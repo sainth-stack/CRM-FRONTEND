@@ -40,7 +40,7 @@ const MailboxPermissionBarrier = () => {
             } else {
                 throw new Error("Authorization portal offline.");
             }
-        } catch (err) {
+        } catch {
             setError("Communication failure. Please try again.");
             setIsLoading(false);
         }

@@ -1,7 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-
-const AuthContext = createContext();
+import { AuthContext } from './AuthContext';
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
@@ -29,28 +28,43 @@ export const AuthProvider = ({ children }) => {
 
     const checkAuth = React.useCallback(async () => {
         const storedToken = localStorage.getItem('token');
-        if (storedToken) {
-            try {
-                const response = await fetch(`${API_URL}/auth/me`, {
-                    headers: { 'Authorization': `Bearer ${storedToken}` }
-                });
-                if (response.ok) {
-                    const userData = await response.json();
-                    setUser(userData);
-                    setHasMailbox(userData.has_mailbox);
-                } else {
-                    logout();
-                }
-            } catch (error) {
-                console.error("Auth check failed:", error);
+        
+        if (!storedToken) {
+            // Delay to prevent React 'cascading renders' in initial mount cycle
+            await new Promise(resolve => setTimeout(resolve, 0));
+            setLoading(false);
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_URL}/auth/me`, {
+                headers: { 'Authorization': `Bearer ${storedToken}` }
+            });
+            if (response.ok) {
+                const userData = await response.json();
+                setUser(userData);
+                setHasMailbox(userData.has_mailbox);
+            } else {
                 logout();
             }
+        } catch (error) {
+            console.error("Auth check failed:", error);
+            logout();
         }
+        
         setLoading(false);
-    }, [API_URL]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [API_URL]);
 
     useEffect(() => {
-        checkAuth();
+        let isMounted = true;
+        const initializeAuth = async () => {
+            await checkAuth();
+            if (isMounted) {
+                // Any post-init logic
+            }
+        };
+        initializeAuth();
+        return () => { isMounted = false; };
     }, [checkAuth]);
 
     const login = async (email, password) => {
@@ -64,7 +78,8 @@ export const AuthProvider = ({ children }) => {
             const data = await response.json();
             localStorage.setItem('token', data.access_token);
             setToken(data.access_token);
-            setUser(data.user);
+            // We consciously DO NOT set user here to prevent firing the 'isLoggedIn' 
+            // routes before 'hasMailbox' is validated. We delegate to checkAuth().
             await checkAuth();
         } else {
             const errorData = await response.json().catch(() => ({}));
@@ -135,5 +150,3 @@ export const AuthProvider = ({ children }) => {
         </AuthContext.Provider>
     );
 };
-
-export const useAuth = () => useContext(AuthContext);

@@ -71,7 +71,7 @@ const Navbar = () => {
 
         {/* Auth Buttons / Profile - Right */}
         <div className="flex items-center gap-4">
-          {!isLoggedIn && !isActive("/login") && !isActive("/forgot-password") && (
+          {!isLoggedIn && !isActive("/login") && !isActive("/forgot-password") && !isActive("/demo") && !isActive("/demo/verify") && (
             <>
               <Link 
                 to="/login"
