@@ -11,17 +11,22 @@ const ConnectMailbox = () => {
     const [status, setStatus] = useState('idle'); // idle, connecting, success, error
 
     const handleMailboxSuccess = React.useCallback(async (tokenResponse, redirectUri = null) => {
+        if (status === 'connecting') return; // Prevent double mobilization
         setStatus('connecting');
         try {
             await connectMailbox(tokenResponse.code, redirectUri);
-            await checkAuth(); // Refresh status
+            
+            // Optimization: Fast-track the status refresh
+            await checkAuth(); 
+            
             setStatus('success');
-            setTimeout(() => navigate('/'), 1500);
+            // Reduced delay: 800ms provides enough visual feedback without feeling sluggish
+            setTimeout(() => navigate('/'), 800); 
         } catch (error) {
             console.error("Mailbox connection deployment failed:", error);
             setStatus('error');
         }
-    }, [connectMailbox, checkAuth, navigate]);
+    }, [connectMailbox, checkAuth, navigate, status]);
 
     // Handle incoming OAuth code from URL redirect
     React.useEffect(() => {

@@ -81,7 +81,7 @@ const Home = () => {
                   to="/create"
                   className="w-full sm:w-auto px-14 py-4.5 bg-brand-primary text-white rounded-2xl font-black text-sm flex items-center justify-center gap-3 shadow-2xl shadow-brand-primary/40 hover:scale-105 transition-all active:scale-95 min-w-[240px]"
                 >
-                  Go to Dashboard
+                  Create Campaign
                 </Link>
                 <Link
                   to="/active"

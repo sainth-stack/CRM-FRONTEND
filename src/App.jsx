@@ -57,14 +57,21 @@ const ManagementRoute = ({ children }) => {
   return children;
 };
 
-function App() {
-  const { isLoggedIn, hasMailbox, loading } = useAuth();
+function AppContents() {
+  const { isLoggedIn, user, hasMailbox, loading } = useAuth();
+  const location = window.location;
 
   if (loading) return <div className="min-h-screen bg-[#050505] flex items-center justify-center font-bold text-zinc-600">Synchronizing Session...</div>;
 
+  // Strategic UI Suppression: Do not show the barrier if we are currently 
+  // on the connection page or if the user is an administrative identity.
+  const isConnectionPage = location.pathname === "/connect-mailbox";
+  const isOperationalUser = user?.role === "user";
+  const showMailboxBarrier = isLoggedIn && !hasMailbox && !isConnectionPage && isOperationalUser;
+
   return (
-    <BrowserRouter>
-      {isLoggedIn && !hasMailbox && <MailboxPermissionBarrier />}
+    <>
+      {showMailboxBarrier && <MailboxPermissionBarrier />}
       <DemoExpiryBarrier>
         <Routes>
           <Route path="/" element={<RootLayout />}>
@@ -91,6 +98,14 @@ function App() {
           </Route>
         </Routes>
       </DemoExpiryBarrier>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppContents />
     </BrowserRouter>
   );
 }
