@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
   Users, 
   UserPlus, 
   Trash2, 
@@ -17,9 +17,12 @@ import {
   EyeOff
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import API_BASE_URL from '../config';
+import { useToast } from '../context/ToastContext';
 
 const AdminDashboard = () => {
   const { token, user } = useAuth();
+  const { showToast } = useToast();
   const [managedUsers, setManagedUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isProvisioning, setIsProvisioning] = useState(false);
@@ -29,16 +32,14 @@ const AdminDashboard = () => {
   const [newUser, setNewUser] = useState({ email: '', password: '' });
   const [showPassword, setShowPassword] = useState(false);
   
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
   const fetchManagedUsers = useCallback(async () => {
     try {
-      const response = await fetch(`${API_URL}/auth/management/users`, {
+      const response = await fetch(`${API_BASE_URL}/auth/management/users`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
         const data = await response.json();
-        setManagedUsers(data);
+        setManagedUsers(Array.isArray(data) ? data : (data.users || []));
       } else {
         throw new Error("Failed to synchronize user sector.");
       }
@@ -47,7 +48,7 @@ const AdminDashboard = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [API_URL, token]);
+  }, [token]);
 
   useEffect(() => {
     if (user?.role !== 'admin' && user?.role !== 'super_admin') return;
@@ -58,7 +59,7 @@ const AdminDashboard = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/auth/management/users`, {
+      const response = await fetch(`${API_BASE_URL}/auth/management/users`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -72,7 +73,11 @@ const AdminDashboard = () => {
         const dispatchMsg = data.email_dispatched 
           ? " Credentials dispatched via your professional identity." 
           : " User provisioned successfully. Manual instruction required (mailbox not connected).";
-        alert("User identity provisioned." + dispatchMsg);
+        showToast({
+          tone: "success",
+          title: "User identity provisioned",
+          description: dispatchMsg.trim(),
+        });
         
         setNewUser({ email: '', password: '' });
         setIsProvisioning(false);
@@ -92,7 +97,7 @@ const AdminDashboard = () => {
     if (!window.confirm("CONFIRM DECOMMISSION: This will permanently remove this user sector and all associated campaigns.")) return;
     
     try {
-      const response = await fetch(`${API_URL}/auth/management/users/${userId}`, {
+      const response = await fetch(`${API_BASE_URL}/auth/management/users/${userId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
@@ -109,7 +114,7 @@ const AdminDashboard = () => {
   const handleReplaceUser = async (oldUserId) => {
     if (window.confirm("IDENTITY REPLACEMENT: This will decommission the existing user and open the provisioning portal for a new identity.")) {
       try {
-        const response = await fetch(`${API_URL}/auth/management/users/${oldUserId}`, {
+      const response = await fetch(`${API_BASE_URL}/auth/management/users/${oldUserId}`, {
           method: 'DELETE',
           headers: { 'Authorization': `Bearer ${token}` }
         });
@@ -200,9 +205,9 @@ const AdminDashboard = () => {
              <button 
                onClick={() => setIsProvisioning(true)}
                disabled={managedUsers.length >= user?.user_limit}
-               className="flex items-center gap-3 bg-zinc-900 text-white px-8 py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-brand-operational transition-all shadow-xl shadow-zinc-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+               className="flex items-center gap-3 bg-brand-operational text-white px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-brand-operational/90 transition-all shadow-xl shadow-brand-operational/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
              >
-               <UserPlus size={18} /> Provision Identity
+               <UserPlus size={20} /> Provision Identity
              </button>
            </div>
         </div>
@@ -212,56 +217,97 @@ const AdminDashboard = () => {
           {managedUsers.map((u, i) => (
             <motion.div 
               key={u.id}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className="bg-white p-8 rounded-[40px] border border-zinc-100 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.03)] group hover:border-brand-operational/30 transition-all relative overflow-hidden"
+              className="bg-white p-8 rounded-[40px] border border-zinc-100 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.03)] group hover:border-brand-operational/30 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.08)] transition-all relative overflow-hidden"
             >
-              <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+              {/* Contextual Actions */}
+              <div className="absolute top-6 right-6 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-4 group-hover:translate-x-0">
                 <button 
                   onClick={() => handleReplaceUser(u.id)}
-                  className="p-2 text-zinc-400 hover:text-brand-operational"
+                  className="p-2.5 bg-zinc-50 text-zinc-400 hover:text-brand-operational hover:bg-brand-operational/5 rounded-xl transition-all"
                   title="Replace Identity"
                 >
-                  <ArrowUpRight size={18} />
+                  <RefreshCw size={16} />
                 </button>
-              </div>
-
-              <div className="flex items-center gap-4 mb-6">
-                 <div className="w-14 h-14 bg-brand-operational/5 rounded-2xl flex items-center justify-center text-brand-operational text-2xl font-black">
-                    {u.email[0].toUpperCase()}
-                 </div>
-                 <div>
-                    <h3 className="font-black text-zinc-900 truncate w-full max-w-[160px]">{u.email}</h3>
-                    <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">User Sector</div>
-                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4 mb-8">
-                 <div className="bg-zinc-50 p-4 rounded-2xl">
-                    <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Missions</div>
-                    <div className="font-black text-zinc-900 flex items-center gap-1.5">
-                      <BarChart3 size={14} className="text-brand-operational" /> {u.campaign_count}
-                    </div>
-                 </div>
-                 <div className="bg-zinc-50 p-4 rounded-2xl">
-                    <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Type</div>
-                    <div className="font-black text-zinc-900 uppercase text-[11px] tracking-widest">
-                      {u.is_demo ? "Demo" : "Standard"}
-                    </div>
-                 </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-6 border-t border-zinc-50">
-                <div className="text-[10px] font-bold text-zinc-300 uppercase tracking-widest flex items-center gap-2">
-                  <CheckCircle2 size={12} className="text-brand-operational" /> Sector Synchronized
-                </div>
                 <button 
                   onClick={() => handleDeleteUser(u.id)}
-                  className="p-3 text-zinc-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                  className="p-2.5 bg-zinc-50 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                  title="Decommission"
                 >
-                  <Trash2 size={18} />
+                  <Trash2 size={16} />
                 </button>
+              </div>
+
+              {/* User Identity Section */}
+              <div className="flex items-start gap-5 mb-8">
+                 <div className="w-16 h-16 bg-gradient-to-br from-brand-operational/10 to-brand-operational/5 rounded-[22px] flex items-center justify-center text-brand-operational text-2xl font-black shadow-inner">
+                    {u.email[0].toUpperCase()}
+                 </div>
+                 <div className="pt-1">
+                    <h3 className="font-black text-zinc-900 text-lg leading-none mb-2 truncate max-w-[180px]">{u.email.split('@')[0]}</h3>
+                    <div className="flex items-center gap-2 flex-wrap">
+                       {u.has_mailbox ? (
+                         <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-wider border border-emerald-100/50">
+                           <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                           Mailbox Active
+                         </div>
+                       ) : (
+                         <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase tracking-wider border border-amber-100/50">
+                           <div className="w-1 h-1 rounded-full bg-amber-500" />
+                           Handshake Pending
+                         </div>
+                       )}
+                       <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest bg-zinc-50 px-2.5 py-1 rounded-lg border border-zinc-100/50">Localized Operator</span>
+                    </div>
+                 </div>
+              </div>
+
+              {/* Operational Metrics */}
+              <div className="space-y-4 mb-8">
+                 <div className="bg-zinc-50/50 border border-zinc-100/50 p-5 rounded-[24px]">
+                    <div className="flex items-center justify-between mb-4">
+                       <div className="flex items-center gap-3">
+                          <div className="p-2.5 bg-white rounded-xl border border-zinc-100 shadow-sm text-brand-operational">
+                             <BarChart3 size={18} />
+                          </div>
+                          <div>
+                             <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Campaign Load</div>
+                             <div className="text-sm font-black text-zinc-900">{u.campaign_count} Missions</div>
+                          </div>
+                       </div>
+                       <div className="text-[10px] font-black text-zinc-300">
+                          {Math.round((u.campaign_count / 10) * 100)}%
+                       </div>
+                    </div>
+                    {/* Mini Progress Bar */}
+                    <div className="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden">
+                       <div 
+                         className="h-full bg-brand-operational transition-all duration-1000" 
+                         style={{ width: `${Math.min((u.campaign_count / 10) * 100, 100)}%` }}
+                       />
+                    </div>
+                 </div>
+
+                 <div className="bg-zinc-50/50 border border-zinc-100/50 p-5 rounded-[24px] flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                       <div className="p-2.5 bg-white rounded-xl border border-zinc-100 shadow-sm text-zinc-400">
+                          <ShieldCheck size={18} />
+                       </div>
+                       <div>
+                          <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Sector Initialized</div>
+                          <div className="text-sm font-black text-zinc-900">
+                            {u.created_at ? new Date(u.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Jan 01, 2026'}
+                          </div>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+
+              <div className="flex items-center gap-2 pt-6 border-t border-zinc-50">
+                <CheckCircle2 size={14} className="text-brand-operational" />
+                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Deployment Readiness Verified</span>
               </div>
             </motion.div>
           ))}

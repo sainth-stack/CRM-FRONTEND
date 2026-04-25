@@ -1,33 +1,38 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useGoogleLogin } from '@react-oauth/google';
 import { motion } from 'framer-motion';
 import { Mail, Shield, CheckCircle2, XCircle, RefreshCcw } from 'lucide-react';
 
+const MAILBOX_REDIRECT_STORAGE_KEY = 'mailbox_oauth_redirect_uri';
+
 const Settings = () => {
-    const { connectMailbox, user } = useAuth();
+    const { getMailboxAuthorizationUrl, user, mailboxHealth } = useAuth();
     const [connecting, setConnecting] = useState(false);
     const [status, setStatus] = useState(null); // 'success', 'error'
 
-    // This hook initiates the OAuth 2.0 Auth Code flow for mailbox scopes
-    const googleLogin = useGoogleLogin({
-        onSuccess: async (tokenResponse) => {
-            setConnecting(true);
-            try {
-                // The 'code' is sent to the backend for refresh token exchange
-                await connectMailbox(tokenResponse.code);
-                setStatus('success');
-            } catch (error) {
-                console.error("Mailbox connection deployment failed:", error);
-                setStatus('error');
-            } finally {
-                setConnecting(false);
+    const startMailboxAuthorization = async () => {
+        setConnecting(true);
+        try {
+            const url = await getMailboxAuthorizationUrl();
+            if (!url) {
+                throw new Error('Authorization URL was not returned.');
             }
-        },
-        onError: () => setStatus('error'),
-        flow: 'auth-code',
-        scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send',
-    });
+            try {
+                const parsed = new URL(url);
+                const redirectUri = parsed.searchParams.get('redirect_uri');
+                if (redirectUri) {
+                    sessionStorage.setItem(MAILBOX_REDIRECT_STORAGE_KEY, redirectUri);
+                }
+            } catch (parseError) {
+                console.warn("Unable to persist mailbox redirect URI:", parseError);
+            }
+            window.location.assign(url);
+        } catch (error) {
+            console.error("Mailbox authorization initialization failed:", error);
+            setStatus('error');
+            setConnecting(false);
+        }
+    };
 
     return (
         <div className="max-w-4xl mx-auto px-6 py-12 font-outfit">
@@ -78,14 +83,21 @@ const Settings = () => {
                         <div className="space-y-6">
                             <div className="flex items-center gap-4 p-4 bg-zinc-50 rounded-2xl border border-dashed border-zinc-200">
                                 <Shield className="w-5 h-5 text-zinc-400" />
-                                <div className="text-[11px] text-zinc-500 font-bold uppercase tracking-wider">
-                                    AES-256 Vault-Level Token Encryption Active
+                                <div className="flex-1">
+                                    <div className="text-[11px] text-zinc-500 font-bold uppercase tracking-wider">
+                                        AES-256 Vault-Level Token Encryption Active
+                                    </div>
+                                    {mailboxHealth?.status && mailboxHealth.status !== 'NOT_CONNECTED' ? (
+                                        <div className="mt-2 text-[10px] font-bold uppercase tracking-wider text-zinc-400">
+                                            Mailbox Health: {mailboxHealth.status.replace(/_/g, ' ')}
+                                        </div>
+                                    ) : null}
                                 </div>
                             </div>
 
                             {!status ? (
                                 <button
-                                    onClick={() => googleLogin()}
+                                    onClick={startMailboxAuthorization}
                                     disabled={connecting}
                                     className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-brand-primary text-white rounded-2xl font-bold text-lg hover:bg-brand-primary/90 transition-all shadow-xl shadow-brand-primary/20 active:scale-95 disabled:opacity-50"
                                 >

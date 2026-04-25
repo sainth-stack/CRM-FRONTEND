@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, Mail, Lock, ArrowLeft, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import API_BASE_URL from '../config';
 
 const ForgotPassword = () => {
   const [step, setStep] = useState(1); // 1: Email, 2: OTP, 3: New Password, 4: Success
@@ -16,14 +17,12 @@ const ForgotPassword = () => {
   const [showConfirmPass, setShowConfirmPass] = useState(false);
   
   const navigate = useNavigate();
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
   const handleRequestOTP = async (e) => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
     try {
-      const resp = await fetch(`${API_URL}/auth/forgot-password`, {
+      const resp = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -46,7 +45,7 @@ const ForgotPassword = () => {
     setIsLoading(true);
     setError('');
     try {
-      const resp = await fetch(`${API_URL}/auth/verify-otp`, {
+      const resp = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, otp })
@@ -74,7 +73,7 @@ const ForgotPassword = () => {
     setIsLoading(true);
     setError('');
     try {
-      const resp = await fetch(`${API_URL}/auth/reset-password`, {
+      const resp = await fetch(`${API_BASE_URL}/auth/reset-password`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ new_password: newPassword, confirm_password: confirmPassword, reset_token: resetToken })

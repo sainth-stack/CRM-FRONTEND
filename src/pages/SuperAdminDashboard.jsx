@@ -17,10 +17,12 @@ import {
   EyeOff
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import API_BASE_URL from '../config';
+import { useToast } from '../context/ToastContext';
 
 const SuperAdminDashboard = () => {
-  const { token, user, logout } = useAuth();
+  const { token, user } = useAuth();
+  const { showToast } = useToast();
   const [admins, setAdmins] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAddingAdmin, setIsAddingAdmin] = useState(false);
@@ -31,11 +33,9 @@ const SuperAdminDashboard = () => {
   const [newAdmin, setNewAdmin] = useState({ email: '', password: '', user_limit: 5 });
   const [showPassword, setShowPassword] = useState(false);
   
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-
   const fetchAdmins = async () => {
     try {
-      const response = await fetch(`${API_URL}/auth/sovereign/admins`, {
+      const response = await fetch(`${API_BASE_URL}/auth/sovereign/admins`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
@@ -60,7 +60,7 @@ const SuperAdminDashboard = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/auth/sovereign/admins`, {
+      const response = await fetch(`${API_BASE_URL}/auth/sovereign/admins`, {
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -74,7 +74,11 @@ const SuperAdminDashboard = () => {
         const dispatchMsg = data.email_dispatched 
           ? " Credentials dispatched via your connected mailbox." 
           : " Identity provisioned, but no welcome email sent (mailbox not connected).";
-        alert("Admin sector provisioned successfully." + dispatchMsg);
+        showToast({
+          tone: "success",
+          title: "Admin sector provisioned",
+          description: dispatchMsg.trim(),
+        });
         
         setNewAdmin({ email: '', password: '', user_limit: 5 });
         setIsAddingAdmin(false);
@@ -94,7 +98,7 @@ const SuperAdminDashboard = () => {
     e.preventDefault();
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/auth/sovereign/admins/${editingAdmin.id}/quota`, {
+      const response = await fetch(`${API_BASE_URL}/auth/sovereign/admins/${editingAdmin.id}/quota`, {
         method: 'PATCH',
         headers: { 
           'Content-Type': 'application/json',
@@ -120,7 +124,7 @@ const SuperAdminDashboard = () => {
     if (!window.confirm("ARE YOU SURE? This will permanently decommission this administrative sector.")) return;
     
     try {
-      const response = await fetch(`${API_URL}/auth/sovereign/admins/${adminId}`, {
+      const response = await fetch(`${API_BASE_URL}/auth/sovereign/admins/${adminId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });

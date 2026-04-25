@@ -1,51 +1,71 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Navigate, useSearchParams } from 'react-router-dom';
-import { useGoogleLogin } from '@react-oauth/google';
+
+const MAILBOX_REDIRECT_STORAGE_KEY = 'mailbox_oauth_redirect_uri';
+
+const rememberMailboxRedirectUri = (authorizationUrl) => {
+    try {
+        const parsed = new URL(authorizationUrl);
+        const redirectUri = parsed.searchParams.get('redirect_uri');
+        if (redirectUri) {
+            sessionStorage.setItem(MAILBOX_REDIRECT_STORAGE_KEY, redirectUri);
+        }
+    } catch (error) {
+        console.warn('Unable to persist mailbox redirect URI:', error);
+    }
+};
 
 const ConnectMailbox = () => {
-    const { isLoggedIn, hasMailbox, connectMailbox, checkAuth } = useAuth();
+    const { isLoggedIn, hasMailbox, connectMailbox, checkAuth, getMailboxAuthorizationUrl } = useAuth();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const [status, setStatus] = useState('idle'); // idle, connecting, success, error
+    const [errorMessage, setErrorMessage] = useState('');
 
-    const handleMailboxSuccess = React.useCallback(async (tokenResponse, redirectUri = null) => {
-        if (status === 'connecting') return; // Prevent double mobilization
+    const handleMailboxSuccess = React.useCallback(async ({ code, state, redirectUri = null }) => {
         setStatus('connecting');
         try {
-            await connectMailbox(tokenResponse.code, redirectUri);
-            
-            // Optimization: Fast-track the status refresh
+            await connectMailbox(code, state, redirectUri);
+            sessionStorage.removeItem(MAILBOX_REDIRECT_STORAGE_KEY);
             await checkAuth(); 
-            
             setStatus('success');
-            // Reduced delay: 800ms provides enough visual feedback without feeling sluggish
-            setTimeout(() => navigate('/'), 800); 
+            
+            // Strategic Redirection: Send users to their natural operational habitat
+            const target = user?.role === 'super_admin' ? '/sovereign' : 
+                         user?.role === 'admin' ? '/management' : '/';
+            
+            setTimeout(() => navigate(target), 1200); 
         } catch (error) {
-            console.error("Mailbox connection deployment failed:", error);
+            setErrorMessage(error.response?.data?.detail || "Mailbox connection failed.");
             setStatus('error');
         }
-    }, [connectMailbox, checkAuth, navigate, status]);
+    }, [status, connectMailbox, checkAuth, navigate, user]);
 
-    // Handle incoming OAuth code from URL redirect
     React.useEffect(() => {
         const code = searchParams.get('code');
+        const state = searchParams.get('state');
         if (code && status === 'idle') {
-            // Note: Manual redirect from Barrier uses the configured Redirect URI,
-            // which the backend uses as its default.
-            handleMailboxSuccess({ code }); 
+            handleMailboxSuccess({ code, state }); 
         }
     }, [searchParams, status, handleMailboxSuccess]);
 
-    const loginMailbox = useGoogleLogin({
-        onSuccess: (resp) => handleMailboxSuccess(resp, 'postmessage'),
-        onError: () => setStatus('error'),
-        flow: 'auth-code',
-        scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile openid',
-        prompt: 'consent',
-        access_type: 'offline'
-    });
+    const loginMailbox = React.useCallback(async () => {
+        if (status === 'connecting') return;
+        setStatus('connecting');
+        try {
+            const url = await getMailboxAuthorizationUrl();
+            if (!url) {
+                throw new Error('Authorization URL was not returned.');
+            }
+            rememberMailboxRedirectUri(url);
+            window.location.assign(url);
+        } catch (error) {
+            console.error("Mailbox authorization initialization failed:", error);
+            setStatus('error');
+        }
+    }, [getMailboxAuthorizationUrl, status]);
 
     // Redirection check after Hook calls
     if (isLoggedIn && hasMailbox) {
@@ -81,15 +101,15 @@ const ConnectMailbox = () => {
                         {status === 'idle' || status === 'error' ? (
                             <>
                                 <button 
-                                    onClick={() => loginMailbox()}
+                                    onClick={loginMailbox}
                                     className="w-full flex items-center justify-center gap-4 px-8 py-[18px] bg-brand-primary text-white rounded-2xl font-bold hover:bg-brand-primary/95 transition-all shadow-xl shadow-brand-primary/20 active:scale-95"
                                 >
                                     <img src="https://authjs.dev/img/providers/google.svg" className="w-5 h-5 brightness-0 invert" alt="" />
                                     Connect Personal Mailbox
                                 </button>
                                 {status === 'error' && (
-                                    <p className="text-red-500 text-[11px] font-bold uppercase tracking-widest bg-red-50 py-2 rounded-lg">
-                                        Authorization Deployment Failed. Try Again.
+                                    <p className="text-red-500 text-[11px] font-bold uppercase tracking-widest bg-red-50 py-2 rounded-lg px-4">
+                                        {errorMessage || "Authorization Deployment Failed. Try Again."}
                                     </p>
                                 )}
                             </>

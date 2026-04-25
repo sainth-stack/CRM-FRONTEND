@@ -150,7 +150,7 @@ const CampaignWorkspace = () => {
 
   useEffect(() => {
     fetchCampaignDetails();
-    const interval = setInterval(fetchCampaignDetails, 5000);
+    const interval = setInterval(fetchCampaignDetails, 2000);
     return () => clearInterval(interval);
   }, [fetchCampaignDetails]);
 
@@ -296,9 +296,17 @@ const CampaignWorkspace = () => {
           </AnimatePresence>
         </nav>
 
-        <div className="flex items-center gap-4">
-           <div className="flex flex-col items-end mr-4">
-             <span className="text-[10px] font-black text-brand-primary uppercase tracking-widest">Operation Lifecycle</span>
+        <div className="flex items-center gap-6">
+           {campaign.status === "FINDING_DECISION_MAKERS" && (
+             <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full animate-pulse">
+               <Loader2 className="w-3 h-3 text-indigo-600 animate-spin" />
+               <span className="text-[10px] font-black text-indigo-700 uppercase tracking-widest">
+                 Agent Active: Stakeholder Mapping...
+               </span>
+             </div>
+           )}
+           <div className="flex flex-col items-end">
+             <span className="text-[10px] font-black text-brand-primary uppercase tracking-widest leading-none">Operation Lifecycle</span>
              <span className="text-[11px] font-black text-slate-900 border-b-2 border-brand-primary tracking-tighter uppercase">{getDisplayStatus()}</span>
            </div>
            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
@@ -461,11 +469,21 @@ const CampaignWorkspace = () => {
                      {campaign.target_companies.filter(co => co.status !== 'REJECTED').map((company) => (
                        <motion.div 
                          key={company.id}
-                        whileHover={{ y: -5, scale: 1.01, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
-                        transition={{ type: "spring", stiffness: 300 }}
-                        onClick={() => setSelectedCompany(company)}
-                        className="bg-white rounded-[40px] p-10 cursor-pointer group relative overflow-hidden transition-all shadow-sm"
+                         whileHover={{ y: -5, scale: 1.01, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
+                         transition={{ type: "spring", stiffness: 300 }}
+                         onClick={() => setSelectedCompany(company)}
+                        className={`bg-white rounded-[40px] p-10 cursor-pointer group relative overflow-hidden transition-all shadow-sm ${
+                          company.status === 'RESEARCHING_STAKEHOLDERS' 
+                            ? 'ring-2 ring-blue-400 ring-offset-4 bg-blue-50/30' 
+                            : ''
+                        }`}
                       >
+                         {company.status === 'RESEARCHING_STAKEHOLDERS' && (
+                           <div className="absolute top-6 left-6 flex items-center gap-1.5 px-2.5 py-1 bg-blue-600 rounded-full animate-pulse shadow-lg z-20">
+                             <div className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
+                             <span className="text-[9px] font-black text-white uppercase tracking-widest">Scanning</span>
+                           </div>
+                         )}
                          <div className="absolute top-0 right-0 p-8 text-slate-200">
                             <Maximize2 size={20} strokeWidth={3} />
                          </div>
@@ -634,7 +652,7 @@ const CampaignWorkspace = () => {
                                    <p className="text-sm font-black text-slate-700 uppercase italic tracking-tight">{company?.name || "Target Organization"}</p>
                                 </div>
                                 <p className="text-slate-500 font-semibold text-sm leading-relaxed italic line-clamp-2">
-                                   "{dm.similarity_score?.reason || "Extracting strategic alignment markers..."}"
+                                   "{dm.relevance_explanation || dm.similarity_score?.reason || "Extracting strategic alignment markers..."}"
                                 </p>
                              </div>
 

@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutGrid, Settings as SettingsIcon } from "lucide-react";
+import { LayoutGrid, Settings as SettingsIcon, ShieldCheck } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 const Navbar = () => {
@@ -21,12 +21,13 @@ const Navbar = () => {
       
       <div className="max-w-[1440px] mx-auto px-6 h-24 flex items-center justify-between">
         {/* Logo Artifact */}
-        <Link to="/" className="flex items-center gap-1 group font-outfit">
-           <div className="flex flex-col items-stretch">
-             <span className="font-extrabold text-4xl tracking-tighter text-brand-primary leading-none uppercase text-center">
+        <Link to="/" className="flex items-center gap-3 group font-outfit">
+           <img src="/logo.png" alt="AI-PRIORI Logo" className="w-18 h-18 object-contain group-hover:scale-105 transition-transform" />
+           <div className="flex flex-col items-start">
+             <span className="font-extrabold text-4xl tracking-tighter text-brand-primary leading-none uppercase">
                 AI-PRIORI
              </span>
-             <div className="flex justify-between w-full items-center mt-1 px-0.5">
+             <div className="flex justify-between w-full items-center mt-0 px-0.5">
                <span className="text-[11px] font-medium text-brand-secondary uppercase tracking-tighter">DATA</span>
                <span className="text-[11px] font-medium text-brand-dark leading-none">-</span>
                <span className="text-[11px] font-medium text-brand-accent uppercase tracking-tighter">INTELLIGENCE</span>
@@ -54,17 +55,17 @@ const Navbar = () => {
           ))}
 
             {/* Management Link for Admins */}
-            {isLoggedIn && role === "ADMIN" && (
+            {isLoggedIn && (role === "ADMIN" || role === "SUPER_ADMIN") && (
               <Link
-                to="/management"
-                className={`text-[14px] font-black uppercase tracking-[0.2em] transition-colors relative h-24 flex items-center bg-brand-secondary/5 px-4 text-brand-secondary hover:bg-brand-secondary/10 ${
-                  isActive("/management") ? "text-brand-secondary" : "text-brand-secondary/70"
+                to={role === "SUPER_ADMIN" ? "/sovereign" : "/management"}
+                className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-widest transition-all ${
+                  isActive(role === "SUPER_ADMIN" ? "/sovereign" : "/management")
+                    ? "bg-brand-operational text-white shadow-lg shadow-brand-operational/25"
+                    : "bg-zinc-50 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 border border-zinc-100"
                 }`}
               >
-                Admin Deck
-                {isActive("/management") && (
-                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-brand-secondary" />
-                )}
+                <ShieldCheck size={16} className={isActive(role === "SUPER_ADMIN" ? "/sovereign" : "/management") ? "text-white" : "text-brand-operational"} />
+                {role === "SUPER_ADMIN" ? "Sovereign Deck" : "Admin Deck"}
               </Link>
             )}
         </nav>
@@ -83,7 +84,7 @@ const Navbar = () => {
                 to="/demo"
                 className="text-[14px] font-bold uppercase tracking-widest bg-brand-primary text-white px-6 py-2.5 rounded-lg hover:bg-brand-primary/90 transition-all shadow-md active:scale-95 shadow-brand-primary/20"
               >
-                Start Free Trial
+                Launch Trial
               </Link>
             </>
           )}

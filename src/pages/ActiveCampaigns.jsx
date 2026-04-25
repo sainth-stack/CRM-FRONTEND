@@ -30,7 +30,9 @@ const ActiveCampaigns = () => {
   const fetchCampaigns = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/campaigns`);
-      const activeOnly = response.data.filter((c) => c.status !== "INACTIVE");
+      // The backend now returns a paginated object { campaigns: [], total: X }
+      const campaignsData = response.data.campaigns || [];
+      const activeOnly = campaignsData.filter((c) => c.status !== "INACTIVE");
       setCampaigns(activeOnly);
     } catch (error) {
       console.error("Error fetching campaigns:", error);

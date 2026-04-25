@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ShieldAlert, Mail, Lock, CheckCircle2, ChevronRight, Info } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import API_BASE_URL from '../config';
+
+const MAILBOX_REDIRECT_STORAGE_KEY = 'mailbox_oauth_redirect_uri';
 
 const MailboxPermissionBarrier = () => {
     const { user, token, logout } = useAuth();
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
-
-    const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
     const handleAuthorize = async () => {
         setIsLoading(true);
@@ -23,7 +24,7 @@ const MailboxPermissionBarrier = () => {
             }
 
             // Initiate the secure OAuth handshake
-            const response = await fetch(`${API_URL}/auth/google/url`, {
+            const response = await fetch(`${API_BASE_URL}/auth/google/url`, {
                 headers: { 'Authorization': `Bearer ${sessionToken}` }
             });
 
@@ -35,6 +36,15 @@ const MailboxPermissionBarrier = () => {
 
             const data = await response.json();
             if (data.url) {
+                try {
+                    const parsed = new URL(data.url);
+                    const redirectUri = parsed.searchParams.get('redirect_uri');
+                    if (redirectUri) {
+                        sessionStorage.setItem(MAILBOX_REDIRECT_STORAGE_KEY, redirectUri);
+                    }
+                } catch (parseError) {
+                    console.warn("Unable to persist mailbox redirect URI:", parseError);
+                }
                 // Open the Google authorization portal in the current tab
                 window.location.href = data.url;
             } else {

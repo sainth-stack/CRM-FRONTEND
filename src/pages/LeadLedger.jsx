@@ -9,9 +9,11 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as XLSX from "xlsx";
+import { useToast } from "../context/ToastContext";
 
 const LeadLedger = ({ campaign }) => {
   const [activeView, setActiveView] = useState("COMPANIES"); // COMPANIES or CONTACTS
+  const { showToast } = useToast();
   const rawCompanies = campaign?.target_companies || [];
   
   // Tactical Sorting Protocol: Approved targets first, Rejected artifacts last
@@ -62,13 +64,11 @@ const LeadLedger = ({ campaign }) => {
 
     // 2. Data Integrity Protocol
     if (exportData.length === 0) {
-      alert("MISSION ALERT: No data found to export. Please wait for mission data to load or check your filters.");
-      return;
-    }
-
-    // 2. Data Integrity Protocol
-    if (exportData.length === 0) {
-      alert("MISSION ALERT: No data found to export. Please wait for mission data to load or check your filters.");
+      showToast({
+        tone: "info",
+        title: "No export data yet",
+        description: "Please wait for mission data to load or adjust your active view before exporting.",
+      });
       return;
     }
 
@@ -110,7 +110,11 @@ const LeadLedger = ({ campaign }) => {
         console.log("[LEDGER] RECOVERY SUCCESS: CSV Mission intelligence dispatched.");
       } catch (fallbackError) {
         console.error("[LEDGER] COMPLETE EXPORT BLACKOUT:", fallbackError);
-        alert("CRITICAL ERROR: Browser blocked all export protocols. Check your security extensions.");
+        showToast({
+          tone: "error",
+          title: "Export failed",
+          description: "Browser protections blocked all export protocols. Please check your extensions and try again.",
+        });
       }
     }
   };

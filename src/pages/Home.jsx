@@ -72,7 +72,7 @@ const Home = () => {
                   to="/demo"
                   className="w-full sm:w-auto px-14 py-4.5 bg-white border border-zinc-100 text-[#1e293b] rounded-2xl font-black text-sm flex items-center justify-center gap-3 hover:bg-zinc-50 transition-all shadow-sm min-w-[240px]"
                 >
-                  Start Free Trial
+                  Launch Trial
                 </Link>
               </>
             ) : (

@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import RootLayout from "./layouts/RootLayout";
 import Home from "./pages/Home";
 import CreateCampaign from "./pages/CreateCampaign";
@@ -18,15 +18,13 @@ import VerifyDemoOTP from "./pages/VerifyDemoOTP";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import { useAuth } from "./context/AuthContext";
+import { ToastProvider } from "./context/ToastContext";
 import { Navigate } from "react-router-dom";
 
 const ProtectedRoute = ({ children }) => {
-  const { isLoggedIn, user, loading } = useAuth();
+  const { isLoggedIn, loading } = useAuth();
   if (loading) return null;
   if (!isLoggedIn) return <Navigate to="/login" replace />;
-  const role = user?.role?.toUpperCase();
-  // Restrict Sovereign/Admin identities from User operational sectors
-  if (role === "SUPER_ADMIN" || role === "ADMIN") return <Navigate to="/" replace />;
   return children;
 };
 
@@ -59,15 +57,20 @@ const ManagementRoute = ({ children }) => {
 
 function AppContents() {
   const { isLoggedIn, user, hasMailbox, loading } = useAuth();
-  const location = window.location;
+  const location = useLocation();
 
   if (loading) return <div className="min-h-screen bg-[#050505] flex items-center justify-center font-bold text-zinc-600">Synchronizing Session...</div>;
 
+  const searchParams = new URLSearchParams(location.search);
+  const hasOAuthCallbackParams = searchParams.has("code") && searchParams.has("state");
+  if (hasOAuthCallbackParams && location.pathname !== "/auth/google/callback") {
+    return <Navigate to={`/auth/google/callback${location.search}`} replace />;
+  }
+
   // Strategic UI Suppression: Do not show the barrier if we are currently 
   // on the connection page or if the user is an administrative identity.
-  const isConnectionPage = location.pathname === "/connect-mailbox";
-  const isOperationalUser = user?.role === "user";
-  const showMailboxBarrier = isLoggedIn && !hasMailbox && !isConnectionPage && isOperationalUser;
+  const isConnectionPage = location.pathname === "/connect-mailbox" || location.pathname === "/auth/google/callback";
+  const showMailboxBarrier = isLoggedIn && !hasMailbox && !isConnectionPage;
 
   return (
     <>
@@ -87,6 +90,7 @@ function AppContents() {
             <Route path="management" element={<ManagementRoute><AdminDashboard /></ManagementRoute>} />
             
             <Route path="connect-mailbox" element={<ProtectedRoute><ConnectMailbox /></ProtectedRoute>} />
+            <Route path="auth/google/callback" element={<ProtectedRoute><ConnectMailbox /></ProtectedRoute>} />
             
             {/* Protected & Capability-Enforced Routes */}
             <Route path="create" element={<CapabilityRoute><CreateCampaign /></CapabilityRoute>} />
@@ -104,9 +108,11 @@ function AppContents() {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AppContents />
-    </BrowserRouter>
+    <ToastProvider>
+      <BrowserRouter>
+        <AppContents />
+      </BrowserRouter>
+    </ToastProvider>
   );
 }
 
