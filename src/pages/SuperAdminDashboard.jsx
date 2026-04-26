@@ -30,8 +30,7 @@ const SuperAdminDashboard = () => {
   const [error, setError] = useState(null);
   
   // Provisioning Form State
-  const [newAdmin, setNewAdmin] = useState({ email: '', password: '', user_limit: 5 });
-  const [showPassword, setShowPassword] = useState(false);
+  const [newAdmin, setNewAdmin] = useState({ email: '', user_limit: 5 });
   
   const fetchAdmins = async () => {
     try {
@@ -72,7 +71,7 @@ const SuperAdminDashboard = () => {
       if (response.ok) {
         const data = await response.json();
         const dispatchMsg = data.email_dispatched 
-          ? " Credentials dispatched via your connected mailbox." 
+          ? " An activation link has been dispatched via your connected mailbox." 
           : " Identity provisioned, but no welcome email sent (mailbox not connected).";
         showToast({
           tone: "success",
@@ -80,7 +79,7 @@ const SuperAdminDashboard = () => {
           description: dispatchMsg.trim(),
         });
         
-        setNewAdmin({ email: '', password: '', user_limit: 5 });
+        setNewAdmin({ email: '', user_limit: 5 });
         setIsAddingAdmin(false);
         fetchAdmins();
       } else {
@@ -135,6 +134,27 @@ const SuperAdminDashboard = () => {
       }
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  const handleResendActivation = async (adminId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/management/resend-activation/${adminId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        showToast({
+          tone: "success",
+          title: "Activation Resent",
+          description: "A fresh setup link has been dispatched to the administrative sector.",
+        });
+      } else {
+        const data = await response.json();
+        throw new Error(data.detail || "Resend failed.");
+      }
+    } catch (err) {
+      showToast({ tone: "error", title: "Dispatch Failure", description: err.message });
     }
   };
 
@@ -278,6 +298,10 @@ const SuperAdminDashboard = () => {
                          <span className="px-4 py-1.5 bg-red-50 text-red-600 rounded-full text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-2">
                            <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" /> Conflict
                          </span>
+                       ) : !adm.is_activated ? (
+                         <span className="px-4 py-1.5 bg-amber-50 text-amber-600 rounded-full text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-2">
+                           <div className="w-1.5 h-1.5 rounded-full bg-amber-500" /> Pending Activation
+                         </span>
                        ) : (
                          <span className="px-4 py-1.5 bg-green-50 text-green-600 rounded-full text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-2">
                            <div className="w-1.5 h-1.5 rounded-full bg-green-500" /> Authorized
@@ -286,6 +310,15 @@ const SuperAdminDashboard = () => {
                     </td>
                     <td className="px-10 py-8 text-right">
                        <div className="flex items-center justify-end gap-3">
+                         {!adm.is_activated && (
+                           <button 
+                             onClick={() => handleResendActivation(adm.id)}
+                             className="p-3 text-amber-500 hover:text-amber-600 transition-colors bg-amber-50 rounded-xl"
+                             title="Resend Activation Link"
+                           >
+                             <Mail size={18} />
+                           </button>
+                         )}
                          <button 
                            onClick={() => setEditingAdmin({...adm})}
                            className="p-3 text-zinc-400 hover:text-brand-primary transition-colors"
@@ -339,7 +372,7 @@ const SuperAdminDashboard = () => {
                    Initialize a new administrative sector and define their user capacity boundaries.
                  </p>
                  
-                 <form onSubmit={handleProvisionAdmin} className="space-y-6">
+                 <form onSubmit={handleProvisionAdmin} className="space-y-8">
                    <div>
                      <label className="text-[11px] font-black text-zinc-400 uppercase tracking-widest block ml-1 mb-2">Identity Email</label>
                      <div className="relative">
@@ -352,28 +385,6 @@ const SuperAdminDashboard = () => {
                          placeholder="admin@ai-priori.com" 
                          className="w-full pl-14 pr-6 py-4.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-zinc-900 font-bold focus:ring-2 focus:ring-brand-primary/10 transition-all outline-none" 
                        />
-                     </div>
-                   </div>
-                   
-                   <div>
-                     <label className="text-[11px] font-black text-zinc-400 uppercase tracking-widest block ml-1 mb-2">Security Credential</label>
-                     <div className="relative">
-                       <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300" size={18} />
-                        <input 
-                          type={showPassword ? "text" : "password"} 
-                          required 
-                          value={newAdmin.password}
-                          onChange={(e) => setNewAdmin({...newAdmin, password: e.target.value})}
-                          placeholder="••••••••" 
-                          className="w-full pl-14 pr-14 py-4.5 bg-zinc-50 border border-zinc-100 rounded-2xl text-zinc-900 font-bold focus:ring-2 focus:ring-brand-primary/10 transition-all outline-none" 
-                        />
-                        <button 
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-6 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-zinc-500 transition-colors"
-                        >
-                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
                      </div>
                    </div>
 

@@ -29,8 +29,7 @@ const AdminDashboard = () => {
   const [error, setError] = useState(null);
   
   // Provisioning Form
-  const [newUser, setNewUser] = useState({ email: '', password: '' });
-  const [showPassword, setShowPassword] = useState(false);
+  const [newUser, setNewUser] = useState({ email: '' });
   
   const fetchManagedUsers = useCallback(async () => {
     try {
@@ -71,7 +70,7 @@ const AdminDashboard = () => {
       if (response.ok) {
         const data = await response.json();
         const dispatchMsg = data.email_dispatched 
-          ? " Credentials dispatched via your professional identity." 
+          ? " An activation link has been dispatched via your professional identity." 
           : " User provisioned successfully. Manual instruction required (mailbox not connected).";
         showToast({
           tone: "success",
@@ -79,7 +78,7 @@ const AdminDashboard = () => {
           description: dispatchMsg.trim(),
         });
         
-        setNewUser({ email: '', password: '' });
+        setNewUser({ email: '' });
         setIsProvisioning(false);
         fetchManagedUsers();
       } else {
@@ -90,6 +89,27 @@ const AdminDashboard = () => {
       setError(err.message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleResendActivation = async (userId) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/management/resend-activation/${userId}`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        showToast({
+          tone: "success",
+          title: "Activation Link Resent",
+          description: "The secure setup link has been re-dispatched to the user's mailbox.",
+        });
+      } else {
+        const data = await response.json();
+        throw new Error(data.detail || "Resend failed.");
+      }
+    } catch (err) {
+      showToast({ tone: "error", title: "Resend Failed", description: err.message });
     }
   };
 
@@ -224,6 +244,15 @@ const AdminDashboard = () => {
             >
               {/* Contextual Actions */}
               <div className="absolute top-6 right-6 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-4 group-hover:translate-x-0">
+                {!u.is_activated && (
+                  <button 
+                    onClick={() => handleResendActivation(u.id)}
+                    className="p-2.5 bg-amber-50 text-amber-500 hover:text-amber-600 rounded-xl transition-all"
+                    title="Resend Activation Link"
+                  >
+                    <Mail size={16} />
+                  </button>
+                )}
                 <button 
                   onClick={() => handleReplaceUser(u.id)}
                   className="p-2.5 bg-zinc-50 text-zinc-400 hover:text-brand-operational hover:bg-brand-operational/5 rounded-xl transition-all"
@@ -248,18 +277,24 @@ const AdminDashboard = () => {
                  <div className="pt-1">
                     <h3 className="font-black text-zinc-900 text-lg leading-none mb-2 truncate max-w-[180px]">{u.email.split('@')[0]}</h3>
                     <div className="flex items-center gap-2 flex-wrap">
-                       {u.has_mailbox ? (
-                         <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-wider border border-emerald-100/50">
-                           <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
-                           Mailbox Active
-                         </div>
-                       ) : (
-                         <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase tracking-wider border border-amber-100/50">
-                           <div className="w-1 h-1 rounded-full bg-amber-500" />
-                           Handshake Pending
-                         </div>
-                       )}
-                       <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest bg-zinc-50 px-2.5 py-1 rounded-lg border border-zinc-100/50">Localized Operator</span>
+                        {u.has_mailbox ? (
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-wider border border-emerald-100/50">
+                            <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                            Mailbox Active
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase tracking-wider border border-amber-100/50">
+                            <div className="w-1 h-1 rounded-full bg-amber-500" />
+                            Handshake Pending
+                          </div>
+                        )}
+                        {!u.is_activated && (
+                          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-brand-primary/5 text-brand-primary rounded-lg text-[9px] font-black uppercase tracking-wider border border-brand-primary/10">
+                            <div className="w-1 h-1 rounded-full bg-brand-primary animate-pulse" />
+                            Activation Pending
+                          </div>
+                        )}
+                        <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest bg-zinc-50 px-2.5 py-1 rounded-lg border border-zinc-100/50">Localized Operator</span>
                     </div>
                  </div>
               </div>
@@ -350,7 +385,7 @@ const AdminDashboard = () => {
                     Establish a new autonomous sector. This identity will have full outreach capabilities under your supervision.
                   </p>
 
-                  <form onSubmit={handleProvisionUser} className="space-y-6">
+                  <form onSubmit={handleProvisionUser} className="space-y-8">
                      <div>
                        <label className="text-[11px] font-black text-zinc-400 uppercase tracking-widest block ml-1 mb-2">User Email</label>
                        <div className="relative">
@@ -366,28 +401,6 @@ const AdminDashboard = () => {
                        </div>
                      </div>
                      
-                     <div>
-                       <label className="text-[11px] font-black text-zinc-400 uppercase tracking-widest block ml-1 mb-2">Identity Password</label>
-                       <div className="relative">
-                         <Lock className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300" size={18} />
-                         <input 
-                          type={showPassword ? "text" : "password"} 
-                          required 
-                          value={newUser.password}
-                          onChange={(e) => setNewUser({...newUser, password: e.target.value})}
-                          placeholder="••••••••••••" 
-                          className="w-full pl-14 pr-14 py-5 bg-zinc-50 border border-zinc-100 rounded-2xl text-zinc-900 font-bold focus:ring-2 focus:ring-brand-operational/10 transition-all outline-none" 
-                        />
-                        <button 
-                          type="button"
-                          onClick={() => setShowPassword(!showPassword)}
-                          className="absolute right-6 top-1/2 -translate-y-1/2 text-zinc-300 hover:text-zinc-500 transition-colors"
-                        >
-                          {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                        </button>
-                       </div>
-                     </div>
-
                      {error && (
                        <div className="bg-red-50 p-5 rounded-2xl flex items-start gap-3 border border-red-100">
                          <AlertCircle className="text-red-500 shrink-0" size={18} />

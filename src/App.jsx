@@ -10,6 +10,7 @@ import CampaignWorkspace from "./pages/CampaignWorkspace";
 import ProspectHistory from "./pages/ProspectHistory";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
+import SetupPassword from "./pages/SetupPassword";
 import MailboxPermissionBarrier from "./components/MailboxPermissionBarrier";
 import DemoExpiryBarrier from "./components/DemoExpiryBarrier";
 import ConnectMailbox from "./pages/ConnectMailbox";
@@ -81,6 +82,7 @@ function AppContents() {
             <Route index element={<Home />} />
             <Route path="login" element={<Login />} />
             <Route path="forgot-password" element={<ForgotPassword />} />
+            <Route path="setup-password" element={<SetupPassword />} />
             
             {/* Demo Identity Portal */}
             <Route path="demo" element={<DemoSignUp />} />

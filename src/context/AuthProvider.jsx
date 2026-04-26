@@ -79,7 +79,8 @@ export const AuthProvider = ({ children }) => {
                 }
 
                 const data = await response.json();
-                return persistAccessToken(data.access_token);
+                persistSession(data.access_token, data.refresh_token);
+                return data.access_token;
             })
             .finally(() => {
                 refreshPromiseRef.current = null;
@@ -117,21 +118,39 @@ export const AuthProvider = ({ children }) => {
     }, [clearRefreshTimer, logout, refreshAccessToken]);
 
     const loadProfile = useCallback(async (accessToken, allowRefresh = true) => {
-        const response = await fetch(`${API_BASE_URL}/auth/me`, {
-            headers: { 'Authorization': `Bearer ${accessToken}` }
-        });
+        // Operational Boundary: Enforce an 8-second timeout on identity synchronization
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-        if (response.ok) {
-            const userData = await response.json();
-            setUser(userData);
-            setHasMailbox(userData.has_mailbox);
-            setMailboxHealth(userData.mailbox_health || null);
-            return true;
-        }
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/me`, {
+                headers: { 'Authorization': `Bearer ${accessToken}` },
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
 
-        if (response.status === 401 && allowRefresh) {
-            const refreshedToken = await refreshAccessToken();
-            return loadProfile(refreshedToken, false);
+            if (response.ok) {
+                const userData = await response.json();
+                setUser(userData);
+                setHasMailbox(userData.has_mailbox);
+                setMailboxHealth(userData.mailbox_health || null);
+                return true;
+            }
+
+            if (response.status === 401 && allowRefresh) {
+                const refreshedToken = await refreshAccessToken();
+                if (refreshedToken) {
+                    return loadProfile(refreshedToken, false);
+                }
+            }
+        } catch (error) {
+            if (error.name === 'AbortError') {
+                console.error('Identity synchronization timed out (8s limit exceeded).');
+            } else {
+                console.error('Profile loading error:', error);
+            }
+        } finally {
+            clearTimeout(timeoutId);
         }
 
         return false;
