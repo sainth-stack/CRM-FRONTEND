@@ -14,63 +14,62 @@ const Home = () => {
   }
   const features = [
     {
-      title: "Deep Research",
-      description: "Our AI agents scan LinkedIn, company news, and earnings calls to find the perfect compelling hook for every single prospect.",
-      icon: <Search className="w-6 h-6 text-brand-primary" />,
-      color: "bg-indigo-50",
+      title: "Targeted Analytics",
+      description: "Our AI agents analyze LinkedIn, company context, and public signals to surface the most relevant outreach vectors.",
+      icon: <Search className="w-6 h-6 text-red-600" />,
     },
     {
-      title: "Hyper-Personalization",
-      description: "Generate completely unique, highly relevant emails that look and feel like you spent 30 minutes writing each one manually.",
-      icon: <Zap className="w-6 h-6 text-brand-primary" />,
-      color: "bg-indigo-50",
+      title: "Contextual Personalization",
+      description: "Generate highly engaging, relevant emails tailored completely to the unique hooks of your high-value target companies.",
+      icon: <Zap className="w-6 h-6 text-red-600" />,
     },
     {
-      title: "Scalable Delivery",
-      description: "Send thousands of personalized emails automatically. Manage replies, track performance, and scale your pipeline effortlessly.",
-      icon: <Cpu className="w-6 h-6 text-brand-primary" />,
-      color: "bg-indigo-50",
+      title: "Scale Deliverability",
+      description: "Manage multiple threads concurrently while ensuring enterprise compliance, multi-tenant logging, and real-time alerts.",
+      icon: <Cpu className="w-6 h-6 text-red-600" />,
     }
   ];
 
   return (
-    <div className="flex flex-col relative overflow-hidden min-h-screen font-outfit bg-white">
-      {/* Hero Section - Background applied directly here */}
+    <div className="flex flex-col relative overflow-hidden min-h-screen font-sans bg-slate-50/20 select-none">
+      {/* Hero Section */}
       <section 
-        className="relative pt-32 pb-24 px-6 text-center w-full"
+        className="relative pt-32 pb-24 px-6 text-center w-full min-h-[75vh] flex items-center justify-center border-b border-slate-100/60 select-none"
         style={{
           backgroundImage: 'url("/background.png")',
           backgroundSize: 'cover',
           backgroundPosition: 'center'
         }}
       >
-        {/* Subtle Overlay to ensure text readability */}
-        <div className="absolute inset-0 bg-black/5 pointer-events-none" />
+        <div className="absolute inset-0 bg-slate-900/10 pointer-events-none" />
 
-        <div className="relative z-10 max-w-[1440px] mx-auto w-full">
-          <h1 className="text-[54px] md:text-[80px] font-black leading-[1.1] mb-8 tracking-tighter text-white drop-shadow-sm">
-            Outreach that feels <br />
-            <span className="text-white">Human</span>, <span className="text-white">yet Scalable</span>
+        <div className="relative z-10 max-w-[1400px] mx-auto w-full">
+          <span className="px-3.5 py-1.5 bg-blue-700/40 backdrop-blur-md text-white border border-blue-600/50 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg mb-6 inline-block select-none">
+            Intelligent Outreach Infrastructure
+          </span>
+          <h1 className="text-4xl md:text-7xl font-extrabold leading-[1.08] mb-6 tracking-tighter text-white uppercase italic drop-shadow-sm select-none">
+            Scale outreach that<br />
+            <span className="text-white">converts</span>
           </h1>
 
-          <p className="text-lg md:text-xl text-yellow-400 max-w-2xl mx-auto mb-14 leading-relaxed font-bold">
+          <p className="text-base md:text-xl text-yellow-400 max-w-2xl mx-auto mb-12 leading-relaxed font-extrabold tracking-wide select-none drop-shadow-sm">
             Stop sending generic spam. Our AI agent researches your prospects, 
             deeply understands their business, and crafts hyper-personalized 
             emails that actually get replies.
           </p>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-5">
             {!isLoggedIn ? (
               <>
                 <Link
                   to="/login"
-                  className="w-full sm:w-auto px-14 py-4.5 bg-brand-primary text-white rounded-2xl font-black text-sm flex items-center justify-center gap-3 shadow-2xl shadow-brand-primary/40 hover:scale-105 transition-all active:scale-95 min-w-[240px]"
+                  className="w-full sm:w-auto px-10 py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-extrabold text-sm uppercase tracking-widest flex items-center justify-center gap-2.5 shadow-xl shadow-red-500/10 hover:scale-[1.02] transition-all active:scale-[0.98] min-w-[220px]"
                 >
                   Sign In
                 </Link>
                 <Link
                   to="/demo"
-                  className="w-full sm:w-auto px-14 py-4.5 bg-white border border-zinc-100 text-[#1e293b] rounded-2xl font-black text-sm flex items-center justify-center gap-3 hover:bg-zinc-50 transition-all shadow-sm min-w-[240px]"
+                  className="w-full sm:w-auto px-10 py-4 bg-white border border-slate-200/80 hover:border-red-100 text-slate-700 rounded-2xl font-extrabold text-sm uppercase tracking-widest flex items-center justify-center gap-2.5 hover:bg-slate-50 transition-all shadow-sm min-w-[220px]"
                 >
                   Launch Trial
                 </Link>
@@ -79,13 +78,13 @@ const Home = () => {
               <>
                 <Link
                   to="/create"
-                  className="w-full sm:w-auto px-14 py-4.5 bg-brand-primary text-white rounded-2xl font-black text-sm flex items-center justify-center gap-3 shadow-2xl shadow-brand-primary/40 hover:scale-105 transition-all active:scale-95 min-w-[240px]"
+                  className="w-full sm:w-auto px-10 py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-extrabold text-sm uppercase tracking-widest flex items-center justify-center gap-2.5 shadow-xl shadow-red-500/10 hover:scale-[1.02] transition-all active:scale-[0.98] min-w-[220px]"
                 >
-                  Create Campaign
+                  New Campaign
                 </Link>
                 <Link
                   to="/active"
-                  className="w-full sm:w-auto px-14 py-4.5 bg-white border border-zinc-100 text-[#1e293b] rounded-2xl font-black text-sm flex items-center justify-center gap-3 hover:bg-zinc-50 transition-all shadow-sm min-w-[240px]"
+                  className="w-full sm:w-auto px-10 py-4 bg-white border border-slate-200/80 hover:border-red-100 text-slate-700 rounded-2xl font-extrabold text-sm uppercase tracking-widest flex items-center justify-center gap-2.5 hover:bg-slate-50 transition-all shadow-sm min-w-[220px]"
                 >
                   Active Campaigns
                 </Link>
@@ -96,23 +95,23 @@ const Home = () => {
       </section>
 
       {/* Stats/Intelligence Title Section */}
-      <section className="py-16 px-6 text-center max-w-[1440px] mx-auto w-full">
-         <h2 className="text-4xl md:text-[52px] font-black text-[#1e293b] mb-8 tracking-tighter mt-10">
-            The intelligence engine for modern <br /> sales teams
+      <section className="py-20 px-6 md:px-10 text-center max-w-[1400px] mx-auto w-full">
+         <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 mb-6 tracking-tight uppercase italic select-none">
+            Built for modern outbound
          </h2>
-         <p className="text-lg text-zinc-400 font-semibold mb-20 max-w-3xl mx-auto leading-relaxed">
-            We handle the heavy lifting of research and personalization, so your team <br />
-            can focus on what they do best: closing deals.
+         <p className="text-base md:text-lg text-slate-400 font-bold mb-16 max-w-2xl mx-auto leading-relaxed select-none">
+            Fully automated research and contextual mapping of targeted company data, 
+            letting you deploy precise communication protocols.
          </p>
 
          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
             {features.map((feature, i) => (
-               <div key={i} className="bg-white border border-zinc-100 p-10 rounded-[32px] shadow-sm hover:shadow-2xl hover:-translate-y-2 transition-all duration-500 flex flex-col items-start text-left">
-                  <div className="bg-brand-primary/10 w-14 h-14 rounded-2xl flex items-center justify-center mb-8">
+               <div key={i} className="bg-white border border-slate-100/80 p-8 rounded-3xl shadow-sm hover:shadow-md hover:border-red-100/40 transition-all duration-300 flex flex-col items-start select-none">
+                  <div className="bg-red-50 border border-red-100 w-12 h-12 rounded-xl flex items-center justify-center mb-6 shadow-sm shrink-0">
                      {feature.icon}
                   </div>
-                  <h3 className="text-2xl font-black text-[#1e293b] mb-4 tracking-tight">{feature.title}</h3>
-                  <p className="text-[#64748b] font-semibold leading-relaxed text-base">
+                  <h3 className="text-xl font-extrabold text-slate-800 mb-3 tracking-tight uppercase italic">{feature.title}</h3>
+                  <p className="text-slate-500 font-bold leading-relaxed text-sm">
                      {feature.description}
                   </p>
                </div>
@@ -120,37 +119,35 @@ const Home = () => {
          </div>
       </section>
 
-      {/* Platform Action Section */}
-      <section className="py-20 px-6 bg-zinc-50/50 w-full flex flex-col items-center">
-         <div className="text-center mb-16 max-w-4xl mx-auto">
-            <h2 className="text-4xl md:text-[52px] font-black text-[#1e293b] mb-6 tracking-tight">
-               See the platform in action
+      {/* Action Showcase Section */}
+      <section className="py-16 px-6 md:px-10 bg-slate-50/10 w-full flex flex-col items-center border-t border-slate-100/80">
+         <div className="text-center mb-12 max-w-3xl mx-auto">
+            <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 mb-4 tracking-tight uppercase italic">
+               The outreach control deck
             </h2>
-            <p className="text-lg text-zinc-400 font-semibold">
-               Manage your entire outreach workflow from a single, powerful dashboard.
+            <p className="text-base text-slate-400 font-bold">
+               Consolidated intelligence analytics and multi-tier campaign visibility.
             </p>
          </div>
 
-         <div className="w-full max-w-[1440px] relative">
-            <div className="absolute inset-0 bg-brand-primary/10 blur-[120px] rounded-full scale-125 opacity-30" />
-            
-            <div className="relative bg-white border border-zinc-200 shadow-[0_50px_100px_-20px_rgba(0,0,0,0.1)] rounded-[40px] p-4 group overflow-hidden">
-               <div className="bg-[#f8fafc] rounded-[32px] overflow-hidden flex min-h-[640px]">
+         <div className="w-full max-w-[1400px] relative">
+            <div className="relative bg-white border border-slate-100/80 shadow-md rounded-[36px] p-4 group overflow-hidden">
+               <div className="bg-slate-50/40 rounded-[28px] overflow-hidden flex min-h-[540px]">
                   {/* Dashboard Sidebar */}
-                  <div className="w-64 bg-white border-r border-zinc-100 p-6 flex flex-col gap-8 hidden lg:flex">
-                     <div className="px-4 py-3 bg-brand-primary text-white rounded-xl text-sm font-black flex items-center justify-center gap-2 mb-4">
+                  <div className="w-56 bg-white border-r border-slate-100/80 p-5 flex flex-col gap-6 hidden lg:flex select-none">
+                     <div className="px-4 py-3 bg-red-600 text-white rounded-xl text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 mb-2 select-none">
                         New Campaign
                      </div>
-                     <div className="flex flex-col gap-2">
+                     <div className="flex flex-col gap-1.5 select-none">
                         {[
-                           { icon: <LayoutDashboard size={18} />, name: "Dashboard", active: false },
-                           { icon: <Globe size={18} />, name: "Campaigns", active: true },
-                           { icon: <FileText size={18} />, name: "Templates", active: false },
-                           { icon: <Users size={18} />, name: "Contacts", active: false },
-                           { icon: <BarChart3 size={18} />, name: "Analytics", active: false },
-                           { icon: <Settings size={18} />, name: "Settings", active: false },
+                           { icon: <LayoutDashboard size={16} />, name: "Dashboard", active: false },
+                           { icon: <Globe size={16} />, name: "Campaigns", active: true },
+                           { icon: <FileText size={16} />, name: "Templates", active: false },
+                           { icon: <Users size={16} />, name: "Contacts", active: false },
+                           { icon: <BarChart3 size={16} />, name: "Analytics", active: false },
+                           { icon: <Settings size={16} />, name: "Settings", active: false },
                         ].map((item, i) => (
-                           <div key={i} className={`flex items-center gap-3 px-4 py-3.5 rounded-xl font-bold text-sm transition-all cursor-pointer ${item.active ? 'bg-zinc-50 text-brand-primary shadow-sm border border-zinc-100' : 'text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50/50'}`}>
+                           <div key={i} className={`flex items-center gap-3 px-3.5 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all cursor-pointer ${item.active ? 'bg-red-50 text-red-600 shadow-sm border border-red-100' : 'text-slate-400 hover:text-slate-700 hover:bg-slate-50/40'}`}>
                               {item.icon}
                               {item.name}
                            </div>
@@ -159,66 +156,55 @@ const Home = () => {
                   </div>
 
                   {/* Dashboard Main Content */}
-                  <div className="flex-grow p-10 flex flex-col gap-10">
+                  <div className="flex-grow p-8 flex flex-col gap-8">
                      <div className="flex items-center justify-between">
-                        <h3 className="text-[28px] font-black text-[#1e293b] tracking-tight">Active Campaigns</h3>
+                        <h3 className="text-xl md:text-2xl font-extrabold text-slate-800 tracking-tight uppercase italic">Active Campaigns</h3>
                      </div>
 
-                     <div className="flex flex-col lg:flex-row gap-8">
+                     <div className="flex flex-col lg:flex-row gap-6">
                         {/* Table Mockup */}
-                        <div className="flex-grow bg-white border border-zinc-100 rounded-[24px] shadow-sm p-8">
+                        <div className="flex-grow bg-white border border-slate-100/80 rounded-3xl shadow-sm p-6 select-none">
                            <table className="w-full text-left">
                               <thead>
-                                 <tr className="text-zinc-400 text-[11px] font-bold uppercase tracking-widest border-b border-zinc-50">
-                                    <th className="pb-5">Campaign Name</th>
-                                    <th className="pb-5">Status</th>
-                                    <th className="pb-5">Sent</th>
-                                    <th className="pb-5 text-right">Replies</th>
+                                 <tr className="text-slate-400 text-[10px] font-bold uppercase tracking-widest border-b border-slate-50">
+                                    <th className="pb-4">Campaign Title</th>
+                                    <th className="pb-4">State</th>
+                                    <th className="pb-4">Total</th>
+                                    <th className="pb-4 text-right">Ratio</th>
                                  </tr>
                               </thead>
-                              <tbody className="text-sm">
+                              <tbody className="text-xs">
                                  {[
-                                    { name: "Q3 Lead Gen", status: "Running", sent: "1248", replies: "45%" },
-                                    { name: "Q2 Lead Gen", status: "Paused", sent: "3215", replies: "31%" },
-                                    { name: "Partnership Outreach", status: "Paused", sent: "328", replies: "48%" },
-                                    { name: "Event Follow-up", status: "Paused", sent: "231", replies: "52%" },
+                                    { name: "Q4 High-Intent", status: "Running", sent: "1248", replies: "45%" },
+                                    { name: "Global Enterprise", status: "Running", sent: "3215", replies: "31%" },
+                                    { name: "Seed-stage Prospecting", status: "Paused", sent: "328", replies: "48%" },
                                  ].map((row, i) => (
-                                    <tr key={i} className="text-[#1e293b] font-bold group border-b border-zinc-50 last:border-0 hover:bg-zinc-50/50">
-                                       <td className="py-5 flex items-center gap-3">
-                                          <div className="w-2 h-2 rounded-full bg-indigo-200" />
+                                    <tr key={i} className="text-slate-800 font-bold group border-b border-slate-50/50 last:border-0 hover:bg-slate-50/40 select-none">
+                                       <td className="py-4 flex items-center gap-2 select-text">
+                                          <div className="w-1.5 h-1.5 rounded-full bg-red-400" />
                                           {row.name}
                                        </td>
-                                       <td className="py-5 font-black text-[10px] uppercase">
-                                          <span className={`px-3 py-1.5 rounded-full ${row.status === 'Running' ? 'bg-green-50 text-green-600' : 'bg-orange-50 text-orange-600'}`}>
+                                       <td className="py-4 font-black text-[9px] uppercase">
+                                          <span className={`px-2.5 py-1 rounded-xl border ${row.status === 'Running' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
                                              {row.status}
                                           </span>
                                        </td>
-                                       <td className="py-5 text-zinc-400 font-medium">{row.sent}</td>
-                                       <td className="py-5 text-right text-brand-primary font-black">{row.replies}</td>
+                                       <td className="py-4 text-slate-400 font-bold">{row.sent}</td>
+                                       <td className="py-4 text-right text-red-600 font-extrabold">{row.replies}</td>
                                     </tr>
                                  ))}
                               </tbody>
                            </table>
                         </div>
 
-                        {/* Charts Mockup */}
-                        <div className="w-full lg:w-[340px] flex flex-col gap-8">
-                            <div className="aspect-square bg-white border border-zinc-100 rounded-[24px] p-8 flex flex-col items-center justify-center text-center shadow-sm">
-                                <div className="relative w-40 h-40 flex items-center justify-center mb-6">
-                                    <div className="absolute inset-0 rounded-full border-[12px] border-zinc-50 border-t-brand-primary animate-[spin_3s_linear_infinite]" />
-                                    <div className="text-3xl font-black text-brand-primary">48%</div>
+                        {/* Chart/Conversion Mockup */}
+                        <div className="w-full lg:w-[280px] flex flex-col gap-6 select-none">
+                            <div className="aspect-square bg-white border border-slate-100/80 rounded-3xl p-6 flex flex-col items-center justify-center text-center shadow-sm">
+                                <div className="relative w-28 h-28 flex items-center justify-center mb-4">
+                                    <div className="absolute inset-0 rounded-full border-8 border-slate-50 border-t-red-600 animate-[spin_4s_linear_infinite]" />
+                                    <div className="text-2xl font-extrabold text-red-600">48%</div>
                                 </div>
-                                <p className="text-zinc-400 font-bold uppercase text-[10px] tracking-widest">Average Reply Rate</p>
-                            </div>
-                            <div className="flex-grow bg-white border border-zinc-100 rounded-[24px] p-8 flex flex-col justify-end shadow-sm">
-                                <div className="flex items-end gap-3 h-24 mb-6">
-                                    {[30, 70, 45, 90, 60, 35].map((h, i) => (
-                                       <div key={i} className="flex-grow bg-brand-primary/10 rounded-full relative group cursor-pointer overflow-hidden border border-brand-primary/5">
-                                          <div style={{ height: `${h}%` }} className="absolute bottom-0 left-0 right-0 bg-brand-primary rounded-full transition-all group-hover:scale-110" />
-                                       </div>
-                                    ))}
-                                </div>
-                                <p className="text-[#1e293b] font-black text-center text-sm">Campaign Evolution</p>
+                                <p className="text-slate-400 font-bold uppercase text-[9px] tracking-widest leading-none">Average Response Ratio</p>
                             </div>
                         </div>
                      </div>

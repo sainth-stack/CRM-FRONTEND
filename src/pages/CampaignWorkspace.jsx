@@ -13,6 +13,7 @@ import {
 import axios from "axios";
 import API_BASE_URL from "../config";
 import LeadLedger from "./LeadLedger";
+import ResearchTabs from "./ResearchTabs";
 
 const formatTimeAgo = (timestamp) => {
   if (!timestamp) return "Never";
@@ -26,8 +27,13 @@ const formatTimeAgo = (timestamp) => {
   return date.toLocaleDateString();
 };
 
-const ensureAbsoluteUrl = (url) => {
-  if (!url || url === "#" || url === "N/A") return "#";
+const ensureAbsoluteUrl = (url, fallbackName = "") => {
+  if (!url || url === "#" || url === "N/A" || url === "unknown") {
+    if (fallbackName) {
+      return `https://www.linkedin.com/company/${fallbackName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+    }
+    return "#";
+  }
   if (url.startsWith("http://") || url.startsWith("https://")) return url;
   return `https://${url}`;
 };
@@ -89,6 +95,7 @@ const CampaignWorkspace = () => {
   const [campaign, setCampaign] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("research");
+  const [researchTab, setResearchTab] = useState("mission_briefing");
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [selectedDraft, setSelectedDraft] = useState(null);
   const [draftEditData, setDraftEditData] = useState({ subject: "", body: "", email: "" });
@@ -150,7 +157,7 @@ const CampaignWorkspace = () => {
 
   useEffect(() => {
     fetchCampaignDetails();
-    const interval = setInterval(fetchCampaignDetails, 2000);
+    const interval = setInterval(fetchCampaignDetails, 15000);
     return () => clearInterval(interval);
   }, [fetchCampaignDetails]);
 
@@ -238,62 +245,59 @@ const CampaignWorkspace = () => {
             <ArrowLeft size={20} strokeWidth={3} />
           </Link>
           <div className="h-8 w-[1px] bg-slate-200" />
-          <div className="flex flex-col">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Active Mission</span>
-            <h1 className="text-lg font-black text-slate-900 tracking-tight italic uppercase truncate max-w-[200px]">
-              {campaign.name}
-            </h1>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center font-bold text-sm">
+              {campaign.name ? campaign.name[0].toUpperCase() : 'A'}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Active Mission</span>
+              <h1 className="text-lg font-bold text-slate-900 tracking-tight uppercase truncate max-w-[200px]">
+                {campaign.name}
+              </h1>
+            </div>
           </div>
         </div>
 
-        <nav className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-2xl border border-slate-100">
+        <nav className="flex items-center gap-8">
           <button 
             onClick={() => setActiveTab("research")}
-            className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-[13px] font-black uppercase tracking-wider transition-all ${activeTab === "research" ? "bg-white text-brand-primary shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+            className={`relative flex items-center gap-2 px-1 py-4 text-sm font-semibold tracking-wider transition-all ${activeTab === "research" ? "text-slate-900" : "text-slate-500 hover:text-slate-800"}`}
           >
-            <Search size={16} strokeWidth={3} />
             Research
+            {activeTab === "research" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500" />}
           </button>
 
           <button 
             onClick={() => setActiveTab("dashboard")}
-            className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-[13px] font-black uppercase tracking-wider transition-all ${activeTab === "dashboard" ? "bg-white text-brand-primary shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
+            className={`relative flex items-center gap-2 px-1 py-4 text-sm font-semibold tracking-wider transition-all ${activeTab === "dashboard" ? "text-slate-900" : "text-slate-500 hover:text-slate-800"}`}
           >
-            <LayoutDashboard size={16} strokeWidth={3} />
             Dashboard
+            {activeTab === "dashboard" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500" />}
           </button>
-          
-          <AnimatePresence>
-            {hasDrafts && (
-              <motion.div 
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="flex items-center gap-2"
-              >
-                <button 
-                  onClick={() => setActiveTab("monitor")}
-                  className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-[13px] font-black uppercase tracking-wider transition-all ${activeTab === "monitor" ? "bg-white text-brand-primary shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
-                >
-                  <Monitor size={16} strokeWidth={3} />
-                  Monitor
-                </button>
-                <button 
-                  onClick={() => setActiveTab("discovery")}
-                  className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-[13px] font-black uppercase tracking-wider transition-all ${activeTab === "discovery" ? "bg-white text-brand-primary shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
-                >
-                  <PhoneCall size={16} strokeWidth={3} />
-                  Discovery Call
-                </button>
-                <button 
-                  onClick={() => setActiveTab("report")}
-                  className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-[13px] font-black uppercase tracking-wider transition-all ${activeTab === "report" ? "bg-white text-brand-primary shadow-sm" : "text-slate-400 hover:text-slate-600"}`}
-                >
-                  <FileBarChart size={16} strokeWidth={3} />
-                  Report
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+
+          <button 
+            onClick={() => setActiveTab("monitor")}
+            className={`relative flex items-center gap-2 px-1 py-4 text-sm font-semibold tracking-wider transition-all ${activeTab === "monitor" ? "text-slate-900" : "text-slate-500 hover:text-slate-800"}`}
+          >
+            Monitor
+            {activeTab === "monitor" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500" />}
+          </button>
+
+          <button 
+            onClick={() => setActiveTab("discovery")}
+            className={`relative flex items-center gap-2 px-1 py-4 text-sm font-semibold tracking-wider transition-all ${activeTab === "discovery" ? "text-slate-900" : "text-slate-500 hover:text-slate-800"}`}
+          >
+            Discovery Call
+            {activeTab === "discovery" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500" />}
+          </button>
+
+          <button 
+            onClick={() => setActiveTab("report")}
+            className={`relative flex items-center gap-2 px-1 py-4 text-sm font-semibold tracking-wider transition-all ${activeTab === "report" ? "text-slate-900" : "text-slate-500 hover:text-slate-800"}`}
+          >
+            Report
+            {activeTab === "report" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500" />}
+          </button>
         </nav>
 
         <div className="flex items-center gap-6">
@@ -315,464 +319,55 @@ const CampaignWorkspace = () => {
         </div>
       </header>
 
-      <main className="pt-32 pb-20 px-10 max-w-[1600px] mx-auto">
+      <main className={
+        activeTab === "dashboard" || activeTab === "research"
+          ? "pt-20 h-screen overflow-hidden bg-[#f8fafc]"
+          : "pt-24 pb-20 px-10 max-w-[1600px] mx-auto"
+      }>
         {activeTab === "dashboard" && (
           <LeadLedger campaign={campaign} />
         )}
 
         {activeTab === "research" && (
-          <div className="flex flex-col gap-12">
-            {/* Quadrant 1: Mission Briefing (Analyzer + User Intel) */}
-            <section className="w-full">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-10 h-10 bg-brand-primary/10 rounded-xl flex items-center justify-center text-brand-primary">
-                  <Bot size={20} strokeWidth={3} />
-                </div>
-                <h2 className="text-xl font-black text-slate-900 uppercase italic tracking-tight">Mission Strategic Briefing</h2>
-              </div>
-              
-              <div className="bg-white rounded-[40px] border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-                <div className="p-10 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between">
-                  {campaign.user_intel && campaign.user_intel.company_name !== "Synchronizing Identity..." ? (
-                    <>
-                      <div className="flex items-center gap-6">
-                        <div>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Corporate Identity Profile</p>
-                          <div className="flex items-center gap-4">
-                            <h3 className="text-3xl font-black text-slate-900 italic uppercase tracking-tighter">
-                              {campaign.user_intel.company_name}
-                            </h3>
-                            <a 
-                              href={ensureAbsoluteUrl(campaign.user_intel.website)} 
-                              target="_blank" rel="noreferrer"
-                              className="p-3 bg-brand-primary text-white rounded-xl hover:scale-105 active:scale-95 transition-all shadow-lg shadow-brand-primary/20"
-                            >
-                              <ExternalLink size={18} strokeWidth={3} />
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right hidden md:block">
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Campaign Integrity</p>
-                        <span className="px-4 py-1.5 bg-emerald-50 text-emerald-600 rounded-lg text-[11px] font-black border border-emerald-100">
-                           VALIDATED
-                        </span>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex flex-col gap-4 w-full">
-                       <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Loader2 size={18} className="text-brand-primary animate-spin" />
-                            <span className="text-sm font-black text-slate-900 uppercase italic tracking-tight">Parallel Synchronizer Active</span>
-                          </div>
-                          <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest animate-pulse">Initializing v3 High-Aesthetic Agents</span>
-                       </div>
-                       <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                          <motion.div 
-                            initial={{ width: "10%" }}
-                            animate={{ width: "70%" }}
-                            transition={{ duration: 10, ease: "easeInOut" }}
-                            className="h-full bg-brand-primary"
-                          />
-                       </div>
-                       <div className="flex items-center justify-between text-[9px] font-black text-slate-400 uppercase tracking-widest">
-                          <div className="flex items-center gap-2">
-                             <div className={`w-1.5 h-1.5 rounded-full ${campaign.user_intel?.company_name !== "Synchronizing Identity..." ? 'bg-emerald-500' : 'bg-slate-300 animate-pulse'}`} />
-                             Identity Research
-                          </div>
-                          <div className="flex items-center gap-2">
-                             <div className={`w-1.5 h-1.5 rounded-full ${campaign.target_industry ? 'bg-emerald-500' : 'bg-slate-300 animate-pulse'}`} />
-                             Targeting Protocol Initialized
-                          </div>
-                       </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
-                  {/* Left Column: Deep Intelligence Analysis */}
-                  <div className="lg:col-span-8 p-10 space-y-10">
-                    <div>
-                      <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6 underline decoration-brand-primary/30 underline-offset-8">Market Presence Analytics</h4>
-                      <p className="text-slate-600 font-semibold leading-relaxed text-[15px] whitespace-pre-wrap">
-                        {campaign.user_intel?.deep_research || "Synchronizing corporate intelligence logs..."}
-                      </p>
-                    </div>
-
-                    <div>
-                      <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6 underline decoration-brand-primary/30 underline-offset-8">Solution Portfolio & Value Props</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {campaign.user_intel ? (
-                          JSON.parse(campaign.user_intel.offerings || "[]").map((o, idx) => (
-                            <span key={idx} className="bg-slate-50 border border-slate-100 px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:border-brand-primary/30 transition-colors">
-                              {o}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-slate-300 italic text-sm">Identifying core capabilities...</span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Right Column: Targeting Parameters (Analysis Hub) */}
-                  <div className="lg:col-span-4 p-10 bg-slate-50/20">
-                    <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-8 border-b border-slate-100 pb-4">Mission Targeting Parameters</h4>
-                    
-                    {campaign.target_industry ? (
-                      <div className="space-y-6">
-                        {[
-                          { label: "Target Sector", value: campaign.target_industry },
-                          { label: "Geographic Location", value: campaign.target_location || "Global" }
-                        ].map((filter, i) => (
-                          <div key={i} className="flex flex-col gap-1">
-                            <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{filter.label}</span>
-                            <span className="text-sm font-black text-slate-800 uppercase italic tracking-tight">{filter.value || "Universal"}</span>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                       <div className="flex flex-col items-center gap-4 py-20 text-slate-300">
-                          <Search size={32} strokeWidth={1.5} className="animate-pulse" />
-                          <p className="text-[10px] font-black uppercase tracking-widest">Calibrating Parameters...</p>
-                       </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* Quadrant 2: Target Intelligence Grid */}
-            <section className="w-full">
-               <div className="flex items-center justify-between mb-8">
-                 <div className="flex items-center gap-4">
-                  <div className="w-10 h-10 bg-emerald-500/10 rounded-xl flex items-center justify-center text-emerald-500">
-                    <Users size={20} strokeWidth={3} />
-                  </div>
-                  <h2 className="text-xl font-black text-slate-900 uppercase italic tracking-tight">Lead Reconnaissance & Pipeline</h2>
-                 </div>
-                 <div className="px-4 py-2 bg-slate-100 rounded-xl text-[11px] font-black text-slate-500 uppercase tracking-widest border border-slate-200">
-                    {campaign.target_companies_count} Vetted Organizations ({campaign.target_companies.length} Raw)
-                 </div>
-               </div>
-
-               {campaign.target_companies.length === 0 ? (
-                 <div className="py-32 flex flex-col items-center justify-center gap-6 bg-slate-50 rounded-[40px] border border-dashed border-slate-200">
-                    <Loader2 size={40} className="text-brand-primary animate-spin" strokeWidth={3} />
-                    <p className="text-slate-400 font-black uppercase text-xs tracking-widest">Hunting for lead artifacts...</p>
-                 </div>
-               ) : (
-                <div className="space-y-12">
-                   {/* Approved Companies Grid */}
-                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                     {campaign.target_companies.filter(co => co.status !== 'REJECTED').map((company) => (
-                       <motion.div 
-                         key={company.id}
-                         whileHover={{ y: -5, scale: 1.01, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
-                         transition={{ type: "spring", stiffness: 300 }}
-                         onClick={() => setSelectedCompany(company)}
-                        className={`bg-white rounded-[40px] p-10 cursor-pointer group relative overflow-hidden transition-all shadow-sm ${
-                          company.status === 'RESEARCHING_STAKEHOLDERS' 
-                            ? 'ring-2 ring-blue-400 ring-offset-4 bg-blue-50/30' 
-                            : ''
-                        }`}
-                      >
-                         {company.status === 'RESEARCHING_STAKEHOLDERS' && (
-                           <div className="absolute top-6 left-6 flex items-center gap-1.5 px-2.5 py-1 bg-blue-600 rounded-full animate-pulse shadow-lg z-20">
-                             <div className="w-1.5 h-1.5 bg-white rounded-full animate-ping" />
-                             <span className="text-[9px] font-black text-white uppercase tracking-widest">Scanning</span>
-                           </div>
-                         )}
-                         <div className="absolute top-0 right-0 p-8 text-slate-200">
-                            <Maximize2 size={20} strokeWidth={3} />
-                         </div>
-
-                         <div className="space-y-6">
-                            <div className="flex items-center justify-between gap-4 pr-10">
-                               <h4 className="text-2xl font-black text-slate-900 tracking-tighter leading-tight truncate uppercase italic">
-                                  {company.name}
-                               </h4>
-                               <span className="flex-shrink-0 px-3 py-1 text-[11px] font-black rounded-lg border bg-brand-primary/10 text-brand-primary border-brand-primary/10">
-                                  APPROVED
-                               </span>
-                            </div>
-
-                            <div className="space-y-4">
-                               <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2">Intelligence Artifacts</p>
-                               <div className="flex flex-col gap-3">
-                                  <div className="flex items-center gap-3">
-                                     <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
-                                        <Monitor size={14} />
-                                     </div>
-                                     <p className="text-xs font-bold text-slate-600 truncate">{company.location || "Location Synchronizing..."}</p>
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                     <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
-                                        <Mail size={14} />
-                                     </div>
-                                     <p className="text-xs font-bold text-slate-600 truncate">{company.contact_email || "Email Discovery Active..."}</p>
-                                  </div>
-                                  <div className="flex items-center gap-3">
-                                     <div className="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400">
-                                        <PhoneCall size={14} />
-                                     </div>
-                                     <p className="text-xs font-bold text-slate-600 truncate">{company.contact_number || "Awaiting Contact Probe..."}</p>
-                                  </div>
-                               </div>
-                               <p className="text-slate-500 font-semibold text-sm leading-relaxed line-clamp-3 italic pt-2">
-                                  "{company.deep_research || "Conducting in-depth organization analysis..."}"
-                               </p>
-                            </div>
-                            
-                            <div className="flex items-center gap-3 pt-6 border-t border-slate-50">
-                               <a 
-                                 href={ensureAbsoluteUrl(company.website)} target="_blank" rel="noreferrer" 
-                                 className="flex-grow flex items-center justify-center py-3.5 bg-slate-50 rounded-2xl text-slate-400 hover:bg-brand-primary/10 hover:text-brand-primary hover:scale-[1.05] active:scale-95 transition-all"
-                                 onClick={(e) => e.stopPropagation()}
-                               >
-                                 <Globe size={20} />
-                               </a>
-                               <a 
-                                 href={ensureAbsoluteUrl(company.linkedin)} target="_blank" rel="noreferrer" 
-                                 className="flex-grow flex items-center justify-center py-3.5 bg-slate-50 rounded-2xl text-slate-400 hover:bg-[#0077b5]/10 hover:text-[#0077b5] hover:scale-[1.05] active:scale-95 transition-all"
-                                 onClick={(e) => e.stopPropagation()}
-                               >
-                                 <Linkedin size={20} />
-                               </a>
-                            </div>
-                         </div>
-                      </motion.div>
-                     ))}
-                   </div>
-                   
-                   {/* Rejected Companies Grid */}
-                   {campaign.target_companies.some(co => co.status === 'REJECTED') && (
-                     <div className="pt-10 border-t-2 border-dashed border-slate-200">
-                        <div className="flex items-center gap-3 mb-8 opacity-70">
-                           <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-500">
-                              <AlertCircle size={20} strokeWidth={3} />
-                           </div>
-                           <div>
-                             <h3 className="text-lg font-black text-slate-900 uppercase italic tracking-tight">Rejected Artifacts</h3>
-                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Failed strategic alignment criteria</p>
-                           </div>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 opacity-60 grayscale hover:grayscale-0 transition-all duration-500">
-                          {campaign.target_companies.filter(co => co.status === 'REJECTED').map((company) => (
-                            <div 
-                              key={company.id}
-                              className="bg-slate-50 rounded-[40px] p-10 relative overflow-hidden border border-slate-200"
-                            >
-                               <div className="space-y-6">
-                                  <div className="flex items-center justify-between gap-4 pr-10">
-                                     <h4 className="text-2xl font-black text-slate-400 tracking-tighter leading-tight truncate uppercase italic">
-                                        {company.name}
-                                     </h4>
-                                     <span className="flex-shrink-0 px-3 py-1 text-[11px] font-black rounded-lg border bg-red-50 text-red-500 border-red-100">
-                                        REJECTED
-                                     </span>
-                                  </div>
-
-                                  <div className="space-y-4">
-                                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 pb-2">Intelligence Artifacts</p>
-                                     <div className="flex flex-col gap-3">
-                                        <div className="flex items-center gap-3">
-                                           <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-slate-400 shadow-sm border border-slate-100">
-                                              <Monitor size={14} />
-                                           </div>
-                                           <p className="text-xs font-bold text-slate-500 truncate">{company.location || "Location Synchronizing..."}</p>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                           <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-slate-400 shadow-sm border border-slate-100">
-                                              <Mail size={14} />
-                                           </div>
-                                           <p className="text-xs font-bold text-slate-500 truncate">{company.contact_email || "Email Discovery Active..."}</p>
-                                        </div>
-                                     </div>
-                                     <p className="text-slate-500 font-semibold text-sm leading-relaxed line-clamp-3 italic pt-2">
-                                        "{company.deep_research || "Conducting in-depth organization analysis..."}"
-                                     </p>
-                                  </div>
-                               </div>
-                            </div>
-                          ))}
-                        </div>
-                     </div>
-                   )}
-                </div>
-               )}
-            </section>
-
-            {/* Quadrant 3: Stakeholder Mapping */}
-            <section className="w-full">
-               <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center text-indigo-500">
-                      <Users size={20} strokeWidth={3} />
-                    </div>
-                    <h2 className="text-xl font-black text-slate-900 uppercase italic tracking-tight">Decision Maker & Stakeholder Intel</h2>
-                  </div>
-                  <div className="px-4 py-2 bg-slate-100 rounded-xl text-[11px] font-black text-slate-500 uppercase tracking-widest border border-slate-200">
-                    {campaign.dms_count || 0} Qualified Stakeholders
-                 </div>
-               </div>
-
-               {campaign.dms_count === 0 ? (
-                 <div className="py-32 flex flex-col items-center justify-center gap-6 bg-slate-50 rounded-[40px] border border-dashed border-slate-200">
-                    <Loader2 size={40} className="text-indigo-500 animate-spin" strokeWidth={3} />
-                    <p className="text-slate-400 font-black uppercase text-xs tracking-widest">Identifying high-value stakeholders...</p>
-                 </div>
-               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                   {campaign.dms.map((dm) => {
-                     const company = campaign.target_companies.find(c => c.id === dm.target_company_id);
-                     return (
-                       <motion.div 
-                         key={dm.id}
-                         whileHover={{ y: -5, scale: 1.01, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
-                         transition={{ type: "spring", stiffness: 300 }}
-                         className="bg-white rounded-[40px] p-10 relative overflow-hidden transition-all group shadow-sm"
-                       >
-                          <div className="flex flex-col h-full space-y-8">
-                             <div className="flex items-center gap-5">
-                                <div className="h-16 w-16 rounded-3xl bg-indigo-50 flex items-center justify-center text-indigo-500 font-black text-2xl uppercase shadow-sm">
-                                   {dm.name.charAt(0)}
-                                </div>
-                                <div>
-                                   <h4 className="text-xl font-black text-slate-900 tracking-tighter leading-tight uppercase italic">{dm.name}</h4>
-                                   <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{dm.position}</p>
-                                </div>
-                             </div>
-
-                             <div className="space-y-4">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-2">Corporate Role & Influence</p>
-                                <div className="flex items-center gap-2">
-                                   <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                                   <p className="text-sm font-black text-slate-700 uppercase italic tracking-tight">{company?.name || "Target Organization"}</p>
-                                </div>
-                                <p className="text-slate-500 font-semibold text-sm leading-relaxed italic line-clamp-2">
-                                   "{dm.relevance_explanation || dm.similarity_score?.reason || "Extracting strategic alignment markers..."}"
-                                </p>
-                             </div>
-
-                             <div className="pt-6 border-t border-slate-50 mt-auto">
-                                <a 
-                                  href={ensureAbsoluteUrl(dm.linkedin)} target="_blank" rel="noreferrer"
-                                  className="w-full flex items-center justify-center gap-3 py-3.5 bg-slate-50 rounded-2xl text-slate-400 hover:bg-[#0077b5]/10 hover:text-[#0077b5] hover:scale-[1.02] active:scale-95 transition-all font-black text-[11px] uppercase tracking-widest"
-                                >
-                                   <Linkedin size={18} /> Network Protocol
-                                </a>
-                             </div>
-                          </div>
-                       </motion.div>
-                     );
-                   })}
-                </div>
-               )}
-            </section>
-
-            {/* Quadrant 4: Email Arsenal Preview */}
-            <section className="w-full">
-               <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-brand-primary/10 rounded-xl flex items-center justify-center text-brand-primary">
-                      <Mail size={20} strokeWidth={3} />
-                    </div>
-                    <h2 className="text-xl font-black text-slate-900 uppercase italic tracking-tight">Outreach Protocol Development</h2>
-                  </div>
-                  <div className="px-4 py-2 bg-slate-100 rounded-xl text-[11px] font-black text-slate-500 uppercase tracking-widest border border-slate-200">
-                    {campaign.drafts_count || 0} Engagement Modules
-                 </div>
-               </div>
-
-               {campaign.drafts_count === 0 ? (
-                 <div className="py-32 flex flex-col items-center justify-center gap-6 bg-slate-50 rounded-[40px] border border-dashed border-slate-200">
-                    <Loader2 size={40} className="text-brand-primary animate-spin" strokeWidth={3} />
-                    <p className="text-slate-400 font-black uppercase text-xs tracking-widest">Generating personalized outreach protocols...</p>
-                 </div>
-               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                   {campaign.drafts.map((draft) => {
-                     const dm = campaign.dms.find(d => d.id === draft.decision_maker_id);
-                     const company = campaign.target_companies.find(c => c.id === dm?.target_company_id);
-                     const prospectEmail = dm?.email || `${dm?.name.toLowerCase().replace(/ /g, ".")}@${company?.website?.replace(/(https?:\/\/|www\.|\/)/g, "")}`;
-                     
-                     return (
-                       <motion.div 
-                         key={draft.id}
-                         onClick={() => setActiveTab("monitor")}
-                         whileHover={{ y: -5, scale: 1.01, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
-                         transition={{ type: "spring", stiffness: 300 }}
-                         className="bg-white rounded-[40px] p-10 relative overflow-hidden transition-all group flex flex-col h-[460px] cursor-pointer shadow-sm"
-                       >
-                          <div className="flex flex-col h-full">
-                             <div className="flex items-start justify-between mb-8">
-                                <div className="space-y-1">
-                                   <p className="text-[10px] font-black text-brand-primary uppercase tracking-widest">Protocol Stakeholder</p>
-                                   <h4 className="text-xl font-black text-slate-900 tracking-tighter uppercase italic">{dm?.name}</h4>
-                                   <div className="flex flex-col gap-0.5">
-                                      <p className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">{company?.name}</p>
-                                      <p className="text-[10px] font-bold text-slate-400 italic lowercase">{prospectEmail}</p>
-                                   </div>
-                                </div>
-                                <div className="h-10 w-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 group-hover:bg-brand-primary/10 group-hover:text-brand-primary transition-colors">
-                                   <Users size={20} />
-                                </div>
-                             </div>
-
-                             <div className="space-y-4 flex-grow overflow-hidden">
-                                <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 group-hover:border-brand-primary/20 transition-colors">
-                                   <p className="text-[9px] font-black text-slate-300 uppercase underline decoration-brand-primary/30 mb-2">Engagement Subject Line</p>
-                                   <p className="text-sm font-black text-slate-900 tracking-tight leading-snug line-clamp-1">{draft.subject}</p>
-                                </div>
-                                <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex-grow group-hover:border-brand-primary/20 transition-colors">
-                                   <p className="text-[9px] font-black text-slate-300 uppercase underline decoration-brand-primary/30 mb-3">Narrative Snippet</p>
-                                   <p className="text-[13px] font-semibold text-slate-600 italic leading-relaxed line-clamp-4">
-                                      "{draft.body}"
-                                   </p>
-                                </div>
-                             </div>
-
-                             <div className="pt-8 mt-auto flex items-center justify-end border-t border-slate-50">
-                                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest group-hover:text-brand-primary transition-colors">Review Engagement Protocol →</p>
-                             </div>
-                          </div>
-                       </motion.div>
-                     );
-                   })}
-                </div>
-               )}
-            </section>
-          </div>
+          <ResearchTabs 
+            campaign={campaign}
+            researchTab={researchTab}
+            setResearchTab={setResearchTab}
+            setSelectedCompany={setSelectedCompany}
+            setSelectedDraft={setSelectedDraft}
+            setDraftEditData={setDraftEditData}
+            setActiveTab={setActiveTab}
+          />
         )}
 
         {activeTab === "monitor" && (
-           <div className="max-w-[1440px] mx-auto space-y-10">
-              <div className="flex items-center justify-between mb-10">
+           <div className="max-w-[1440px] mx-auto space-y-12">
+              {/* Part 1: Page Header */}
+              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8 select-none">
                  <div>
-                    <h2 className="text-3xl font-black text-slate-900 uppercase italic tracking-tighter mb-2">Outreach Review & Launch</h2>
-                    <p className="text-slate-400 font-bold">Review your personalized drafts and start your outreach campaign.</p>
+                    <span className="px-3 py-1 bg-red-50 text-red-600 border border-red-100 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm self-start mb-2 inline-block">Refinement Suite</span>
+                    <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight uppercase italic">Outreach Review & Launch</h2>
+                    <p className="text-slate-400 font-semibold text-sm">Review highly personalized messaging drafts and initiate outreach.</p>
                  </div>
                  <button 
                    onClick={handleBatchDispatch}
-                   className="px-8 py-4 bg-brand-primary text-white rounded-2xl font-black text-[13px] uppercase tracking-widest shadow-xl shadow-brand-primary/20 hover:scale-[1.05] active:scale-95 transition-all flex items-center gap-3"
+                   className="px-6 py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-[18px] font-bold text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3 shadow-lg shadow-red-500/10 shrink-0"
                  >
-                    <Send size={18} strokeWidth={3} />
+                    <Send size={16} strokeWidth={3} />
                     Synchronized Batch Dispatch
                  </button>
               </div>
 
-              {/* Engagement Tracker: Live Performance Hub */}
-              <div className="bg-white rounded-[40px] border border-slate-200 overflow-hidden shadow-sm mb-12">
-                <div className="px-10 py-8 border-b border-slate-100 bg-slate-50/30 flex items-center justify-between">
+              {/* Part 2: Engagement Tracker Table */}
+              <div className="bg-white rounded-[32px] border border-slate-100/80 overflow-hidden shadow-sm mb-12 select-none">
+                <div className="px-8 py-6 border-b border-slate-50 bg-slate-50/20 flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-brand-primary/10 rounded-xl flex items-center justify-center text-brand-primary">
-                      <FileBarChart size={20} strokeWidth={3} />
+                    <div className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center border border-red-100/60 shadow-sm">
+                      <FileBarChart size={18} strokeWidth={3} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-black text-slate-900 uppercase italic tracking-tight">Active Engagement Tracker</h3>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Real-time Outreach Lifecycle Monitoring</p>
+                      <h3 className="text-base font-extrabold text-slate-900 uppercase italic tracking-tight leading-none">Active Engagement Tracker</h3>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Real-time Outreach Lifecycle Monitoring</p>
                     </div>
                   </div>
                 </div>
@@ -780,62 +375,69 @@ const CampaignWorkspace = () => {
                 <div className="overflow-x-auto">
                   <table className="w-full text-left border-collapse">
                     <thead>
-                      <tr className="bg-slate-50/50">
-                        <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Prospect</th>
-                        <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Organization</th>
-                        <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Status</th>
-                        <th className="px-10 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Mission Pulse</th>
+                      <tr className="bg-slate-50/30">
+                        <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Prospect</th>
+                        <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Organization</th>
+                        <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Status</th>
+                        <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Mission Pulse</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100">                       {(campaign.dms || []).filter(dm => !["NEW", "SYNCED"].includes(dm.status)).length === 0 ? (
+                    <tbody className="divide-y divide-slate-50">
+                       {(campaign.dms || []).filter(dm => !["NEW", "SYNCED"].includes(dm.status)).length === 0 ? (
                         <tr>
-                          <td colSpan="4" className="px-10 py-20 text-center">
-                            <div className="flex flex-col items-center gap-4 text-slate-300">
-                              <Loader2 className="animate-spin" size={32} />
-                              <p className="text-xs font-black uppercase tracking-widest">Awaiting first deployment...</p>
+                          <td colSpan="4" className="px-8 py-16 text-center">
+                            <div className="flex flex-col items-center gap-3 text-slate-300">
+                              <Loader2 className="animate-spin text-red-500" size={32} />
+                              <p className="text-xs font-bold uppercase tracking-widest">Awaiting first deployment...</p>
                             </div>
                           </td>
                         </tr>
                       ) : (
                         (campaign.dms || []).filter(dm => !["NEW", "SYNCED"].includes(dm.status)).map((dm) => {
-                          // Type-Agnostic Organization Sync Protocol
                           const company = campaign.target_companies.find(c => String(c.id) === String(dm.target_company_id));
                           
-                          // Determine status display
                           let displayStatus = "Waiting for Reply";
                           let statusColor = "bg-blue-50 text-blue-500 border-blue-100";
                           let dotColor = "bg-blue-500";
                           
                           if (dm.status === "TERMINATED") {
                             displayStatus = "Terminated";
-                            statusColor = "bg-slate-100 text-slate-400 border-slate-200";
+                            statusColor = "bg-slate-50 text-slate-400 border-slate-200";
                             dotColor = "bg-slate-300";
                           } else if (dm.status === "MEETING_BOOKED" || dm.status === "DATE_AND_MEETING_SECURED") {
                             displayStatus = "Meeting Booked";
                             statusColor = "bg-emerald-50 text-emerald-600 border-emerald-100";
-                            dotColor = "bg-emerald-500 shadow-emerald-500/20";
+                            dotColor = "bg-emerald-500";
                           } else if (dm.status.includes("DRAFTED")) {
                             displayStatus = "Action Required (Approval)";
-                            statusColor = "bg-orange-50 text-orange-600 border-orange-100";
-                            dotColor = "bg-orange-500 animate-pulse";
+                            statusColor = "bg-amber-50 text-amber-600 border-amber-100";
+                            dotColor = "bg-amber-500 animate-pulse";
                           } else if (dm.status === "DISCOVERY_CALL" || dm.status === "WAITING_FOR_REPLY") {
                             displayStatus = "Discovery Protocol";
                             statusColor = "bg-emerald-50 text-emerald-600 border-emerald-100";
                             dotColor = "bg-emerald-500";
                           }
                           
+                          const initials = (dm.name || "P")
+                            .split(" ")
+                            .filter(Boolean)
+                            .map(w => w[0])
+                            .join("")
+                            .toUpperCase()
+                            .slice(0, 2);
+
                           return (
-                            <tr key={dm.id} className="hover:bg-slate-50/50 transition-colors group">
-                              <td className="px-10 py-6">
-                                <div className="flex items-center gap-4">
-                                  <div className="h-10 w-10 rounded-xl bg-slate-100 flex items-center justify-center font-black text-slate-400 text-xs shadow-sm">
-                                    {dm.name.charAt(0)}
+                            <tr key={dm.id} className="hover:bg-slate-50/40 transition-colors group">
+                              <td className="px-8 py-5">
+                                <div className="flex items-center gap-3.5">
+                                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 text-white flex items-center justify-center font-bold text-xs shadow-sm select-none">
+                                    {initials}
                                   </div>
                                   <div className="flex flex-col">
                                     <div className="flex items-center gap-2">
-                                      <p className="text-sm font-black text-slate-900 tracking-tight uppercase italic">{dm.name}</p>
+                                      <p className="text-sm font-extrabold text-slate-800 tracking-tight leading-none uppercase">{dm.name}</p>
                                       {dm.reply_intent && (
-                                        <span className={`px-2 py-0.5 rounded-md text-[8px] font-black uppercase tracking-tighter border ${
+                                        <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-tighter border ${
                                           dm.reply_intent === 'POSITIVE' ? 'bg-emerald-500 text-white border-emerald-600' :
                                           dm.reply_intent === 'NEGATIVE' ? 'bg-rose-500 text-white border-rose-600' :
                                           'bg-amber-400 text-white border-amber-500'
@@ -844,38 +446,38 @@ const CampaignWorkspace = () => {
                                         </span>
                                       )}
                                     </div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{dm.position || "Stakeholder"}</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{dm.position || "Stakeholder"}</p>
                                   </div>
                                   <button 
                                     onClick={() => setShowHistoryDM(dm)}
-                                    className="p-2 opacity-0 group-hover:opacity-100 hover:bg-white rounded-lg text-slate-300 hover:text-brand-primary transition-all shadow-sm"
+                                    className="p-2 opacity-0 group-hover:opacity-100 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-red-600 transition-all shadow-sm"
                                     title="View Communication History"
                                   >
-                                    <MessageSquare size={14} strokeWidth={3} />
+                                    <MessageSquare size={14} strokeWidth={2.5} />
                                   </button>
                                 </div>
                               </td>
-                              <td className="px-10 py-6">
-                                <div className="flex flex-col gap-1">
-                                  <p className="text-xs font-black text-slate-900 uppercase italic tracking-tight">{company?.name || "Target System"}</p>
-                                  <div className="flex items-center gap-2 text-slate-300">
-                                     <Globe size={10} />
-                                     <span className="text-[8px] font-black uppercase tracking-widest truncate max-w-[120px]">{company?.website?.replace(/(https?:\/\/|www\.|\/)/g, "") || "Direct Connect"}</span>
+                              <td className="px-8 py-5">
+                                <div className="flex flex-col gap-0.5">
+                                  <p className="text-xs font-extrabold text-slate-800 uppercase tracking-tight">{company?.name || "Target Organization"}</p>
+                                  <div className="flex items-center gap-1.5 text-slate-300">
+                                     <Globe size={11} />
+                                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate max-w-[120px]">{company?.website?.replace(/(https?:\/\/|www\.|\/)/g, "") || "Connect"}</span>
                                   </div>
                                 </div>
                               </td>
-                              <td className="px-10 py-6">
+                              <td className="px-8 py-5">
                                 <div 
                                   onClick={() => dm.status.includes("DRAFTED") && scrollToDraft(dm.id)}
-                                  className={`inline-flex items-center gap-2.5 px-3 py-1.5 rounded-lg border ${statusColor} text-[10px] font-black uppercase tracking-widest ${dm.status.includes("DRAFTED") ? "cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-sm" : ""}`}
+                                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border ${statusColor} text-[10px] font-black uppercase tracking-widest ${dm.status.includes("DRAFTED") ? "cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-sm" : ""}`}
                                 >
                                   <div className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
                                   {displayStatus}
                                   {dm.status.includes("DRAFTED") && <ChevronRight size={10} strokeWidth={4} />}
                                 </div>
                               </td>
-                              <td className="px-10 py-6 text-right">
-                                <p className="text-[11px] font-black text-slate-900 uppercase italic tracking-tight">
+                              <td className="px-8 py-5 text-right">
+                                <p className="text-[11px] font-black text-slate-800 uppercase italic tracking-tight">
                                   {(() => {
                                     if (dm.status === "TERMINATED") return "Mission Complete";
                                     if (dm.status === "MEETING_BOOKED" || dm.status === "DATE_AND_MEETING_SECURED") return "Discovery Call Scheduled";
@@ -892,43 +494,38 @@ const CampaignWorkspace = () => {
                                   <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest italic leading-none">
                                     {dm.status.includes("DRAFTED") ? "Awaiting Executive Authorization" : "Awaiting Interaction Signal"}
                                   </p>
-                                  {dm.logs && dm.logs.length > 0 && dm.status.includes("DRAFTED") && (
-                                    <p className="text-[11px] font-semibold text-brand-primary italic max-w-[200px] truncate bg-brand-primary/5 px-2 py-0.5 rounded-md">
-                                      "{(dm.logs.find(l => l.direction === 'RECEIVED')?.body || "").slice(0, 50)}..."
-                                    </p>
-                                  )}
                                 </div>
                               </td>
                             </tr>
                           );
                         })
                       )}
-
                     </tbody>
                   </table>
                 </div>
               </div>
 
-              <div className="flex items-center gap-4 mb-8">
-                 <div className="w-10 h-10 bg-brand-primary/10 rounded-xl flex items-center justify-center text-brand-primary">
-                   <Mail size={20} strokeWidth={3} />
+              {/* Part 3: Pending Approvals */}
+              <div className="flex items-center gap-4 mb-6 select-none">
+                 <div className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center border border-red-100/60 shadow-sm">
+                   <Mail size={18} strokeWidth={3} />
                  </div>
                  <div>
-                   <h3 className="text-lg font-black text-slate-900 uppercase italic tracking-tight">Pending Approvals</h3>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Execute executive authorization</p>
+                    <h3 className="text-base font-extrabold text-slate-900 uppercase italic tracking-tight leading-none">Pending Approvals</h3>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Authorize messaging for deployment</p>
                  </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-20">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-16">
                  {(campaign.drafts || []).filter(d => {
                     const dm = campaign.dms.find(dm => dm.id === d.decision_maker_id);
                     return String(d.status).includes("DRAFTED") && dm?.status !== "TERMINATED";
                  }).length === 0 ? (
-                    <div className="col-span-full py-20 flex flex-col items-center justify-center gap-6 bg-slate-50 rounded-[40px] border border-dashed border-slate-200">
-                      <CheckCircle2 size={48} className="text-emerald-500" />
+                    <div className="col-span-full py-16 flex flex-col items-center justify-center gap-4 bg-slate-50/50 rounded-[32px] border border-dashed border-slate-100/80">
+                      <CheckCircle2 size={40} className="text-emerald-500" />
                       <div className="text-center">
-                        <h4 className="text-lg font-black text-slate-900 uppercase italic tracking-tighter mb-1">Queue Initialized</h4>
-                        <p className="text-slate-400 font-bold text-sm">No modules currently awaiting executive authorization.</p>
+                        <h4 className="text-base font-extrabold text-slate-800 uppercase italic tracking-tight mb-0.5">All Modules Initialized</h4>
+                        <p className="text-slate-400 font-semibold text-xs">No outreach items awaiting authorization.</p>
                       </div>
                     </div>
                  ) : (
@@ -939,6 +536,14 @@ const CampaignWorkspace = () => {
                     const dm = campaign.dms.find(d => d.id === draft.decision_maker_id);
                     const co = campaign.target_companies.find(c => c.id === dm?.target_company_id);
                     const prospectEmail = dm?.email || `${dm?.name.toLowerCase().replace(/ /g, ".")}@${co?.website?.replace(/(https?:\/\/|www\.|\/)/g, "")}`;
+                    
+                    const initials = (dm?.name || "P")
+                      .split(" ")
+                      .filter(Boolean)
+                      .map(w => w[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2);
 
                     return (
                       <motion.div 
@@ -946,77 +551,71 @@ const CampaignWorkspace = () => {
                         id={`draft-card-${draft.id}`}
                         initial={{ opacity: 0, scale: 0.98 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        whileHover={{ y: -5, scale: 1.01, boxShadow: "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)" }}
+                        whileHover={{ y: -4, scale: 1.01 }}
                         onClick={() => {
                            const email = dm?.email || `${dm?.name.toLowerCase().replace(/ /g, ".")}@${co?.website?.replace(/(https?:\/\/|www\.|\/)/g, "")}`;
                            setDraftEditData({ subject: draft.subject, body: draft.body, email: email });
                            setSelectedDraft(draft);
                         }}
-                        className={`bg-white rounded-[40px] p-10 shadow-sm transition-all relative overflow-hidden group cursor-pointer flex flex-col h-[420px] ${String(highlightedDraftId) === String(draft.id) ? 'ring-8 ring-blue-500 ring-offset-8 border-2 border-blue-500 scale-[1.03] z-[100] shadow-2xl shadow-blue-500/40 animate-pulse' : ''}`}
+                        className={`bg-white rounded-[32px] p-8 shadow-sm transition-all relative overflow-hidden group cursor-pointer flex flex-col h-[400px] border border-slate-100/80 hover:border-red-100/60 ${String(highlightedDraftId) === String(draft.id) ? 'ring-4 ring-red-500 ring-offset-4 border-2 border-red-500 scale-[1.02] z-[100] shadow-2xl shadow-red-500/20' : ''}`}
                       >
                          <div className="absolute top-0 right-0 p-8 opacity-5">
-                            <Mail size={120} strokeWidth={1} />
+                            <Mail size={100} strokeWidth={1} />
                          </div>
-                         {dm?.status === "DISCOVERY_CALL" && (
-                           <div className="absolute top-6 left-6 px-3 py-1 bg-amber-500 text-white rounded-lg text-[10px] font-black uppercase tracking-widest z-20 shadow-lg shadow-amber-500/20">
-                             Discovery Request
-                           </div>
-                         )}
 
                          <div className="relative z-10 flex flex-col h-full">
-                            <div className="flex items-start justify-between mb-8">
+                            <div className="flex items-start justify-between mb-6">
                                <div className="space-y-1">
-                                  <p className="text-[10px] font-black text-brand-primary uppercase tracking-widest leading-none mb-2">Protocol Target</p>
-                                  <h4 className="text-xl font-black text-slate-900 tracking-tighter uppercase italic">{dm?.name}</h4>
+                                  <p className="text-[9px] font-black text-red-500 uppercase tracking-widest leading-none mb-1 select-none">Review Phase</p>
+                                  <h4 className="text-xl font-extrabold text-slate-900 tracking-tight leading-tight uppercase select-none">{dm?.name}</h4>
                                   <div className="flex flex-col gap-0.5">
-                                     <p className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">{co?.name}</p>
-                                     <p className="text-[10px] font-bold text-slate-400 italic lowercase">{prospectEmail}</p>
+                                     <p className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">{co?.name}</p>
+                                     <p className="text-[10px] font-bold text-slate-300 italic lowercase select-all">{prospectEmail}</p>
                                   </div>
                                </div>
-                               <div className="h-10 w-10 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-300 group-hover:bg-brand-primary/10 group-hover:text-brand-primary transition-colors">
-                                  <Users size={20} />
+                               <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 text-white flex items-center justify-center font-bold text-sm shadow-sm select-none">
+                                  {initials}
                                 </div>
                             </div>
 
-                            <div className="space-y-4 flex-grow overflow-hidden mb-8">
-                               <div className="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                                  <p className="text-[9px] font-black text-slate-300 uppercase underline decoration-brand-primary/30 mb-2">Subject Header</p>
-                                  <p className="text-sm font-black text-slate-900 tracking-tight leading-snug line-clamp-1">{draft.subject}</p>
-                               </div>
-                               <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 flex-grow">
-                                  <p className="text-[9px] font-black text-slate-300 uppercase underline decoration-brand-primary/30 mb-3">Narrative Snippet</p>
-                                  <p className="text-[13px] font-semibold text-slate-600 italic leading-relaxed line-clamp-4">
+                            <div className="space-y-3 flex-grow overflow-hidden mb-6 select-none">
+                               <div className="bg-slate-50/60 rounded-xl p-3.5 border border-slate-100/80">
+                                  <p className="text-[8px] font-bold text-slate-400 uppercase underline decoration-red-500/20 mb-1 tracking-widest">Subject Line</p>
+                                  <p className="text-xs font-bold text-slate-800 tracking-tight leading-snug line-clamp-1">{draft.subject}</p>
+                                </div>
+                               <div className="bg-slate-50/60 rounded-xl p-4 border border-slate-100/80 flex-grow">
+                                  <p className="text-[8px] font-bold text-slate-400 uppercase underline decoration-red-500/20 mb-2 tracking-widest">Content snippet</p>
+                                  <p className="text-xs font-medium text-slate-600 italic leading-relaxed line-clamp-3">
                                      "{draft.body}"
                                   </p>
                                </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-3 pt-6 border-t border-slate-50 mt-auto">
+                            <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-50 mt-auto select-none">
                                <button 
                                  onClick={(e) => {
                                    e.stopPropagation();
                                    handleSendMessage(draft.id, dm?.name);
                                  }}
                                  disabled={sendingId === draft.id || draft.status === "DEPLOYED"}
-                                 className={`py-3.5 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${draft.status === "DEPLOYED" ? "bg-emerald-500 text-white shadow-emerald-500/20" : "bg-brand-primary text-white shadow-brand-primary/20 hover:scale-[1.02] active:scale-95 shadow-lg"}`}
+                                 className={`py-3.5 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${draft.status === "DEPLOYED" ? "bg-emerald-500 text-white shadow-emerald-500/20" : "bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/10 hover:scale-[1.01] active:scale-[0.99]"}`}
                                >
                                   {sendingId === draft.id ? <Loader2 size={14} className="animate-spin" /> : (draft.status === "DEPLOYED" ? <CheckCircle2 size={14} strokeWidth={3} /> : <Send size={14} strokeWidth={3} />)}
-                                   {sendingId === draft.id ? "Deploying..." : "Authorize"}
+                                   {sendingId === draft.id ? "Deploying" : "Authorize"}
                                 </button>
                                 <button 
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    // Terminate logic
                                   }}
-                                  className="py-3.5 bg-slate-50 border border-slate-100 text-slate-400 hover:text-red-500 hover:border-red-100 hover:bg-red-50/50 rounded-xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center justify-center gap-2"
+                                  className="py-3.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/60 text-slate-400 hover:text-red-600 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all flex items-center justify-center gap-2"
                                 >
-                                   <Trash size={14} strokeWidth={3} />
+                                   <Trash size={14} strokeWidth={2.5} />
                                    Terminate
                                 </button>
                              </div>
                           </div>
-                        </motion.div>
-                     );
+                      </motion.div>
+                    );
                   })
                  )}
               </div>
@@ -1025,27 +624,27 @@ const CampaignWorkspace = () => {
 
         {activeTab === "discovery" && (
            <div className="max-w-[1440px] mx-auto space-y-16">
-              {/* Part 1: Engagement Outreach Drafts (Discovery) */}
+                             {/* Part 1: Engagement Outreach Drafts (Discovery) */}
               <section>
-                <div className="flex items-center justify-between mb-10">
+                                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-10 select-none">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-indigo-500/10 rounded-2xl flex items-center justify-center text-indigo-500">
-                      <Edit3 size={24} strokeWidth={3} />
-                    </div>
-                    <div>
-                      <h3 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Engagement Outreach Drafts</h3>
-                      <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Discovery Phase Invitation Controls</p>
-                    </div>
-                  </div>
-                  <div className="px-6 py-2 bg-slate-100 rounded-xl text-[11px] font-black text-slate-500 uppercase tracking-widest border border-slate-200">
-                    {(campaign.dms || []).filter(dm => dm.status === "DISCOVERY_CALL" || dm.status === "WAITING_FOR_REPLY").length} Active Protocols
-                  </div>
+                                        <div className="w-12 h-12 bg-red-50 text-red-600 rounded-xl flex items-center justify-center border border-red-100 shadow-sm">
+                       <Edit3 size={20} strokeWidth={3} />
+                     </div>
+                     <div>
+                        <span className="px-3 py-1 bg-red-50 text-red-600 border border-red-100 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm self-start mb-2 inline-block">Refinement Suite</span>
+                        <h3 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight uppercase italic">Engagement Outreach Drafts</h3>
+                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest leading-none">Discovery Phase Invitation Controls</p>
+                     </div>
+                   </div>
+                   <div className="px-5 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl text-[11px] font-extrabold text-slate-500 uppercase tracking-widest shadow-sm">
+                     {(campaign.dms || []).filter(dm => dm.status === "DISCOVERY_CALL" || dm.status === "WAITING_FOR_REPLY").length} Active Protocols
+                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                   {(campaign.dms || []).filter(dm => dm.status === "DISCOVERY_CALL" || dm.status === "WAITING_FOR_REPLY").map(dm => {
                     const dmDrafts = (campaign.drafts || []).filter(d => d.decision_maker_id === dm.id);
-                    // Pick the most recent (newest is first in our sorted array)
                     const draft = dmDrafts[0];
                     const co = campaign.target_companies.find(c => c.id === dm.target_company_id);
                     
@@ -1053,60 +652,60 @@ const CampaignWorkspace = () => {
 
                     return (
                       <motion.div 
-                        key={dm.id}
-                        initial={{ opacity: 0, scale: 0.98 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="bg-white rounded-[40px] p-10 shadow-sm border border-slate-100 transition-all hover:shadow-xl hover:shadow-indigo-500/5 group"
-                      >
-                         <div className="flex flex-col h-full">
-                            <div className="flex items-start justify-between mb-8">
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2">
-                                  <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter ${dm.status === "WAITING_FOR_REPLY" ? "bg-orange-50 text-orange-500" : "bg-indigo-50 text-indigo-500"}`}>
-                                    {dm.status === "WAITING_FOR_REPLY" ? "Awaiting Reply" : "Ready to Draft"}
-                                  </span>
-                                  {dm.reply_intent && (
-                                    <span className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-tighter border ${
-                                      dm.reply_intent === 'POSITIVE' ? 'bg-emerald-500 text-white border-emerald-600' :
-                                      dm.reply_intent === 'NEGATIVE' ? 'bg-rose-500 text-white border-rose-600' :
-                                      'bg-amber-400 text-white border-amber-500'
-                                    }`}>
-                                      {dm.reply_intent}
-                                    </span>
-                                  )}
-                                </div>
-                                <h4 className="text-xl font-black text-slate-900 tracking-tighter uppercase italic pt-2">{dm.name}</h4>
-                                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">{co?.name}</p>
-                              </div>
-                              <button 
-                                onClick={() => {
-                                  setDraftEditData({ subject: draft.subject, body: draft.body, email: dm.email });
-                                  setSelectedDraft(draft);
-                                }}
-                                className="p-3 bg-slate-50 text-slate-400 rounded-xl hover:bg-indigo-500 hover:text-white transition-all shadow-sm group-hover:scale-110"
-                              >
-                                <Maximize2 size={18} />
-                              </button>
-                            </div>
+                         key={dm.id}
+                         initial={{ opacity: 0, scale: 0.98 }}
+                         animate={{ opacity: 1, scale: 1 }}
+                         className="bg-white rounded-[32px] p-8 shadow-sm border border-slate-100/80 transition-all hover:border-red-100/60 flex flex-col h-[400px] select-none"
+                       >
+                          <div className="flex flex-col h-full">
+                             <div className="flex items-start justify-between mb-6">
+                               <div className="space-y-1 flex-grow">
+                                 <div className="flex items-center gap-2">
+                                   <span className={`px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-tighter ${dm.status === "WAITING_FOR_REPLY" ? "bg-orange-50 text-orange-500 border border-orange-100" : "bg-red-50 text-red-500 border border-red-100"}`}>
+                                     {dm.status === "WAITING_FOR_REPLY" ? "Awaiting Reply" : "Ready to Draft"}
+                                   </span>
+                                   {dm.reply_intent && (
+                                     <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-tighter border ${
+                                       dm.reply_intent === 'POSITIVE' ? 'bg-emerald-500 text-white border-emerald-600' :
+                                       dm.reply_intent === 'NEGATIVE' ? 'bg-rose-500 text-white border-rose-600' :
+                                       'bg-amber-400 text-white border-amber-500'
+                                     }`}>
+                                       {dm.reply_intent}
+                                     </span>
+                                   )}
+                                 </div>
+                                 <h4 className="text-lg font-extrabold text-slate-800 tracking-tight leading-tight uppercase pt-2">{dm.name}</h4>
+                                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">{co?.name}</p>
+                               </div>
+                               <button 
+                                 onClick={() => {
+                                   setDraftEditData({ subject: draft.subject, body: draft.body, email: dm.email });
+                                   setSelectedDraft(draft);
+                                 }}
+                                 className="h-11 w-11 bg-slate-50 text-slate-400 rounded-xl hover:bg-red-50 hover:text-red-600 border border-slate-200/60 hover:border-red-100 flex items-center justify-center transition-all shadow-sm group-hover:scale-105 shrink-0"
+                               >
+                                 <Maximize2 size={16} />
+                               </button>
+                             </div>
 
-                            <div className="bg-slate-50/50 rounded-2xl p-6 border border-slate-50 flex-grow mb-8 italic">
-                               <p className="text-[9px] font-black text-slate-300 uppercase underline decoration-indigo-500/30 mb-3 tracking-widest">Discovery Request Bundle</p>
-                               <p className="text-sm font-bold text-slate-900 tracking-tight leading-snug line-clamp-1 mb-2">{draft.subject}</p>
-                               <p className="text-[13px] font-semibold text-slate-600 leading-relaxed line-clamp-4">
-                                  "{draft.body}"
-                                </p>
-                            </div>
+                             <div className="bg-slate-50/60 rounded-xl p-4 border border-slate-100/80 flex-grow mb-6 select-text">
+                                <p className="text-[8px] font-bold text-slate-400 uppercase underline decoration-red-500/20 mb-2 tracking-widest">Discovery Request Bundle</p>
+                                <p className="text-xs font-bold text-slate-800 tracking-tight leading-snug line-clamp-1 mb-1.5">{draft.subject}</p>
+                                <p className="text-[13px] font-medium text-slate-600 italic leading-relaxed line-clamp-3">
+                                   "{draft.body}"
+                                 </p>
+                             </div>
 
-                            <button 
-                               onClick={() => handleSendMessage(draft.id, dm.name)}
-                               disabled={sendingId === draft.id || dm.status === "WAITING_FOR_REPLY"}
-                               className={`w-full py-4 rounded-2xl font-black text-[11px] uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${dm.status === "WAITING_FOR_REPLY" ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-indigo-500 text-white shadow-lg shadow-indigo-500/20 hover:scale-[1.02] active:scale-95"}`}
-                            >
-                               {sendingId === draft.id ? <Loader2 size={16} className="animate-spin" /> : (dm.status === "WAITING_FOR_REPLY" ? <Clock size={16} /> : <Send size={16} />)}
-                               {dm.status === "WAITING_FOR_REPLY" ? "In Orbit (Waiting)" : "Deploy Discovery Protocol"}
-                            </button>
-                         </div>
-                      </motion.div>
+                             <button 
+                                onClick={() => handleSendMessage(draft.id, dm.name)}
+                                disabled={sendingId === draft.id || dm.status === "WAITING_FOR_REPLY"}
+                                className={`w-full py-4 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${dm.status === "WAITING_FOR_REPLY" ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white shadow-lg shadow-red-500/10 hover:scale-[1.01] active:scale-[0.99]"}`}
+                             >
+                                {sendingId === draft.id ? <Loader2 size={16} className="animate-spin" /> : (dm.status === "WAITING_FOR_REPLY" ? <Clock size={16} /> : <Send size={16} />)}
+                                {dm.status === "WAITING_FOR_REPLY" ? "In Orbit (Waiting)" : "Deploy Discovery Protocol"}
+                             </button>
+                          </div>
+                       </motion.div>
                     );
                   })}
                 </div>
@@ -1114,68 +713,77 @@ const CampaignWorkspace = () => {
 
               {/* Part 2: Strategic Meeting Intel (Booked) */}
               <section>
-                <div className="flex items-center gap-4 mb-10">
-                    <div className="w-12 h-12 bg-emerald-500/10 rounded-2xl flex items-center justify-center text-emerald-500">
-                      <Calendar size={24} strokeWidth={3} />
+                 <div className="flex items-center gap-4 mb-10 select-none">
+                    <div className="w-12 h-12 bg-red-50 text-red-600 border border-red-100 rounded-xl flex items-center justify-center shadow-sm">
+                      <Calendar size={20} strokeWidth={3} />
                     </div>
                     <div>
-                      <h3 className="text-2xl font-black text-slate-900 uppercase italic tracking-tighter">Strategic Meeting Intel</h3>
-                      <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Confirmed Stakeholder Engagements</p>
+                        <span className="px-3 py-1 bg-red-50 text-red-600 border border-red-100 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm self-start mb-2 inline-block">Engagement Suite</span>
+                        <h3 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight uppercase italic">Strategic Meeting Intel</h3>
+                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Confirmed Stakeholder Engagements</p>
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-[40px] border border-slate-200 overflow-hidden shadow-sm">
+                  <div className="bg-white rounded-[32px] border border-slate-100/80 overflow-hidden shadow-sm">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
-                          <tr className="bg-slate-50/50">
-                            <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Company Repository</th>
-                            <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Stakeholder</th>
-                            <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Meeting Target (IST)</th>
-                            <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Countdown Protocol</th>
-                            <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Coordinate (Link)</th>
+                          <tr className="bg-slate-50/30">
+                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Company Repository</th>
+                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Stakeholder</th>
+                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Meeting Target (IST)</th>
+                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Countdown Protocol</th>
+                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Coordinate (Link)</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-50">
                            {(campaign.dms || []).filter(dm => dm.status === "MEETING_BOOKED" || dm.status === "DATE_AND_MEETING_SECURED").length === 0 ? (
                              <tr>
-                               <td colSpan="5" className="px-10 py-20 text-center">
+                               <td colSpan="5" className="px-8 py-16 text-center">
                                   <div className="flex flex-col items-center gap-4 text-slate-300">
-                                    <Bot size={48} strokeWidth={1} className="opacity-20" />
-                                    <p className="text-xs font-black uppercase tracking-widest tracking-widest italic animate-pulse">Scanning for confirmed bookings...</p>
+                                    <Bot size={40} strokeWidth={1} className="opacity-20 text-red-400" />
+                                    <p className="text-xs font-bold uppercase tracking-widest italic animate-pulse">Scanning for confirmed bookings...</p>
                                   </div>
                                </td>
                              </tr>
                            ) : (
                              (campaign.dms || []).filter(dm => dm.status === "MEETING_BOOKED" || dm.status === "DATE_AND_MEETING_SECURED").map((dm) => {
                                const co = campaign.target_companies.find(c => c.id === dm.target_company_id);
+                               const initials = (dm.name || "P")
+                                 .split(" ")
+                                 .filter(Boolean)
+                                 .map(w => w[0])
+                                 .join("")
+                                 .toUpperCase()
+                                 .slice(0, 2);
+
                                return (
-                                 <tr key={dm.id} className="hover:bg-slate-50/50 transition-colors group">
-                                    <td className="px-10 py-8">
-                                       <p className="text-sm font-black text-slate-900 uppercase italic tracking-tight">{co?.name}</p>
+                                 <tr key={dm.id} className="hover:bg-slate-50/40 transition-colors group">
+                                    <td className="px-8 py-6">
+                                       <p className="text-sm font-extrabold text-slate-800 uppercase tracking-tight">{co?.name}</p>
                                     </td>
-                                    <td className="px-10 py-8">
+                                    <td className="px-8 py-6">
                                        <div className="flex items-center gap-3">
-                                          <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-500 text-[10px] font-black">
-                                            {dm.name.charAt(0)}
+                                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                                            {initials}
                                           </div>
-                                          <p className="text-sm font-bold text-slate-600">{dm.name}</p>
+                                          <p className="text-sm font-bold text-slate-700">{dm.name}</p>
                                        </div>
                                     </td>
-                                    <td className="px-10 py-8">
-                                       <p className="text-[11px] font-black text-slate-800 uppercase tabular-nums">
+                                    <td className="px-8 py-6">
+                                       <p className="text-[11px] font-extrabold text-slate-800 uppercase tabular-nums">
                                           {new Date(dm.scheduled_time).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }).replace(',', ' @')}
                                        </p>
                                     </td>
-                                    <td className="px-10 py-8">
+                                    <td className="px-8 py-6">
                                        <DiscoveryTimer scheduledTime={dm.scheduled_time} />
                                     </td>
-                                    <td className="px-10 py-8 text-right">
+                                    <td className="px-8 py-6 text-right">
                                        <a 
                                          href={dm.meeting_link} target="_blank" rel="noreferrer"
-                                         className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all"
+                                         className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/10 hover:scale-[1.02] active:scale-[0.98] transition-all"
                                        >
-                                         <Link2 size={14} strokeWidth={3} />
+                                         <Link2 size={13} strokeWidth={3} />
                                          Access Bridge
                                        </a>
                                     </td>
@@ -1192,79 +800,86 @@ const CampaignWorkspace = () => {
         )}
 
         {activeTab === "report" && (
-           <div className="max-w-[1200px] mx-auto space-y-12">
+           <div className="max-w-[1200px] mx-auto space-y-12 select-none">
               {/* Report Header: Aggregate Intelligence */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 {[
-                  { label: "Total Profiled", value: campaign.target_companies_count, icon: Search, color: "text-brand-primary", bg: "bg-brand-primary/10" },
-                  { label: "Avg Alignment", value: `${Math.round(campaign.target_companies.reduce((acc, c) => acc + (c.similarity_score?.score || 0), 0) / (campaign.target_companies_count || 1))}%`, icon: Target, color: "text-indigo-500", bg: "bg-indigo-500/10" },
-                  { label: "Total Prospects", value: (campaign.dms || []).length, icon: Users, color: "text-emerald-500", bg: "bg-emerald-500/10" }
+                  { label: "Total Profiled", value: campaign.target_companies_count, icon: Search, color: "text-red-600", bg: "bg-red-50 border border-red-100/60" },
+                  { label: "Avg Alignment", value: `${Math.round(campaign.target_companies.reduce((acc, c) => acc + (c.similarity_score?.score || 0), 0) / (campaign.target_companies_count || 1))}%`, icon: Target, color: "text-red-600", bg: "bg-red-50 border border-red-100/60" },
+                  { label: "Total Prospects", value: (campaign.dms || []).length, icon: Users, color: "text-red-600", bg: "bg-red-50 border border-red-100/60" }
                 ].map((stat, i) => (
-                  <div key={i} className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm flex items-center gap-6">
-                    <div className={`w-14 h-14 ${stat.bg} ${stat.color} rounded-2xl flex items-center justify-center`}>
-                      <stat.icon size={24} strokeWidth={3} />
+                  <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100/80 shadow-sm flex items-center gap-5 hover:scale-[1.01] transition-transform">
+                    <div className={`w-14 h-14 ${stat.bg} ${stat.color} rounded-2xl flex items-center justify-center shrink-0 shadow-sm`}>
+                      <stat.icon size={22} strokeWidth={2.5} />
                     </div>
                     <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{stat.label}</p>
-                      <h4 className="text-2xl font-black text-slate-900 tracking-tighter">{stat.value}</h4>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">{stat.label}</p>
+                      <h4 className="text-2xl md:text-3xl font-black text-slate-900 uppercase tracking-tight leading-none">{stat.value}</h4>
                     </div>
                   </div>
                 ))}
               </div>
 
               {/* Company List: Multi-Threaded Intelligence Repository */}
-              <section className="bg-white rounded-[40px] border border-slate-200 overflow-hidden shadow-sm">
-                <div className="px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+              <section className="bg-white rounded-[32px] border border-slate-100/80 overflow-hidden shadow-sm select-none">
+                <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-brand-primary/10 rounded-xl flex items-center justify-center text-brand-primary">
-                      <PieChart size={20} strokeWidth={3} />
+                    <div className="w-10 h-10 bg-red-50 border border-red-100/60 rounded-xl flex items-center justify-center text-red-600 shadow-sm">
+                      <PieChart size={18} strokeWidth={3} />
                     </div>
                     <div>
                       <h3 className="text-lg font-black text-slate-900 uppercase italic tracking-tight">Organizational Intelligence Repository</h3>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Vertical Campaign Audit</p>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Vertical Campaign Audit</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="divide-y divide-slate-100">
-                  {campaign.target_companies.filter(co => (campaign.dms || []).some(dm => dm.target_company_id === co.id)).map((company) => {
+                  {campaign.target_companies.map((company) => {
                     const companyDMs = (campaign.dms || []).filter(dm => dm.target_company_id === company.id);
                     const isExpanded = expandedReportCompany === company.id;
+                    const companyInitials = (company.name || "C")
+                      .split(" ")
+                      .filter(Boolean)
+                      .map(w => w[0])
+                      .join("")
+                      .toUpperCase()
+                      .slice(0, 2);
                     
                     return (
-                      <div key={company.id} className="flex flex-col border-b border-slate-100 last:border-0">
+                      <div key={company.id} className="flex flex-col border-b border-slate-50 last:border-0">
                         <div 
                           onClick={() => setExpandedReportCompany(isExpanded ? null : company.id)}
-                          className="px-10 py-6 hover:bg-slate-50 transition-all cursor-pointer group flex items-center justify-between"
+                          className="px-8 py-5 hover:bg-slate-50/40 transition-all cursor-pointer group flex items-center justify-between select-none"
                         >
-                          <div className="flex items-center gap-6 flex-grow">
-                            <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${isExpanded ? 'bg-brand-primary text-white' : 'bg-slate-50 text-slate-400 group-hover:bg-brand-primary/10 group-hover:text-brand-primary'}`}>
-                              <Globe size={20} />
+                          <div className="flex items-center gap-5 flex-grow">
+                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all font-black text-xs shadow-sm shrink-0 select-none ${isExpanded ? 'bg-red-600 text-white shadow-red-500/10' : 'bg-red-50 text-red-600 border border-red-100 group-hover:bg-red-600 group-hover:text-white'}`}>
+                              {companyInitials}
                             </div>
                             <div>
-                              <h4 className={`text-lg font-black uppercase italic tracking-tight transition-colors ${isExpanded ? 'text-brand-primary' : 'text-slate-900 group-hover:text-brand-primary'}`}>
+                              <h4 className={`text-base font-extrabold uppercase tracking-tight transition-colors ${isExpanded ? 'text-red-600' : 'text-slate-800 group-hover:text-red-600'}`}>
                                 {company.name}
                               </h4>
-                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Target Organization</p>
+                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Target Organization</p>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-12">
+                          <div className="flex items-center gap-10">
                             <div className="text-right">
-                              <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Alignment</p>
-                              <span className="text-sm font-black text-brand-primary">{company.similarity_score?.score || 0}%</span>
+                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Alignment</p>
+                              <span className="text-sm font-extrabold text-red-600">{company.similarity_score?.score || 0}%</span>
                             </div>
                             
-                            <div className="text-right w-32">
-                              <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Prospects</p>
-                              <div className="flex items-center justify-end gap-2 text-slate-600">
-                                 <Users size={14} strokeWidth={3} />
-                                 <span className="text-sm font-black">{companyDMs.length}</span>
+                            <div className="text-right w-24">
+                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Prospects</p>
+                              <div className="flex items-center justify-end gap-1.5 text-slate-600">
+                                 <Users size={13} strokeWidth={3} />
+                                 <span className="text-sm font-extrabold">{companyDMs.length}</span>
                               </div>
                             </div>
 
-                            <div className={`text-slate-200 transition-transform duration-300 ${isExpanded ? 'rotate-90 text-brand-primary' : 'group-hover:text-brand-primary'}`}>
-                               <ChevronRight size={20} strokeWidth={3} />
+                            <div className={`text-slate-300 transition-all duration-300 ${isExpanded ? 'rotate-90 text-red-600' : 'group-hover:text-red-600'}`}>
+                               <ChevronRight size={18} strokeWidth={3} />
                             </div>
                           </div>
                         </div>
@@ -1275,79 +890,96 @@ const CampaignWorkspace = () => {
                               initial={{ height: 0, opacity: 0 }}
                               animate={{ height: "auto", opacity: 1 }}
                               exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.3, ease: "easeInOut" }}
-                              className="overflow-hidden bg-slate-50/50"
+                              transition={{ duration: 0.25, ease: "easeInOut" }}
+                              className="overflow-hidden bg-slate-50/40 select-none"
                             >
-                              <div className="px-10 pb-10 pt-4 space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                              <div className="px-8 pb-8 pt-2 space-y-4">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
                                   {[
                                     { label: "Phone Protocol", value: company.contact_number, icon: PhoneCall },
                                     { label: "HQ Coordinates", value: company.location, icon: Globe },
                                     { label: "Corporate Email", value: company.contact_email, icon: Mail }
                                   ].map((item, idx) => (
-                                    <div key={idx} className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm">
-                                      <div className="flex items-center gap-3 mb-2">
-                                        <item.icon size={14} className="text-brand-primary" />
-                                        <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest">{item.label}</span>
+                                    <div key={idx} className="bg-white p-4.5 rounded-2xl border border-slate-100/80 shadow-sm hover:border-red-100/50 transition-all select-text">
+                                      <div className="flex items-center gap-2 mb-1.5">
+                                        <item.icon size={13} className="text-red-500" />
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">{item.label}</span>
                                       </div>
-                                      <p className="text-xs font-black text-slate-900 truncate uppercase tabular-nums">{item.value || "N/A"}</p>
+                                      <p className="text-xs font-extrabold text-slate-800 truncate uppercase tabular-nums">{item.value || "N/A"}</p>
                                     </div>
                                   ))}
                                 </div>
-                                <div className="flex items-center gap-3 mb-6">
-                                  <div className="h-[1px] flex-grow bg-slate-200" />
-                                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Mapped Stakeholders</span>
-                                  <div className="h-[1px] flex-grow bg-slate-200" />
+                                <div className="flex items-center gap-3 mb-5 select-none">
+                                  <div className="h-[1px] flex-grow bg-slate-100" />
+                                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap leading-none select-none">Mapped Stakeholders</span>
+                                  <div className="h-[1px] flex-grow bg-slate-100" />
                                 </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                  {companyDMs.map((dm) => (
-                                    <div 
-                                      key={dm.id}
-                                      className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm flex items-center justify-between group/dm hover:border-brand-primary/30 transition-all"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 font-black text-xs group-hover/dm:bg-brand-primary/10 group-hover/dm:text-brand-primary transition-colors">
-                                          {dm.name.charAt(0)}
-                                        </div>
-                                        <div>
-                                          <button 
-                                            onClick={() => setShowHistoryDM(dm)}
-                                            className="text-sm font-black text-slate-900 uppercase italic tracking-tight hover:text-brand-primary transition-colors cursor-pointer text-left"
-                                          >
-                                            {dm.name}
-                                          </button>
-                                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{dm.position}</p>
-                                        </div>
-                                      </div>
-                                      <div className="flex items-center gap-2">
-                                        <a 
-                                          href={ensureAbsoluteUrl(dm.linkedin)} 
-                                          target="_blank" rel="noreferrer"
-                                          className="p-2 text-slate-300 hover:text-[#0077b5] transition-colors"
-                                          onClick={(e) => e.stopPropagation()}
+                                {companyDMs.length === 0 ? (
+                                  <div className="p-6 bg-white border border-slate-100/80 rounded-2xl flex flex-col items-center justify-center gap-3 text-center select-none shadow-sm">
+                                    <Bot size={28} className="text-red-400 opacity-40 animate-pulse" />
+                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wide leading-none">No Mapped Stakeholders for this Profile</p>
+                                  </div>
+                                ) : (
+                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {companyDMs.map((dm) => {
+                                      const dmInitials = (dm.name || "P")
+                                        .split(" ")
+                                        .filter(Boolean)
+                                        .map(w => w[0])
+                                        .join("")
+                                        .toUpperCase()
+                                        .slice(0, 2);
+
+                                      return (
+                                        <div 
+                                          key={dm.id}
+                                          className="bg-white p-4.5 rounded-2xl border border-slate-100/80 shadow-sm flex items-center justify-between group/dm hover:border-red-100/50 transition-all select-none"
                                         >
-                                          <Linkedin size={16} />
-                                        </a>
-                                        <div className={`px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-tighter ${
-                                          (dm.status === "MEETING_BOOKED" || dm.status === "DATE_AND_MEETING_SECURED") ? "bg-emerald-50 text-emerald-500" : 
-                                          dm.status.includes("SENT") ? "bg-blue-50 text-blue-500" : 
-                                          "bg-slate-100 text-slate-400"
-                                        }`}>
-                                          {dm.status.replace(/_/g, " ")}
-                                        </div>
-                                        {dm.reply_intent && (
-                                          <div className={`px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-tighter shadow-sm border ${
-                                            dm.reply_intent === 'POSITIVE' ? 'bg-emerald-500 text-white border-emerald-600' :
-                                            dm.reply_intent === 'NEGATIVE' ? 'bg-rose-500 text-white border-rose-600' :
-                                            'bg-amber-400 text-white border-amber-500'
-                                          }`}>
-                                            {dm.reply_intent}
+                                           <div className="flex items-center gap-4">
+                                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 text-white flex items-center justify-center font-extrabold text-xs group-hover/dm:scale-105 transition-all shadow-sm">
+                                              {dmInitials}
+                                            </div>
+                                            <div>
+                                              <button 
+                                                onClick={() => setShowHistoryDM(dm)}
+                                                className="text-sm font-extrabold text-slate-800 tracking-tight hover:text-red-600 transition-colors cursor-pointer text-left uppercase leading-tight select-text"
+                                              >
+                                                {dm.name}
+                                              </button>
+                                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-none pt-0.5">{dm.position}</p>
+                                            </div>
                                           </div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
+                                          <div className="flex items-center gap-2">
+                                            <a 
+                                              href={ensureAbsoluteUrl(dm.linkedin)} 
+                                              target="_blank" rel="noreferrer"
+                                              className="p-2 text-slate-400 hover:text-[#0a66c2] transition-all hover:scale-110 active:scale-95 shrink-0"
+                                              onClick={(e) => e.stopPropagation()}
+                                            >
+                                              <Linkedin size={16} />
+                                            </a>
+                                            <div className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter ${
+                                              (dm.status === "MEETING_BOOKED" || dm.status === "DATE_AND_MEETING_SECURED") ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : 
+                                              dm.status.includes("SENT") ? "bg-blue-50 text-blue-600 border border-blue-100" : 
+                                              "bg-slate-50 text-slate-500 border border-slate-100"
+                                            }`}>
+                                              {dm.status.replace(/_/g, " ")}
+                                            </div>
+                                            {dm.reply_intent && (
+                                              <div className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter shadow-sm border ${
+                                                dm.reply_intent === 'POSITIVE' ? 'bg-emerald-500 text-white border-emerald-600' :
+                                                dm.reply_intent === 'NEGATIVE' ? 'bg-rose-500 text-white border-rose-600' :
+                                                'bg-amber-400 text-white border-amber-500'
+                                              }`}>
+                                                {dm.reply_intent}
+                                              </div>
+                                            )}
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                )}
                               </div>
                             </motion.div>
                           )}
@@ -1363,8 +995,12 @@ const CampaignWorkspace = () => {
 
       {/* Target Intel Professional Overlay */}
       <AnimatePresence>
-        {selectedCompany && (
-           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-20">
+        {selectedCompany && (() => {
+          const score = selectedCompany.relevance_score || selectedCompany.similarity_score?.score || 0;
+          const reason = selectedCompany.relevance_explanation || selectedCompany.similarity_score?.reason || "High match synergy detected";
+          
+          return (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12">
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -1376,64 +1012,84 @@ const CampaignWorkspace = () => {
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="relative w-full max-w-4xl bg-white rounded-[40px] shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar"
+                className="relative w-full max-w-5xl bg-white rounded-[32px] shadow-2xl overflow-y-auto max-h-[85vh] z-10 border border-slate-100 flex flex-col"
               >
+                 {/* Close Button */}
                  <button 
                    onClick={() => setSelectedCompany(null)}
-                   className="absolute top-8 right-8 w-12 h-12 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center text-slate-400 hover:text-slate-900 hover:rotate-90 transition-all z-10"
+                   className="absolute top-6 right-6 w-10 h-10 bg-slate-50 border border-slate-200/60 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all z-20 shadow-sm"
                  >
-                   <X size={24} />
+                   <X size={20} />
                  </button>
 
-                 <div className="grid grid-cols-1 md:grid-cols-2">
-                    <div className="p-12 space-y-10 border-r border-slate-100 bg-slate-50/50">
-                       <div className="h-20 w-20 rounded-3xl bg-white shadow-xl flex items-center justify-center text-brand-primary">
-                          <Globe size={40} />
-                       </div>
-                       <div className="space-y-4">
-                          <h2 className="text-4xl font-black text-slate-900 leading-tight uppercase italic">{selectedCompany.name}</h2>
-                          <a href={ensureAbsoluteUrl(selectedCompany.website)} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-brand-primary font-black text-sm hover:underline">
-                             {selectedCompany.website} <ExternalLink size={16} />
-                          </a>
-                       </div>
-                       
-                       <div className="space-y-6 pt-10 border-t border-slate-200">
-                          <div className="flex items-center justify-between">
-                             <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Matching Protocol</span>
-                             <span className="text-2xl font-black text-slate-900">{selectedCompany.similarity_score?.score}%</span>
-                          </div>
-                          <div className="p-6 bg-white rounded-2xl border border-slate-200 shadow-sm font-bold text-slate-500 italic text-sm leading-relaxed">
-                             "{selectedCompany.similarity_score?.reason}"
+                 <div className="grid grid-cols-1 md:grid-cols-12 h-full flex-1">
+                    {/* Left Column: Organization Identity */}
+                    <div className="md:col-span-5 p-8 md:p-10 bg-slate-50/50 border-r border-slate-100 space-y-8 flex flex-col justify-between">
+                       <div className="space-y-6">
+                          {/* Logo/Icon Header */}
+                          <div className="flex items-center gap-4">
+                             <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/10 flex items-center justify-center font-black text-xl tracking-tight select-none">
+                                {(selectedCompany.name || "C")
+                                  .split(" ")
+                                  .filter(Boolean)
+                                  .map(w => w[0])
+                                  .join("")
+                                  .toUpperCase()
+                                  .slice(0, 2)}
+                             </div>
+                             <div className="flex flex-col">
+                                <span className="px-2.5 py-0.5 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-lg text-[10px] font-extrabold uppercase tracking-wider self-start mb-1 shadow-sm">Approved</span>
+                                <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">{selectedCompany.name}</h2>
+                             </div>
                           </div>
 
-                          <div className="space-y-4 pt-6">
-                             <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Strategic Intelligence</p>
-                             <div className="grid grid-cols-1 gap-3">
-                                <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 group hover:border-brand-primary/30 transition-all">
-                                   <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-primary group-hover:bg-brand-primary/10 transition-colors">
-                                      <Monitor size={18} />
+                          <div className="space-y-4">
+                             <a href={ensureAbsoluteUrl(selectedCompany.website)} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-red-500 hover:text-red-600 font-bold text-sm transition-all underline decoration-red-100 underline-offset-4 decoration-2">
+                                {selectedCompany.website} <ExternalLink size={14} />
+                             </a>
+                             <p className="text-slate-500 text-xs font-semibold leading-relaxed">Verified corporate footprint & identity data.</p>
+                          </div>
+                          
+                          {/* Synergy Meter */}
+                          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+                             <div className="flex items-center justify-between">
+                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Alignment Score</span>
+                                <span className="text-lg font-black text-slate-900 bg-red-50 text-red-600 px-2.5 py-1 rounded-lg border border-red-100 shadow-sm">{score}%</span>
+                             </div>
+                             <p className="text-slate-600 font-medium text-xs leading-relaxed italic bg-slate-50/80 p-3.5 rounded-xl border border-slate-100/60">
+                                "{reason}"
+                             </p>
+                          </div>
+
+                          {/* Detail Grid */}
+                          <div className="space-y-3 pt-2">
+                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Strategic Attributes</p>
+                             <div className="grid grid-cols-1 gap-2.5">
+                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 flex items-center gap-3.5 group hover:border-red-100/60 transition-all shadow-sm">
+                                   <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-red-500 group-hover:bg-red-50 transition-colors">
+                                      <Monitor size={16} />
                                    </div>
                                    <div>
-                                      <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">HQ Location</p>
-                                      <p className="text-xs font-black text-slate-700 uppercase tracking-tight">{selectedCompany.location || "N/A"}</p>
+                                      <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Headquarters</p>
+                                      <p className="text-xs font-bold text-slate-800 uppercase tracking-tight truncate">{selectedCompany.location || "Global Operations"}</p>
                                    </div>
                                 </div>
-                                <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 group hover:border-brand-primary/30 transition-all">
-                                   <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-primary group-hover:bg-brand-primary/10 transition-colors">
-                                      <Mail size={18} />
+                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 flex items-center gap-3.5 group hover:border-red-100/60 transition-all shadow-sm">
+                                   <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-red-500 group-hover:bg-red-50 transition-colors">
+                                      <Mail size={16} />
                                    </div>
                                    <div>
-                                      <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Corporate Email</p>
-                                      <p className="text-xs font-black text-slate-700 tracking-tight lowercase">{selectedCompany.contact_email || "N/A"}</p>
+                                      <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Inbound Email</p>
+                                      <p className="text-xs font-bold text-slate-800 lowercase tracking-tight truncate">{selectedCompany.contact_email || "N/A"}</p>
                                    </div>
                                 </div>
-                                <div className="bg-white p-4 rounded-xl border border-slate-100 flex items-center gap-4 group hover:border-brand-primary/30 transition-all">
-                                   <div className="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-brand-primary group-hover:bg-brand-primary/10 transition-colors">
-                                      <PhoneCall size={18} />
+                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 flex items-center gap-3.5 group hover:border-red-100/60 transition-all shadow-sm">
+                                   <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-red-500 group-hover:bg-red-50 transition-colors">
+                                      <PhoneCall size={16} />
                                    </div>
                                    <div>
-                                      <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Direct Line</p>
-                                      <p className="text-xs font-black text-slate-700 tracking-tight">{selectedCompany.contact_number || "N/A"}</p>
+                                      <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Contact Line</p>
+                                      <p className="text-xs font-bold text-slate-800 uppercase tracking-tight truncate">{selectedCompany.contact_number || "N/A"}</p>
                                    </div>
                                 </div>
                              </div>
@@ -1441,31 +1097,42 @@ const CampaignWorkspace = () => {
                        </div>
                     </div>
 
-                    <div className="p-12 space-y-10">
-                       <div>
-                          <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-6 underline decoration-brand-primary/30 underline-offset-4">Deep Research & Strategic Rational</h3>
-                          <div className="prose prose-slate max-w-none">
-                             <p className="text-slate-600 font-semibold leading-relaxed text-[15px] whitespace-pre-wrap">
-                                {selectedCompany.deep_research}
+                    {/* Right Column: Deep Intel Narrative */}
+                    <div className="md:col-span-7 p-8 md:p-10 space-y-8 flex flex-col justify-between bg-white h-full">
+                       <div className="space-y-6 flex-1 overflow-y-auto max-h-[480px] pr-2 select-text custom-scrollbar">
+                          <div>
+                             <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4 underline decoration-red-500/20 underline-offset-4 decoration-2">Deep Research Insight</h3>
+                             <p className="text-slate-600 font-medium text-sm leading-relaxed whitespace-pre-wrap bg-slate-50/50 p-6 rounded-[20px] border border-slate-100">
+                                {selectedCompany.deep_research || "Intelligent reconnaissance summary and company core research insights are currently processing."}
                              </p>
                           </div>
                        </div>
 
-                       <div className="pt-10 border-t border-slate-100 flex items-center gap-4">
-                           <a 
-                             href={ensureAbsoluteUrl(selectedCompany.linkedin)} 
-                             target="_blank" 
-                             rel="noreferrer"
-                             className="flex-grow flex items-center justify-center gap-3 py-4 bg-[#0077b5] text-white rounded-2xl font-black text-[13px] uppercase tracking-widest hover:brightness-110 transition-all shadow-xl shadow-blue-500/20"
-                           >
-                              <Linkedin size={20} /> LinkedIn Protocol
-                           </a>
+                       {/* Interactive Navigation Footer */}
+                       <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-4">
+                          <a 
+                            href={ensureAbsoluteUrl(selectedCompany.linkedin, selectedCompany.name)} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            className="w-full flex items-center justify-center gap-3 py-4 bg-[#0077b5] hover:bg-[#006bb0] text-white rounded-2xl font-bold text-sm uppercase tracking-widest hover:scale-[1.01] active:scale-[0.99] transition-all shadow-lg shadow-blue-500/10"
+                          >
+                             <Linkedin size={20} /> LinkedIn Profile
+                          </a>
+                          <a 
+                            href={ensureAbsoluteUrl(selectedCompany.website)} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            className="w-full flex items-center justify-center gap-3 py-4 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-2xl font-bold text-sm uppercase tracking-widest hover:scale-[1.01] active:scale-[0.99] transition-all"
+                          >
+                             <Globe size={20} /> View Website
+                          </a>
                        </div>
                     </div>
                  </div>
               </motion.div>
-           </div>
-        )}
+            </div>
+          );
+        })()}
       </AnimatePresence>
 
       {/* Engagement Protocol Modal */}
@@ -1475,7 +1142,7 @@ const CampaignWorkspace = () => {
           const co = campaign.target_companies.find(c => c.id === dm?.target_company_id);
 
           return (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 sm:p-20">
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12">
               <motion.div 
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -1487,87 +1154,100 @@ const CampaignWorkspace = () => {
                 initial={{ opacity: 0, scale: 0.95, y: 20 }}
                 animate={{ opacity: 1, scale: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="relative w-full max-w-4xl bg-white rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10"
+                className="relative w-full max-w-5xl bg-white rounded-[32px] shadow-2xl overflow-y-auto max-h-[85vh] z-10 border border-slate-100 flex flex-col"
               >
-                {/* Header */}
-                <div className="p-8 border-b border-slate-50 flex items-center justify-between">
-                   <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-brand-primary/10 text-brand-primary rounded-2xl flex items-center justify-center">
-                         <Mail size={24} />
-                      </div>
-                      <div>
-                         <h3 className="text-xl font-black text-slate-900 uppercase italic tracking-tight">Executive Protocol Refinement</h3>
-                         <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Stakeholder Analysis Hub</p>
-                      </div>
-                   </div>
-                   <button 
-                     onClick={() => setSelectedDraft(null)}
-                     className="p-3 hover:bg-slate-50 rounded-xl text-slate-400 transition-colors"
-                   >
-                      <X size={24} />
-                   </button>
-                </div>
+                 {/* Close Button */}
+                 <button 
+                   onClick={() => setSelectedDraft(null)}
+                   className="absolute top-6 right-6 w-10 h-10 bg-slate-50 border border-slate-200/60 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all z-20 shadow-sm"
+                 >
+                   <X size={20} />
+                 </button>
 
-                {/* Content */}
-                <div className="flex-grow overflow-y-auto p-10 space-y-8">
-                   {/* Identity Side-by-Side */}
-                   <div className="grid grid-cols-2 gap-8">
-                      <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                         <p className="text-[10px] font-black text-brand-primary uppercase tracking-widest mb-2">Stakeholder</p>
-                         <p className="text-xl font-black text-slate-900 tracking-tight">{dm?.name}</p>
-                      </div>
-                      <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                         <p className="text-[10px] font-black text-brand-primary uppercase tracking-widest mb-2">Organization</p>
-                         <p className="text-xl font-black text-slate-900 tracking-tight">{co?.name}</p>
-                      </div>
-                   </div>
+                 <div className="grid grid-cols-1 md:grid-cols-12 h-full flex-1">
+                    {/* Left Column: Context & Metadata */}
+                    <div className="md:col-span-5 p-8 md:p-10 bg-slate-50/50 border-r border-slate-100 space-y-8 flex flex-col justify-between">
+                       <div className="space-y-6">
+                          {/* Logo/Icon Header */}
+                          <div className="flex items-center gap-4">
+                             <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/10 flex items-center justify-center font-black text-xl tracking-tight select-none">
+                                {(dm?.name || "P")
+                                  .split(" ")
+                                  .filter(Boolean)
+                                  .map(w => w[0])
+                                  .join("")
+                                  .toUpperCase()
+                                  .slice(0, 2)}
+                             </div>
+                             <div className="flex flex-col">
+                                <span className="px-2.5 py-0.5 bg-red-50 border border-red-100 text-red-600 rounded-lg text-[10px] font-extrabold uppercase tracking-wider self-start mb-1 shadow-sm">Draft Refinement</span>
+                                <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">{dm?.name}</h2>
+                             </div>
+                          </div>
 
-                   {/* Editable Fields */}
-                   <div className="space-y-6">
-                      <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 focus-within:border-brand-primary transition-colors">
-                         <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-2 underline decoration-brand-primary/30">Deployment Coordinate (Email)</p>
-                         <input 
-                           value={draftEditData.email}
-                           onChange={(e) => setDraftEditData({ ...draftEditData, email: e.target.value })}
-                           className="w-full bg-transparent font-black text-slate-900 outline-none text-lg tracking-tight"
-                         />
-                      </div>
-                      <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 focus-within:border-brand-primary transition-colors">
-                         <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-2 underline decoration-brand-primary/30">Strategic Subject Line</p>
-                         <input 
-                           value={draftEditData.subject}
-                           onChange={(e) => setDraftEditData({ ...draftEditData, subject: e.target.value })}
-                           className="w-full bg-transparent font-black text-slate-900 outline-none text-xl tracking-tight"
-                         />
-                      </div>
-                      <div className="bg-slate-50 rounded-3xl p-10 border border-slate-100 focus-within:border-brand-primary transition-colors">
-                         <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-4 underline decoration-brand-primary/30">Narrative Protocol Body</p>
-                         <textarea 
-                           value={draftEditData.body}
-                           onChange={(e) => setDraftEditData({ ...draftEditData, body: e.target.value })}
-                           className="w-full bg-transparent font-semibold text-slate-600 outline-none text-[16px] leading-relaxed min-h-[300px] resize-none"
-                         />
-                      </div>
-                   </div>
+                          <div className="space-y-4">
+                             <div className="p-5 bg-white rounded-2xl border border-slate-100 shadow-sm space-y-1">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Target Organization</span>
+                                <p className="text-sm font-extrabold text-slate-800">{co?.name || "Unknown Organization"}</p>
+                             </div>
+                          </div>
 
-                   {/* Actions */}
-                   <div className="grid grid-cols-2 gap-8 pt-4">
-                      <button 
-                        onClick={() => setSelectedDraft(null)}
-                        className="w-full py-5 bg-white border border-slate-200 text-slate-400 rounded-2xl font-black text-[13px] uppercase tracking-widest hover:bg-slate-50 transition-all"
-                      >
-                         Discard Changes
-                      </button>
-                      <button 
-                        onClick={handleSaveDraft}
-                        disabled={isSaving}
-                        className="w-full py-5 bg-brand-primary text-white rounded-2xl font-black text-[13px] uppercase tracking-widest shadow-xl shadow-brand-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-                      >
-                         {isSaving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} strokeWidth={3} />}
-                         Synchronize & Save
-                      </button>
-                   </div>
-                </div>
+                          {/* Editable Email */}
+                          <div className="space-y-3 pt-2">
+                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Deployment Coordinate</p>
+                             <div className="bg-white p-5 rounded-2xl border border-slate-100 focus-within:border-red-500/30 transition-all shadow-sm space-y-1.5">
+                                <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest leading-none">Recipient Email</span>
+                                <input 
+                                  value={draftEditData.email}
+                                  onChange={(e) => setDraftEditData({ ...draftEditData, email: e.target.value })}
+                                  className="w-full bg-transparent font-bold text-slate-800 outline-none text-sm tracking-tight"
+                                />
+                             </div>
+                          </div>
+                       </div>
+                    </div>
+
+                    {/* Right Column: Editable Message Content */}
+                    <div className="md:col-span-7 p-8 md:p-10 space-y-6 flex flex-col justify-between bg-white h-full">
+                       <div className="space-y-6 flex-1 pr-2 select-text">
+                          <div className="bg-slate-50/60 p-5 rounded-xl border border-slate-100 focus-within:border-red-500/30 transition-all">
+                             <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-2 block select-none">Strategic Subject Header</span>
+                             <input 
+                               value={draftEditData.subject}
+                               onChange={(e) => setDraftEditData({ ...draftEditData, subject: e.target.value })}
+                               className="w-full bg-transparent font-black text-slate-900 outline-none text-base tracking-tight leading-relaxed"
+                             />
+                          </div>
+
+                          <div className="bg-slate-50/60 p-6 rounded-[20px] border border-slate-100 focus-within:border-red-500/30 transition-all flex-grow">
+                             <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-3 block select-none">Narrative Protocol Body</span>
+                             <textarea 
+                               value={draftEditData.body}
+                               onChange={(e) => setDraftEditData({ ...draftEditData, body: e.target.value })}
+                               className="w-full bg-transparent font-medium text-slate-600 outline-none text-sm leading-relaxed min-h-[220px] resize-none"
+                             />
+                          </div>
+                       </div>
+
+                       {/* Action Controls Footer */}
+                       <div className="pt-6 border-t border-slate-100 grid grid-cols-2 gap-4">
+                          <button 
+                            onClick={() => setSelectedDraft(null)}
+                            className="w-full py-4 bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-200 rounded-2xl font-bold text-sm uppercase tracking-widest hover:scale-[1.01] active:scale-[0.99] transition-all"
+                          >
+                             Discard Changes
+                          </button>
+                          <button 
+                            onClick={handleSaveDraft}
+                            disabled={isSaving}
+                            className="w-full py-4 bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white rounded-2xl font-bold text-sm uppercase tracking-widest hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-3 shadow-lg shadow-red-500/10"
+                          >
+                             {isSaving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} strokeWidth={3} />}
+                             Save & Refine
+                          </button>
+                       </div>
+                    </div>
+                 </div>
               </motion.div>
             </div>
           );
@@ -1583,78 +1263,80 @@ const CampaignWorkspace = () => {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowHistoryDM(null)}
-              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-900/50 backdrop-blur-md"
             />
             <motion.div 
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="relative w-full max-w-xl bg-white h-full shadow-2xl flex flex-col"
+              className="relative w-full max-w-xl bg-white h-full shadow-2xl flex flex-col border-l border-slate-100"
             >
-              <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+              <div className="p-6 md:p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/40 select-none">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-brand-primary shadow-sm">
-                    <MessageSquare size={24} />
+                  <div className="w-11 h-11 bg-red-50 text-red-600 border border-red-100 rounded-xl flex items-center justify-center shadow-sm shrink-0">
+                    <MessageSquare size={20} strokeWidth={2.5} />
                   </div>
                   <div>
-                    <h3 className="text-xl font-black text-slate-900 uppercase italic tracking-tight">Mission Engagement Chain</h3>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{showHistoryDM.name} • {campaign.target_companies.find(c => c.id === showHistoryDM.target_company_id)?.name}</p>
+                    <h3 className="text-lg md:text-xl font-extrabold text-slate-900 uppercase italic tracking-tight leading-tight">Mission Engagement Chain</h3>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none pt-1">
+                      {showHistoryDM.name} • {campaign.target_companies.find(c => c.id === showHistoryDM.target_company_id)?.name}
+                    </p>
                   </div>
                 </div>
-                <button onClick={() => setShowHistoryDM(null)} className="p-3 hover:bg-white rounded-xl text-slate-400 transition-colors shadow-sm">
-                  <X size={24} />
+                <button 
+                  onClick={() => setShowHistoryDM(null)} 
+                  className="w-10 h-10 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-900 transition-colors flex items-center justify-center border border-slate-100/60 shadow-sm"
+                >
+                  <X size={18} strokeWidth={2.5} />
                 </button>
               </div>
 
-              <div className="flex-grow overflow-y-auto p-10 space-y-10 bg-slate-50/30 relative">
-                {/* Vertical Timeline Line (The Chain) */}
-                <div className="absolute left-[59px] top-10 bottom-10 w-0.5 bg-slate-200" />
+              <div className="flex-grow overflow-y-auto p-6 md:p-8 space-y-8 bg-slate-50/20 relative">
+                <div className="absolute left-[43px] md:left-[51px] top-8 bottom-8 w-0.5 bg-slate-100/80" />
 
-                {/* Node 1: Targeting Strategy (The Origin) */}
-                <div className="relative flex gap-8">
-                   <div className="z-10 bg-white w-10 h-10 rounded-full border-2 border-slate-200 flex items-center justify-center text-slate-400 shadow-sm shrink-0">
-                      <Target size={18} strokeWidth={3} />
+                <div className="relative flex gap-5 md:gap-6">
+                   <div className="z-10 bg-white w-9 h-9 rounded-xl border-2 border-slate-100 flex items-center justify-center text-red-500 shadow-sm shrink-0">
+                      <Target size={16} strokeWidth={3} />
                    </div>
                    <div 
                       onClick={() => toggleNodeExpansion('strategy')}
-                      className="bg-white p-6 rounded-[24px] border border-slate-100 shadow-sm flex-grow cursor-pointer hover:border-brand-primary/20 transition-all"
+                      className="bg-white p-5 rounded-2xl border border-slate-100/80 shadow-sm flex-grow cursor-pointer hover:border-red-100/40 hover:bg-slate-50/30 transition-all"
                    >
-                      <p className="text-[9px] font-black text-brand-primary uppercase tracking-widest mb-2">Stage 0: Targeting Strategy</p>
-                      <p className="text-xs font-black text-slate-900 uppercase italic tracking-tight mb-2">Strategic Alignment Identification</p>
-                      <p className={`text-sm font-semibold text-slate-500 italic leading-relaxed ${expandedNodes.includes('strategy') ? '' : 'line-clamp-3'}`}>
+                      <p className="text-[9px] font-bold text-red-600 uppercase tracking-widest mb-1 select-none">Stage 0: Targeting Strategy</p>
+                      <p className="text-xs font-extrabold text-slate-800 uppercase italic tracking-tight mb-2 select-none">Strategic Alignment Identification</p>
+                      <p className={`text-sm font-semibold text-slate-600 italic leading-relaxed select-text ${expandedNodes.includes('strategy') ? '' : 'line-clamp-3'}`}>
                          "{showHistoryDM.similarity_score?.reason || "Lead identified through high-intent LinkedIn reconnaissance."}"
                       </p>
                    </div>
                 </div>
 
-                {/* Combined Interaction Timeline (The Chain) */}
                 {(!showHistoryDM.logs || showHistoryDM.logs.length === 0) ? (
-                  <div className="relative flex gap-8 opacity-40">
-                    <div className="z-10 bg-slate-100 w-10 h-10 rounded-full border-2 border-slate-200 flex items-center justify-center text-slate-400 shadow-sm shrink-0">
-                       <Clock size={18} strokeWidth={3} />
+                  <div className="relative flex gap-5 md:gap-6 opacity-40">
+                    <div className="z-10 bg-slate-50 w-9 h-9 rounded-xl border-2 border-slate-100 flex items-center justify-center text-slate-400 shadow-sm shrink-0">
+                       <Clock size={16} strokeWidth={3} />
                     </div>
                     <div className="flex flex-col justify-center">
-                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Awaiting Live Engagement Response...</p>
+                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Awaiting Live Engagement Response...</p>
                     </div>
                   </div>
                 ) : (
                   [...showHistoryDM.logs].reverse().map((log, i) => {
                     const isFirstLog = i === 0;
                     return (
-                      <div key={i} className="relative flex gap-8">
-                         <div className={`z-10 w-10 h-10 rounded-full border-2 flex items-center justify-center shadow-sm shrink-0 ${log.direction === 'SENT' ? 'bg-indigo-500 border-indigo-600 text-white' : 'bg-emerald-500 border-emerald-600 text-white'}`}>
-                            {log.direction === 'SENT' ? (isFirstLog ? <Bot size={18} strokeWidth={3} /> : <Mail size={18} strokeWidth={3} />) : <MessageSquare size={18} strokeWidth={3} />}
+                      <div key={i} className="relative flex gap-5 md:gap-6">
+                         <div className={`z-10 w-9 h-9 rounded-xl border flex items-center justify-center shadow-sm shrink-0 ${log.direction === 'SENT' ? 'bg-indigo-600 border-indigo-700 text-white' : 'bg-emerald-600 border-emerald-700 text-white'}`}>
+                            {log.direction === 'SENT' ? (isFirstLog ? <Bot size={16} strokeWidth={2.5} /> : <Mail size={16} strokeWidth={2.5} />) : <MessageSquare size={16} strokeWidth={2.5} />}
                          </div>
-                         <div className={`p-6 rounded-[24px] border shadow-sm flex-grow ${log.direction === 'SENT' ? 'bg-indigo-50/5 border-indigo-100' : 'bg-emerald-50/10 border-emerald-100'}`}>
-                            <div className="flex items-center justify-between mb-2">
-                               <p className={`text-[9px] font-black uppercase tracking-widest ${log.direction === 'SENT' ? 'text-indigo-400' : 'text-emerald-500'}`}>
+                         <div className={`p-5 rounded-2xl border shadow-sm flex-grow select-text ${log.direction === 'SENT' ? 'bg-white border-slate-100 hover:border-indigo-100' : 'bg-white border-slate-100 hover:border-emerald-100'} transition-all`}>
+                            <div className="flex items-center justify-between mb-2 select-none">
+                               <p className={`text-[9px] font-bold uppercase tracking-widest ${log.direction === 'SENT' ? 'text-indigo-600' : 'text-emerald-600'}`}>
                                   {log.direction === 'SENT' ? (isFirstLog ? 'Mission Alpha: Inaugural Signal' : 'Mission Outbound') : 'Signal Captured'} • {formatTimeAgo(log.received_at)}
-                               </p>
-                               <div className="p-1 px-2 rounded-md bg-white border border-slate-100 text-[8px] font-black text-slate-400 uppercase tracking-tighter">Sync ID: #{String(log.id).slice(-4)}</div>
+                                </p>
+                               <div className="p-1 px-1.5 rounded bg-slate-50 border border-slate-100 text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Sync ID: #{String(log.id).slice(-4)}</div>
                             </div>
-                            <p className="text-sm font-black text-slate-900 uppercase italic tracking-tight mb-1">Subject: {log.subject}</p>
-                            <p className={`text-sm font-semibold leading-relaxed whitespace-pre-wrap ${log.direction === 'SENT' ? 'text-slate-500 italic' : 'text-slate-700 font-medium'}`}>
+                            <p className="text-sm font-extrabold text-slate-800 uppercase italic tracking-tight mb-1">Subject: {log.subject}</p>
+                            <p className={`text-sm font-medium leading-relaxed whitespace-pre-wrap ${log.direction === 'SENT' ? 'text-slate-600 italic' : 'text-slate-600 font-medium'}`}>
                                {cleanEmailReply(log.body)}
                             </p>
                          </div>

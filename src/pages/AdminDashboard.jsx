@@ -150,52 +150,51 @@ const AdminDashboard = () => {
 
   if (user?.role !== 'admin' && user?.role !== 'super_admin') {
     return (
-       <div className="min-h-screen bg-white flex items-center justify-center p-6 font-outfit">
+       <div className="min-h-screen bg-white flex items-center justify-center p-6 font-sans select-none">
          <div className="text-center max-w-sm">
-           <AlertCircle size={64} className="text-red-500 mx-auto mb-6" />
-           <h1 className="text-3xl font-black text-zinc-900 mb-2">Access Denied</h1>
-           <p className="text-zinc-500 font-bold mb-8 italic">Administrative clearance required for this sector.</p>
-           <button onClick={() => window.location.href = '/'} className="w-full py-4 bg-brand-primary text-white rounded-2xl font-black uppercase tracking-widest text-sm shadow-xl shadow-brand-primary/20">Return to Operations</button>
+           <AlertCircle size={56} className="text-rose-500 mx-auto mb-5" />
+           <h1 className="text-2xl font-extrabold text-slate-900 mb-2 uppercase tracking-tight italic">Access Denied</h1>
+           <p className="text-slate-400 font-bold mb-6 text-sm">Administrative clearance required for this sector.</p>
+           <button onClick={() => window.location.href = '/'} className="w-full py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-extrabold uppercase tracking-widest text-xs shadow-md shadow-red-500/10 transition-all select-none">Return to Operations</button>
          </div>
        </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#fafafa] font-outfit pb-20">
-      {/* Admin Header Section */}
-      <div className="bg-white border-b border-zinc-100 pt-12 pb-16 px-10">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-end justify-between gap-8">
-           <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="px-3 py-1 bg-brand-operational/10 text-brand-operational rounded-full text-[10px] font-black uppercase tracking-widest inline-flex items-center gap-1.5">
-                  <ShieldCheck size={12} /> Administrative Deck
-                </div>
-                <div className="w-1.5 h-1.5 rounded-full bg-brand-operational" />
-              </div>
-              <h1 className="text-5xl font-black text-zinc-900 tracking-tighter mb-2">User Sector Hub</h1>
-              <p className="text-zinc-500 font-medium text-lg leading-relaxed max-w-xl">
-                 Managing <span className="text-brand-operational font-black underline decoration-brand-operational/30">{managedUsers.length} active identities</span> across your provisioned administrative jurisdiction.
+    <div className="min-h-screen bg-slate-50/20 font-sans pb-20 select-none">
+      {/* Top Administrative Header */}
+      <div className="bg-white border-b border-slate-100/80 pt-10 pb-12 px-6 md:px-10 select-none">
+        <div className="max-w-[1400px] mx-auto flex flex-col md:flex-row md:items-end justify-between gap-6">
+           <div className="space-y-3">
+              <span className="px-3 py-1 bg-red-50 text-red-600 border border-red-100/60 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm self-start mb-1 inline-flex items-center gap-1.5 select-none">
+                <ShieldCheck size={12} /> Admin Deck
+              </span>
+              <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight uppercase italic leading-tight select-none">
+                User Sector Hub
+              </h1>
+              <p className="text-slate-400 font-bold text-sm tracking-wide max-w-xl leading-relaxed select-none">
+                 Managing <span className="text-red-600 font-black">{managedUsers.length} active identities</span> across your provisioned administrative jurisdiction.
               </p>
            </div>
 
-           <div className="bg-zinc-50 p-6 rounded-[32px] border border-zinc-100 flex items-center gap-8 min-w-[300px]">
+           <div className="bg-white p-5 rounded-3xl border border-slate-100/80 flex items-center gap-6 min-w-[280px] select-none shadow-sm">
               <div className="flex-1">
-                <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1">Provisioned Quota</div>
-                <div className="text-2xl font-black text-zinc-900 tracking-tighter">{managedUsers.length} / {user?.user_limit}</div>
+                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Provisioned Quota</div>
+                <div className="text-2xl font-extrabold text-slate-800 tracking-tight">{managedUsers.length} / {user?.user_limit}</div>
               </div>
-              <div className="w-16 h-16 rounded-2xl bg-white border border-zinc-100 shadow-sm flex items-center justify-center p-2 relative">
+              <div className="w-14 h-14 rounded-2xl bg-slate-50 border border-slate-100/60 flex items-center justify-center p-2 relative shrink-0">
                 <svg className="w-full h-full transform -rotate-90">
-                  <circle cx="24" cy="24" r="20" fill="none" stroke="#f4f4f5" strokeWidth="6" />
+                  <circle cx="20" cy="20" r="16" fill="none" stroke="#f1f5f9" strokeWidth="5" />
                   <circle 
-                    cx="24" cy="24" r="20" fill="none" stroke="currentColor" strokeWidth="6" 
-                    strokeDasharray={126}
-                    strokeDashoffset={126 - (126 * Math.min(managedUsers.length / user?.user_limit, 1))}
+                    cx="20" cy="20" r="16" fill="none" stroke="currentColor" strokeWidth="5" 
+                    strokeDasharray={100.5}
+                    strokeDashoffset={100.5 - (100.5 * Math.min(managedUsers.length / user?.user_limit, 1))}
                     strokeLinecap="round"
-                    className="text-brand-operational transition-all duration-1000"
+                    className="text-red-600 transition-all duration-1000"
                   />
                 </svg>
-                <div className="absolute inset-0 flex items-center justify-center text-[10px] font-black text-zinc-400 uppercase">
+                <div className="absolute inset-0 flex items-center justify-center text-[9px] font-black text-slate-400 uppercase select-none">
                   {Math.round((managedUsers.length / user?.user_limit) * 100) || 0}%
                 </div>
               </div>
@@ -203,136 +202,137 @@ const AdminDashboard = () => {
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-10 mt-12">
-        {/* Actions Bar */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
+      {/* Primary Operating Deck Context */}
+      <div className="max-w-[1400px] mx-auto px-6 md:px-10 mt-10">
+        {/* Filter Toolbar Section */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-5 mb-8">
            <div className="relative flex-1 w-full max-w-md">
-             <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300" size={18} />
+             <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
              <input 
                type="text" 
-               placeholder="Filter Identities..." 
-               className="w-full pl-14 pr-6 py-4 bg-white border border-zinc-100 rounded-2xl text-zinc-900 font-bold focus:ring-2 focus:ring-brand-operational/10 outline-none transition-all"
+               placeholder="Filter identities..." 
+               className="w-full pl-12 pr-5 py-3.5 bg-white border border-slate-100/80 rounded-2xl text-slate-800 font-extrabold outline-none focus:border-red-500/30 focus:shadow-sm transition-all text-sm placeholder:text-slate-300"
              />
            </div>
            
-           <div className="flex items-center gap-3">
+           <div className="flex items-center gap-3 w-full md:w-auto shrink-0 select-none">
              <button 
                onClick={fetchManagedUsers}
-               className="p-4 bg-white border border-zinc-100 text-zinc-400 rounded-2xl hover:text-brand-operational transition-all active:scale-95"
+               className="p-3.5 bg-white border border-slate-100 rounded-2xl text-slate-400 hover:text-red-600 hover:bg-slate-50/50 transition-all active:scale-95 shadow-sm"
              >
                <RefreshCw size={18} />
              </button>
              <button 
                onClick={() => setIsProvisioning(true)}
                disabled={managedUsers.length >= user?.user_limit}
-               className="flex items-center gap-3 bg-brand-operational text-white px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-widest hover:bg-brand-operational/90 transition-all shadow-xl shadow-brand-operational/20 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+               className="flex flex-1 md:flex-initial items-center justify-center gap-2.5 bg-red-600 hover:bg-red-700 text-white px-6 py-3.5 rounded-2xl font-extrabold text-xs uppercase tracking-widest shadow-md shadow-red-500/10 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-40 disabled:cursor-not-allowed select-none"
              >
-               <UserPlus size={20} /> Provision Identity
+               <UserPlus size={16} /> Provision Identity
              </button>
            </div>
         </div>
 
-        {/* Managed Users Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {/* Managed Identities Display Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {managedUsers.map((u, i) => (
             <motion.div 
               key={u.id}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className="bg-white p-8 rounded-[40px] border border-zinc-100 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.03)] group hover:border-brand-operational/30 hover:shadow-[0_40px_80px_-20px_rgba(0,0,0,0.08)] transition-all relative overflow-hidden"
+              transition={{ delay: i * 0.04 }}
+              className="bg-white p-6 rounded-3xl border border-slate-100/80 shadow-sm hover:shadow-md hover:border-red-100/40 transition-all relative overflow-hidden group select-none"
             >
-              {/* Contextual Actions */}
-              <div className="absolute top-6 right-6 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-4 group-hover:translate-x-0">
+              {/* Identity Interaction Sub-deck */}
+              <div className="absolute top-5 right-5 flex items-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all select-none">
                 {!u.is_activated && (
                   <button 
                     onClick={() => handleResendActivation(u.id)}
-                    className="p-2.5 bg-amber-50 text-amber-500 hover:text-amber-600 rounded-xl transition-all"
+                    className="p-2 bg-amber-50 border border-amber-100/50 text-amber-500 hover:bg-amber-100/60 hover:text-amber-600 rounded-xl transition-all shadow-sm select-none"
                     title="Resend Activation Link"
                   >
-                    <Mail size={16} />
+                    <Mail size={14} />
                   </button>
                 )}
                 <button 
                   onClick={() => handleReplaceUser(u.id)}
-                  className="p-2.5 bg-zinc-50 text-zinc-400 hover:text-brand-operational hover:bg-brand-operational/5 rounded-xl transition-all"
+                  className="p-2 bg-slate-50 border border-slate-100/60 text-slate-400 hover:text-red-600 hover:bg-red-50/30 rounded-xl transition-all shadow-sm select-none"
                   title="Replace Identity"
                 >
-                  <RefreshCw size={16} />
+                  <RefreshCw size={14} />
                 </button>
                 <button 
                   onClick={() => handleDeleteUser(u.id)}
-                  className="p-2.5 bg-zinc-50 text-zinc-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                  className="p-2 bg-rose-50 border border-rose-100/60 text-rose-500 hover:bg-rose-100/50 hover:text-rose-600 rounded-xl transition-all shadow-sm select-none"
                   title="Decommission"
                 >
-                  <Trash2 size={16} />
+                  <Trash2 size={14} />
                 </button>
               </div>
 
-              {/* User Identity Section */}
-              <div className="flex items-start gap-5 mb-8">
-                 <div className="w-16 h-16 bg-gradient-to-br from-brand-operational/10 to-brand-operational/5 rounded-[22px] flex items-center justify-center text-brand-operational text-2xl font-black shadow-inner">
-                    {u.email[0].toUpperCase()}
+              {/* Individual Profile Overview */}
+              <div className="flex items-start gap-4 mb-6">
+                 <div className="w-12 h-12 bg-red-50 border border-red-100/60 rounded-xl flex items-center justify-center text-red-600 text-lg font-extrabold shadow-sm shrink-0 uppercase select-none">
+                    {u.email[0]}
                  </div>
-                 <div className="pt-1">
-                    <h3 className="font-black text-zinc-900 text-lg leading-none mb-2 truncate max-w-[180px]">{u.email.split('@')[0]}</h3>
-                    <div className="flex items-center gap-2 flex-wrap">
+                 <div className="pt-0.5 select-text">
+                    <h3 className="font-extrabold text-slate-800 text-base leading-none mb-1 tracking-tight truncate max-w-[170px]">{u.email.split('@')[0]}</h3>
+                    <div className="flex items-center gap-1.5 flex-wrap select-none mt-2">
                         {u.has_mailbox ? (
-                          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 text-emerald-600 rounded-lg text-[9px] font-black uppercase tracking-wider border border-emerald-100/50">
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 text-emerald-600 border border-emerald-100/50 rounded-lg text-[8px] font-black uppercase tracking-wider">
                             <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
                             Mailbox Active
                           </div>
                         ) : (
-                          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50 text-amber-600 rounded-lg text-[9px] font-black uppercase tracking-wider border border-amber-100/50">
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-50 text-amber-600 border border-amber-100/50 rounded-lg text-[8px] font-black uppercase tracking-wider">
                             <div className="w-1 h-1 rounded-full bg-amber-500" />
                             Handshake Pending
                           </div>
                         )}
                         {!u.is_activated && (
-                          <div className="flex items-center gap-1.5 px-2.5 py-1 bg-brand-primary/5 text-brand-primary rounded-lg text-[9px] font-black uppercase tracking-wider border border-brand-primary/10">
-                            <div className="w-1 h-1 rounded-full bg-brand-primary animate-pulse" />
+                          <div className="flex items-center gap-1.5 px-2 py-0.5 bg-red-50 text-red-600 border border-red-100/50 rounded-lg text-[8px] font-black uppercase tracking-wider select-none">
+                            <div className="w-1 h-1 rounded-full bg-red-500 animate-pulse" />
                             Activation Pending
                           </div>
                         )}
-                        <span className="text-[9px] font-black text-zinc-400 uppercase tracking-widest bg-zinc-50 px-2.5 py-1 rounded-lg border border-zinc-100/50">Localized Operator</span>
+                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest bg-slate-50/50 border border-slate-100 px-2 py-0.5 rounded-lg select-none">Localized Operator</span>
                     </div>
                  </div>
               </div>
 
-              {/* Operational Metrics */}
-              <div className="space-y-4 mb-8">
-                 <div className="bg-zinc-50/50 border border-zinc-100/50 p-5 rounded-[24px]">
-                    <div className="flex items-center justify-between mb-4">
-                       <div className="flex items-center gap-3">
-                          <div className="p-2.5 bg-white rounded-xl border border-zinc-100 shadow-sm text-brand-operational">
-                             <BarChart3 size={18} />
+              {/* Status Metrics Block */}
+              <div className="space-y-3 mb-6 select-none">
+                 <div className="bg-slate-50/40 border border-slate-100/60 p-4 rounded-2xl select-none">
+                    <div className="flex items-center justify-between mb-3 select-none">
+                       <div className="flex items-center gap-2 select-none">
+                          <div className="p-1.5 bg-white rounded-lg border border-slate-100 text-red-600 shrink-0 select-none shadow-sm">
+                             <BarChart3 size={14} />
                           </div>
                           <div>
-                             <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Campaign Load</div>
-                             <div className="text-sm font-black text-zinc-900">{u.campaign_count} Missions</div>
+                             <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1 select-none">Campaign Load</div>
+                             <div className="text-xs font-extrabold text-slate-800 leading-none select-none">{u.campaign_count} Missions</div>
                           </div>
                        </div>
-                       <div className="text-[10px] font-black text-zinc-300">
+                       <div className="text-[9px] font-black text-slate-300 select-none">
                           {Math.round((u.campaign_count / 10) * 100)}%
                        </div>
                     </div>
-                    {/* Mini Progress Bar */}
-                    <div className="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden">
+                    {/* Operating Limit Line */}
+                    <div className="h-1 w-full bg-slate-100 rounded-full overflow-hidden select-none">
                        <div 
-                         className="h-full bg-brand-operational transition-all duration-1000" 
+                         className="h-full bg-red-600 transition-all duration-1000 select-none" 
                          style={{ width: `${Math.min((u.campaign_count / 10) * 100, 100)}%` }}
                        />
                     </div>
                  </div>
 
-                 <div className="bg-zinc-50/50 border border-zinc-100/50 p-5 rounded-[24px] flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                       <div className="p-2.5 bg-white rounded-xl border border-zinc-100 shadow-sm text-zinc-400">
-                          <ShieldCheck size={18} />
+                 <div className="bg-slate-50/40 border border-slate-100/60 p-4 rounded-2xl flex items-center justify-between select-none">
+                    <div className="flex items-center gap-2 select-none">
+                       <div className="p-1.5 bg-white rounded-lg border border-slate-100 text-slate-400 shrink-0 select-none shadow-sm">
+                          <ShieldCheck size={14} />
                        </div>
                        <div>
-                          <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest">Sector Initialized</div>
-                          <div className="text-sm font-black text-zinc-900">
+                          <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1 select-none">Sector Initialized</div>
+                          <div className="text-xs font-extrabold text-slate-800 leading-none select-none">
                             {u.created_at ? new Date(u.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'Jan 01, 2026'}
                           </div>
                        </div>
@@ -340,86 +340,86 @@ const AdminDashboard = () => {
                  </div>
               </div>
 
-              <div className="flex items-center gap-2 pt-6 border-t border-zinc-50">
-                <CheckCircle2 size={14} className="text-brand-operational" />
-                <span className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Deployment Readiness Verified</span>
+              <div className="flex items-center gap-2 pt-4 border-t border-slate-50 select-none">
+                <CheckCircle2 size={13} className="text-red-500" />
+                <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em] select-none">Readiness Verified</span>
               </div>
             </motion.div>
           ))}
 
           {managedUsers.length === 0 && !isLoading && (
-            <div className="col-span-full py-32 text-center">
-               <div className="w-20 h-20 bg-zinc-50 rounded-[32px] flex items-center justify-center text-zinc-200 mx-auto mb-8">
-                 <Users size={32} />
+            <div className="col-span-full py-28 bg-white border border-slate-100/80 rounded-3xl border-dashed gap-4 text-center select-none shadow-sm">
+               <div className="w-14 h-14 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 mx-auto mb-4 border border-slate-100">
+                 <Users size={24} />
                </div>
-               <h3 className="text-2xl font-black text-zinc-300 italic mb-2 tracking-tight">Empty Operational Grid</h3>
-               <p className="text-zinc-400 font-medium">Initialize your first user identity sector to begin deployment.</p>
+               <h3 className="text-xl font-extrabold text-slate-400 italic mb-1 uppercase tracking-tight leading-tight">Empty Operational Grid</h3>
+               <p className="text-slate-400 font-bold text-xs">Initialize your first user identity sector to begin deployment.</p>
             </div>
           )}
         </div>
       </div>
 
-      {/* Provisioning Modal */}
+      {/* Identity Allocation Portal Overlay */}
       <AnimatePresence>
         {isProvisioning && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 select-none">
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsProvisioning(false)}
-              className="absolute inset-0 bg-zinc-950/60 backdrop-blur-md" 
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm select-none" 
             />
             <motion.div 
-              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              initial={{ scale: 0.96, opacity: 0, y: 15 }}
               animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 20 }}
-              className="bg-white w-full max-w-[500px] rounded-[48px] shadow-2xl relative z-10 overflow-hidden"
+              exit={{ scale: 0.96, opacity: 0, y: 15 }}
+              className="bg-white w-full max-w-[480px] rounded-[36px] shadow-xl relative z-10 overflow-hidden border border-slate-100/80 select-none"
             >
-               <div className="p-12">
-                  <div className="w-16 h-16 bg-brand-operational/10 text-brand-operational rounded-2xl flex items-center justify-center mb-8 shadow-inner">
-                    <UserPlus size={28} />
+               <div className="p-8 md:p-10 select-none">
+                  <div className="w-14 h-14 bg-red-50 border border-red-100/60 text-red-600 rounded-2xl flex items-center justify-center mb-6 shadow-sm shrink-0">
+                    <UserPlus size={24} />
                   </div>
-                  <h2 className="text-4xl font-black text-zinc-900 tracking-tight mb-3">Provision Identity</h2>
-                  <p className="text-zinc-500 font-medium mb-10 leading-relaxed italic">
+                  <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight mb-2 uppercase italic leading-tight select-none">Provision Identity</h2>
+                  <p className="text-slate-400 font-bold text-sm mb-8 leading-relaxed select-none">
                     Establish a new autonomous sector. This identity will have full outreach capabilities under your supervision.
                   </p>
 
-                  <form onSubmit={handleProvisionUser} className="space-y-8">
-                     <div>
-                       <label className="text-[11px] font-black text-zinc-400 uppercase tracking-widest block ml-1 mb-2">User Email</label>
+                  <form onSubmit={handleProvisionUser} className="space-y-6">
+                     <div className="space-y-2">
+                       <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block ml-1 select-none">User Email Address</label>
                        <div className="relative">
-                         <Mail className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300" size={18} />
+                         <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
                          <input 
                            type="email" 
                            required 
                            value={newUser.email}
                            onChange={(e) => setNewUser({...newUser, email: e.target.value})}
                            placeholder="user@outreach-mission.com" 
-                           className="w-full pl-14 pr-6 py-5 bg-zinc-50 border border-zinc-100 rounded-2xl text-zinc-900 font-bold focus:ring-2 focus:ring-brand-operational/10 transition-all outline-none" 
+                           className="w-full pl-12 pr-5 py-4 bg-white border border-slate-100/80 rounded-2xl text-slate-800 font-extrabold focus:border-red-500/30 transition-all outline-none text-sm shadow-sm" 
                          />
                        </div>
                      </div>
                      
                      {error && (
-                       <div className="bg-red-50 p-5 rounded-2xl flex items-start gap-3 border border-red-100">
-                         <AlertCircle className="text-red-500 shrink-0" size={18} />
-                         <p className="text-red-500 text-xs font-black leading-relaxed">{error}</p>
+                       <div className="bg-rose-50 p-4 rounded-2xl flex items-start gap-2.5 border border-rose-100 select-text">
+                         <AlertCircle className="text-rose-500 shrink-0" size={16} />
+                         <p className="text-rose-500 text-[11px] font-extrabold leading-relaxed">{error}</p>
                        </div>
                      )}
 
-                     <div className="flex gap-4 pt-4">
+                     <div className="flex gap-3 pt-2">
                        <button 
                          type="button" 
                          onClick={() => setIsProvisioning(false)}
-                         className="flex-1 py-5 bg-zinc-50 text-zinc-400 rounded-2xl font-black text-xs uppercase tracking-widest hover:text-zinc-700 transition-all"
+                         className="flex-1 py-4 bg-slate-50 border border-slate-100 text-slate-500 rounded-2xl font-extrabold text-xs uppercase tracking-widest hover:bg-slate-100/80 transition-all select-none"
                        >
                          Abort
                        </button>
                        <button 
                          type="submit" 
                          disabled={isLoading}
-                         className="flex-1 py-5 bg-zinc-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl shadow-zinc-200 hover:bg-brand-operational transition-all disabled:opacity-50"
+                         className="flex-1 py-4 bg-red-600 hover:bg-red-700 text-white rounded-2xl font-extrabold text-xs uppercase tracking-widest shadow-md shadow-red-500/10 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 select-none"
                        >
                          {isLoading ? "Provisioning..." : "Activate Sector"}
                        </button>

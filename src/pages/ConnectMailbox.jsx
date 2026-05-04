@@ -18,7 +18,7 @@ const rememberMailboxRedirectUri = (authorizationUrl) => {
 };
 
 const ConnectMailbox = () => {
-    const { isLoggedIn, hasMailbox, connectMailbox, checkAuth, getMailboxAuthorizationUrl } = useAuth();
+    const { isLoggedIn, user, hasMailbox, connectMailbox, checkAuth, getMailboxAuthorizationUrl } = useAuth();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
     const [status, setStatus] = useState('idle'); // idle, connecting, success, error

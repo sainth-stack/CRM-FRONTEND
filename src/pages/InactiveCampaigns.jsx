@@ -3,7 +3,8 @@ import { Link } from "react-router-dom";
 import { 
   Search, ArrowUpDown, 
   Trash2, RefreshCw, Archive, 
-  Loader2, Square, CheckSquare
+  Loader2, Square, CheckSquare,
+  CheckCircle2
 } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "../config";
@@ -22,7 +23,6 @@ const InactiveCampaigns = () => {
   const fetchCampaigns = async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/campaigns`);
-      // The backend now returns a paginated object { campaigns: [], total: X }
       const campaignsData = response.data.campaigns || [];
       const inactiveOnly = campaignsData.filter(c => c.status === "INACTIVE");
       setCampaigns(inactiveOnly);
@@ -130,27 +130,29 @@ const InactiveCampaigns = () => {
     });
 
   return (
-    <div className="max-w-[1440px] mx-auto px-10 py-12 bg-white min-h-screen">
-      <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
-        <div className="space-y-2">
-          <h1 className="text-[40px] font-black text-[#1e293b] tracking-tight leading-tight">
+    <div className="max-w-[1400px] mx-auto px-6 md:px-10 py-10 min-h-screen font-sans bg-slate-50/20 select-none">
+      {/* Top Header & Context Banner */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6">
+        <div className="space-y-3">
+          <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight uppercase italic leading-tight select-none">
             Inactive Campaigns
           </h1>
-          <p className="text-zinc-400 font-semibold text-lg">
-            Archived missions that have been paused or completed.
+          <p className="text-slate-400 font-bold text-sm tracking-wide max-w-xl leading-relaxed select-none">
+            Manage paused, enqueued, or finished missions.
           </p>
         </div>
       </div>
 
-      <div className="flex flex-col lg:flex-row items-center gap-4 mb-10 w-full">
+      {/* Operation Dashboard Block */}
+      <div className="flex flex-col lg:flex-row items-center gap-4 mb-8 w-full">
         <div className="relative flex-grow group w-full">
-          <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-brand-primary transition-colors" size={20} />
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-red-500 transition-colors" size={18} />
           <input 
             type="text" 
             placeholder="Search archived missions..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-zinc-50 border border-zinc-100 rounded-[20px] pl-16 pr-6 py-4.5 text-[#1e293b] font-bold outline-none focus:bg-white focus:border-brand-primary focus:shadow-xl focus:shadow-indigo-500/5 transition-all placeholder:text-zinc-300"
+            className="w-full bg-white border border-slate-100/80 rounded-2xl pl-12 pr-6 py-3.5 text-slate-800 font-extrabold outline-none focus:border-red-500/30 focus:shadow-sm transition-all placeholder:text-slate-300 text-sm"
           />
         </div>
         
@@ -159,116 +161,141 @@ const InactiveCampaigns = () => {
             <button 
               onClick={handleBatchRestore}
               disabled={processingAction !== null}
-              className="flex-grow lg:flex-grow-0 flex items-center justify-center gap-2 px-6 py-4.5 bg-brand-primary/10 text-brand-primary border border-brand-primary/10 rounded-[20px] font-black text-sm hover:bg-brand-primary hover:text-white transition-all shadow-sm disabled:opacity-50"
+              className="flex-grow lg:flex-grow-0 flex items-center justify-center gap-2 px-5 py-3.5 bg-red-50 text-red-600 border border-red-100 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-600 hover:text-white transition-all shadow-sm disabled:opacity-50"
             >
-              {processingAction === 'batch-restore' ? <Loader2 size={18} className="animate-spin" /> : <RefreshCw size={18} strokeWidth={3} />}
-              {processingAction === 'batch-restore' ? "Restoring..." : "Restore Selected"}
+              {processingAction === 'batch-restore' ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} strokeWidth={3} />}
+              {processingAction === 'batch-restore' ? "Restoring" : "Restore Selected"}
             </button>
           )}
           <button 
             disabled={selectedIds.length === 0 || processingAction !== null}
             onClick={handleBatchDelete}
-            className={`flex-grow lg:flex-grow-0 flex items-center justify-center gap-2 px-6 py-4.5 rounded-[20px] font-black text-sm transition-all shadow-sm ${
+            className={`flex-grow lg:flex-grow-0 flex items-center justify-center gap-2 px-5 py-3.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-sm ${
                 selectedIds.length > 0 
-                ? "bg-red-50 text-red-500 hover:bg-red-500 hover:text-white border border-red-100" 
-                : "bg-zinc-50 text-zinc-300 border border-zinc-100 cursor-not-allowed opacity-50"
+                ? "bg-rose-50 border border-rose-100 text-rose-600 hover:bg-rose-600 hover:text-white" 
+                : "bg-slate-50 border border-slate-100/60 text-slate-300 cursor-not-allowed opacity-40"
             } disabled:opacity-50`}
           >
-            {processingAction === 'batch-delete' ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} strokeWidth={3} />}
-            {processingAction === 'batch-delete' ? "Purging..." : `Purge Selected ${selectedIds.length > 0 ? `(${selectedIds.length})` : ''}`}
+            {processingAction === 'batch-delete' ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} strokeWidth={3} />}
+            {processingAction === 'batch-delete' ? "Deleting" : "Batch Purge"}
           </button>
           <button 
             onClick={toggleSort}
-            className="flex-grow lg:flex-grow-0 flex items-center justify-center gap-2 px-6 py-4.5 bg-white border border-zinc-100 rounded-[20px] text-[#1e293b] font-bold text-sm hover:bg-zinc-50 transition-all"
+            className="flex-grow lg:flex-grow-0 flex items-center justify-center gap-2 px-5 py-3.5 bg-white border border-slate-100 rounded-2xl text-slate-700 font-bold text-xs uppercase tracking-widest hover:bg-slate-50/40 transition-all shadow-sm"
           >
-            <ArrowUpDown size={18} />
-            Sort: {sortOrder === "newest" ? "Newest" : "Oldest"}
+            <ArrowUpDown size={16} />
+            {sortOrder === "newest" ? "Newest" : "Oldest"}
           </button>
         </div>
       </div>
 
+      {/* Context Action Menu Bar */}
       {filteredCampaigns.length > 0 && (
-          <div className="flex items-center gap-3 mb-6 px-4">
-              <button 
-                  onClick={toggleSelectAll}
-                  disabled={processingAction !== null}
-                  className="flex items-center gap-2 text-[11px] font-black uppercase tracking-widest text-[#1e293b] hover:text-brand-primary transition-colors disabled:opacity-50"
-                >
-                  {selectedIds.length === filteredCampaigns.length ? <CheckSquare size={16} className="text-brand-primary" strokeWidth={3} /> : <Square size={16} strokeWidth={3} />}
-                  {selectedIds.length === filteredCampaigns.length ? "Deselect All" : "Select All Campaigns"}
-              </button>
-          </div>
+        <div className="flex items-center gap-3 mb-6 px-2 select-none">
+          <button 
+            onClick={toggleSelectAll}
+            disabled={processingAction !== null}
+            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-red-600 transition-colors disabled:opacity-50 select-none"
+          >
+            {selectedIds.length === filteredCampaigns.length ? (
+              <CheckSquare size={16} className="text-red-600" strokeWidth={3} />
+            ) : (
+              <Square size={16} className="text-slate-300" strokeWidth={3} />
+            )}
+            {selectedIds.length === filteredCampaigns.length ? "Deselect All" : "Select All Campaigns"}
+          </button>
+        </div>
       )}
 
-      <div className="flex flex-col gap-6 relative">
+      {/* Main Campaign List Content */}
+      <div className="flex flex-col gap-5 relative">
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-32 gap-4">
-             <Loader2 className="w-10 h-10 text-brand-primary animate-spin" />
-             <p className="text-zinc-400 font-black uppercase text-xs tracking-widest">Scanning Archives...</p>
+          <div className="flex flex-col items-center justify-center py-28 bg-white border border-slate-100/80 rounded-3xl gap-3 shadow-sm select-none">
+             <Loader2 className="w-10 h-10 text-red-500 animate-spin" />
+             <p className="text-slate-400 font-extrabold uppercase text-xs tracking-widest animate-pulse">Scanning Archives...</p>
           </div>
         ) : filteredCampaigns.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-32 bg-zinc-50 border border-zinc-100 rounded-[40px] border-dashed">
-             <Archive className="w-16 h-16 text-zinc-200 mb-6" />
-             <p className="text-zinc-400 font-bold">Your archive is currently empty.</p>
+          <div className="flex flex-col items-center justify-center py-28 bg-white border border-slate-100/80 rounded-[32px] border-dashed gap-4 text-center select-none shadow-sm">
+             <Archive className="w-14 h-14 text-red-200 animate-pulse" />
+             <div>
+                <p className="text-slate-700 font-extrabold uppercase tracking-wide text-sm leading-tight mb-1">
+                  Your archive is empty
+                </p>
+                <p className="text-slate-400 font-bold text-xs tracking-wide max-w-sm mx-auto">
+                  No paused or completed campaigns are currently stored.
+                </p>
+             </div>
           </div>
         ) : (
-          filteredCampaigns.map((campaign, index) => (
-            <div 
-              key={campaign.id}
-              className={`bg-white border rounded-[32px] p-8 shadow-sm transition-all flex items-center gap-6 ${
-                selectedIds.includes(campaign.id) ? "border-brand-primary/40 bg-brand-primary/[0.02]" : "border-zinc-100"
-              }`}
-            >
-              <button 
-                onClick={() => toggleSelect(campaign.id)}
-                className={`flex-shrink-0 w-8 h-8 rounded-xl border-2 flex items-center justify-center transition-all ${
-                    selectedIds.includes(campaign.id) 
-                    ? "bg-brand-primary border-brand-primary text-white shadow-lg shadow-brand-primary/20" 
-                    : "bg-zinc-50 border-zinc-100 text-transparent"
+          filteredCampaigns.map((campaign, index) => {
+            const initials = (campaign.name || "C")
+              .split(" ")
+              .filter(Boolean)
+              .map(w => w[0])
+              .join("")
+              .toUpperCase()
+              .slice(0, 2);
+
+            return (
+              <div 
+                key={campaign.id}
+                className={`bg-white border rounded-3xl p-5 md:p-6 shadow-sm hover:shadow-md transition-all flex flex-col md:flex-row items-start md:items-center justify-between gap-6 select-none ${
+                  selectedIds.includes(campaign.id) ? "border-red-200 bg-red-50/10" : "border-slate-100/80"
                 }`}
               >
-                <CheckSquare size={16} strokeWidth={4} />
-              </button>
+                <div className="flex items-center gap-5 flex-grow">
+                  <button 
+                    onClick={() => toggleSelect(campaign.id)}
+                    className={`flex-shrink-0 w-7 h-7 rounded-xl border flex items-center justify-center transition-all ${
+                        selectedIds.includes(campaign.id) 
+                        ? "bg-red-600 border-red-600 text-white shadow-md shadow-red-500/10 hover:bg-red-700" 
+                        : "bg-slate-50 border-slate-200 text-transparent hover:border-red-400/50"
+                    }`}
+                  >
+                    <CheckCircle2 size={15} strokeWidth={3} />
+                  </button>
 
-              <div className="flex items-center justify-between flex-grow">
-                <div className="flex gap-5 flex-grow opacity-60 grayscale group-hover:grayscale-0 transition-all">
-                  <div className="w-16 h-16 rounded-2xl bg-zinc-100 text-zinc-400 flex items-center justify-center shadow-sm border border-zinc-50">
-                    <Archive size={28} />
-                  </div>
-                  <div className="space-y-1 pt-1 flex-grow">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-2xl font-black text-zinc-400 tracking-tight">{campaign.name}</h3>
-                      <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase border bg-zinc-50 text-zinc-400 border-zinc-100">
-                        ARCHIVED
-                      </span>
+                  <div className="flex gap-5 flex-grow opacity-80 select-text">
+                    <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center shadow-sm shrink-0 font-extrabold text-slate-400 text-xs select-none">
+                      {initials}
                     </div>
-                    <p className="text-zinc-300 font-semibold text-sm line-clamp-1 max-w-4xl italic">
-                      {campaign.query}
-                    </p>
+                    <div className="space-y-1 pt-1 flex-grow">
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <h3 className="text-lg md:text-xl font-extrabold text-slate-400 tracking-tight uppercase italic leading-tight">
+                          {campaign.name}
+                        </h3>
+                        <span className="px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-widest bg-slate-100 text-slate-400 border border-slate-200">
+                          ARCHIVED
+                        </span>
+                      </div>
+                      <p className="text-slate-300 font-bold text-xs line-clamp-1 max-w-4xl lowercase italic select-none">
+                        {campaign.query}
+                      </p>
+                    </div>
                   </div>
                 </div>
                 
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 w-full md:w-auto shrink-0 select-none">
                   <button 
                     disabled={processingId === campaign.id}
                     onClick={() => handleRestore(campaign.id)}
-                    className="flex items-center gap-2 px-5 py-3.5 bg-brand-primary/10 text-brand-primary rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-brand-primary hover:text-white transition-all shadow-sm disabled:opacity-50"
+                    className="flex-grow md:flex-grow-0 flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-50 border border-slate-100/80 text-slate-600 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-red-50 hover:text-red-600 hover:border-red-100 transition-all select-none shadow-sm disabled:opacity-50"
                   >
-                    {processingId === campaign.id && processingAction === 'restore' ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} strokeWidth={3} />}
-                    {processingId === campaign.id && processingAction === 'restore' ? "Restoring..." : "Restore Mission"}
+                    {processingId === campaign.id && processingAction === 'restore' ? <Loader2 size={14} className="animate-spin" /> : <RefreshCw size={14} strokeWidth={3} />}
+                    {processingId === campaign.id && processingAction === 'restore' ? "Restoring" : "Restore"}
                   </button>
                   <button 
                     disabled={processingId === campaign.id}
                     onClick={() => handleDelete(campaign.id)}
-                    className="flex items-center gap-2 px-5 py-3.5 bg-red-50 text-red-500 rounded-xl font-black text-[11px] uppercase tracking-widest hover:bg-red-500 hover:text-white transition-all shadow-sm disabled:opacity-50"
+                    className="flex-grow md:flex-grow-0 flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-50 border border-rose-100 text-rose-600 rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-rose-600 hover:text-white transition-all select-none shadow-sm disabled:opacity-50"
                   >
-                    {processingId === campaign.id && processingAction === 'delete' ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} strokeWidth={3} />}
-                    {processingId === campaign.id && processingAction === 'delete' ? "Deleting..." : "Delete"}
+                    {processingId === campaign.id && processingAction === 'delete' ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} strokeWidth={3} />}
+                    {processingId === campaign.id && processingAction === 'delete' ? "Deleting" : "Delete"}
                   </button>
                 </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>

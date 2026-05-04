@@ -8,81 +8,72 @@ const Navbar = () => {
   const isActive = (path) => location.pathname === path;
 
   const role = user?.role?.toUpperCase();
+  const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
   const navLinks = role === "USER" ? [
     { name: "New Campaign", path: "/create" },
     { name: "Active", path: "/active" },
     { name: "Inactive", path: "/inactive" },
+  ] : isAdmin ? [
+    { name: "Admin Deck", path: role === "SUPER_ADMIN" ? "/sovereign" : "/management" },
+    { name: "Analysis", path: "/analysis" },
   ] : [];
 
   return (
-    <header className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
-      {/* Sovereign Accent Bar */}
-      <div className={`h-1.5 w-full ${role === 'SUPER_ADMIN' ? 'bg-amber-500' : role === 'ADMIN' ? 'bg-emerald-500' : 'bg-brand-primary'}`} />
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-100/80 shadow-sm select-none">
+      {/* Premium Red Accent Bar */}
+      <div className={`h-1 w-full ${role === 'SUPER_ADMIN' ? 'bg-amber-500' : role === 'ADMIN' ? 'bg-emerald-500' : 'bg-red-600'}`} />
       
-      <div className="max-w-[1440px] mx-auto px-6 h-24 flex items-center justify-between">
-        {/* Logo Artifact */}
-        <Link to="/" className="flex items-center gap-3 group font-outfit">
-           <img src="/logo.png" alt="AI-PRIORI Logo" className="w-18 h-18 object-contain group-hover:scale-105 transition-transform" />
-           <div className="flex flex-col items-start">
-             <span className="font-extrabold text-4xl tracking-tighter text-brand-primary leading-none uppercase">
-                AI-PRIORI
-             </span>
-             <div className="flex justify-between w-full items-center mt-0 px-0.5">
-               <span className="text-[11px] font-medium text-brand-secondary uppercase tracking-tighter">DATA</span>
-               <span className="text-[11px] font-medium text-brand-dark leading-none">-</span>
-               <span className="text-[11px] font-medium text-brand-accent uppercase tracking-tighter">INTELLIGENCE</span>
-               <span className="text-[11px] font-medium text-brand-dark leading-none">-</span>
-               <span className="text-[11px] font-medium text-brand-primary uppercase tracking-tighter">AUTONOMY</span>
-             </div>
-           </div>
+      <div className="w-full px-4 md:px-6 h-20 flex items-center justify-between">
+        {/* Logo Branding */}
+        <Link to="/" className="flex items-center gap-3 group">
+           <img src="/logo.png" alt="AI-PRIORI Logo" className="w-14 h-14 object-cover rounded-full group-hover:scale-105 transition-transform shrink-0 mix-blend-multiply" />
+            <div className="flex flex-col items-start leading-none shrink-0 font-outfit">
+              <span className="font-extrabold text-3xl md:text-4xl tracking-tighter text-red-600 leading-none uppercase select-none">
+                 AI-PRIORI
+              </span>
+              <div className="flex justify-between w-full items-center mt-1 px-0.5">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">DATA</span>
+                <span className="text-[10px] font-bold text-slate-300 leading-none">-</span>
+                <span className="text-[10px] font-bold text-red-600 uppercase tracking-tighter">INTELLIGENCE</span>
+                <span className="text-[10px] font-bold text-slate-300 leading-none">-</span>
+                <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">AUTONOMY</span>
+              </div>
+            </div>
         </Link>
 
-        {/* Dynamic Command Interface - Role Filtered */}
-        <nav className="flex items-center gap-10">
+        {/* Dynamic Command Interface */}
+        <nav className="hidden md:flex items-center gap-8">
           {isLoggedIn && navLinks.map((link) => (
             <Link
               key={link.path}
               to={link.path}
-              className={`text-[13px] font-black uppercase tracking-[0.15em] transition-all relative h-24 flex items-center ${
-                isActive(link.path) ? "text-brand-primary" : "text-zinc-400 hover:text-zinc-800"
+              className={`text-xs font-bold uppercase tracking-wider transition-all relative h-20 flex items-center ${
+                isActive(link.path) ? "text-red-600 font-extrabold" : "text-slate-500 hover:text-slate-800"
               }`}
             >
               {link.name}
               {isActive(link.path) && (
-                <div className="absolute bottom-0 left-0 right-0 h-1 bg-brand-primary rounded-t-full shadow-[0_-4px_10px_rgba(59,130,246,0.3)]" />
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-600 rounded-t-full shadow-sm" />
               )}
             </Link>
           ))}
 
-            {/* Management Link for Admins */}
-            {isLoggedIn && (role === "ADMIN" || role === "SUPER_ADMIN") && (
-              <Link
-                to={role === "SUPER_ADMIN" ? "/sovereign" : "/management"}
-                className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-[12px] font-black uppercase tracking-widest transition-all ${
-                  isActive(role === "SUPER_ADMIN" ? "/sovereign" : "/management")
-                    ? "bg-brand-operational text-white shadow-lg shadow-brand-operational/25"
-                    : "bg-zinc-50 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-900 border border-zinc-100"
-                }`}
-              >
-                <ShieldCheck size={16} className={isActive(role === "SUPER_ADMIN" ? "/sovereign" : "/management") ? "text-white" : "text-brand-operational"} />
-                {role === "SUPER_ADMIN" ? "Sovereign Deck" : "Admin Deck"}
-              </Link>
-            )}
+
         </nav>
 
-        {/* Auth Buttons / Profile - Right */}
-        <div className="flex items-center gap-4">
+        {/* Action Blocks & Logout */}
+        <div className="flex items-center gap-3">
           {!isLoggedIn && !isActive("/login") && !isActive("/forgot-password") && !isActive("/demo") && !isActive("/demo/verify") && (
             <>
               <Link 
                 to="/login"
-                className="text-[14px] font-bold uppercase tracking-widest text-[#1e293b] hover:border-brand-primary transition-all px-6 py-2.5 border border-zinc-200 rounded-lg hover:text-brand-primary active:scale-95 shadow-sm"
+                className="text-xs font-bold uppercase tracking-widest text-slate-600 hover:text-red-600 border border-slate-200/80 hover:border-red-100 bg-white rounded-xl transition-all px-4 py-2.5 shadow-sm active:scale-95 hover:bg-slate-50/50"
               >
                 Sign In
               </Link>
               <Link 
                 to="/demo"
-                className="text-[14px] font-bold uppercase tracking-widest bg-brand-primary text-white px-6 py-2.5 rounded-lg hover:bg-brand-primary/90 transition-all shadow-md active:scale-95 shadow-brand-primary/20"
+                className="text-xs font-extrabold uppercase tracking-widest bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl hover:shadow-md transition-all shadow-md active:scale-95 shadow-red-500/10"
               >
                 Launch Trial
               </Link>
@@ -91,7 +82,7 @@ const Navbar = () => {
           {isLoggedIn && (
             <button 
               onClick={logout}
-              className="text-[14px] font-bold uppercase tracking-widest text-zinc-400 hover:text-brand-primary transition-colors px-4 py-2"
+              className="text-xs font-extrabold uppercase tracking-widest text-slate-400 hover:text-red-600 transition-colors px-3 py-2 select-none"
             >
               Sign Out
             </button>
