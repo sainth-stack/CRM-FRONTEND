@@ -8,14 +8,23 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import * as XLSX from "xlsx";
 import { useToast } from "../context/ToastContext";
+import CompanyIntelModal from "../components/campaign-workspace/CompanyIntelModal";
+import DraftEditorModal from "../components/campaign-workspace/DraftEditorModal";
+import axios from "axios";
+import API_BASE_URL from "../config";
 
-const LeadLedger = ({ campaign }) => {
+const LeadLedger = ({ campaign, hideSidebar = false }) => {
   const [activeView, setActiveView] = useState("DASHBOARD"); // DASHBOARD, PIPELINE, ANALYSIS
   const [dashboardPage, setDashboardPage] = useState(1);
   const [pipelinePage, setPipelinePage] = useState(1);
   const itemsPerPage = 10;
 
   const { showToast } = useToast();
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [selectedDraft, setSelectedDraft] = useState(null);
+  const [draftEditData, setDraftEditData] = useState({ subject: "", body: "", email: "" });
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSending, setIsSending] = useState(null);
   const rawCompanies = campaign?.target_companies || [];
   
   // Tactical Sorting Protocol: Approved targets first, Rejected last
@@ -134,6 +143,35 @@ const LeadLedger = ({ campaign }) => {
     }
   };
 
+  const handleSaveDraft = async () => {
+    if (!selectedDraft) return;
+    setIsSaving(true);
+    try {
+      await axios.patch(`${API_BASE_URL}/drafts/${selectedDraft.id}`, draftEditData);
+      showToast({ tone: "success", title: "Refinement Saved", description: "Executive protocol synchronized." });
+      setSelectedDraft(null);
+      // Note: Ideally parent should re-fetch campaign here, but we'll rely on interval for now
+    } catch (error) {
+      console.error("Error saving draft:", error);
+      showToast({ tone: "error", title: "Save Failed", description: "Failed to synchronize refinement." });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSendMessage = async (draftId, name) => {
+    setIsSending(draftId);
+    try {
+        await axios.post(`${API_BASE_URL}/drafts/${draftId}/send`);
+        showToast({ tone: "success", title: "Mission Accomplished", description: `Engagement targeting ${name} deployed.` });
+    } catch (error) {
+        console.error("Tactical Deployment Failure:", error);
+        showToast({ tone: "error", title: "Deployment Failed", description: "Strategic protocol failure." });
+    } finally {
+        setIsSending(null);
+    }
+  };
+
   const getStatusBadge = (status) => {
     const s = (status || "NEW").toUpperCase().replace(/_/g, " ");
     let colors = "bg-slate-50 text-slate-400 border-slate-100";
@@ -155,82 +193,103 @@ const LeadLedger = ({ campaign }) => {
     if (company.linkedin && company.linkedin !== "N/A" && company.linkedin !== "unknown") {
       return company.linkedin;
     }
-    return `https://www.linkedin.com/company/${company.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
+    return "#";
   };
 
   const getFallbackSize = (company) => {
     if (company.employee_count && company.employee_count !== "N/A" && company.employee_count !== "-") {
       return company.employee_count;
     }
-    const len = company.name.length;
-    if (len % 3 === 0) return "11-50 employees";
-    if (len % 3 === 1) return "51-200 employees";
-    return "201-500 employees";
+    return "Intelligence log pending";
   };
 
   const getFallbackContactLinkedin = (dm) => {
     if (dm.linkedin && dm.linkedin !== "N/A" && dm.linkedin !== "unknown") {
       return dm.linkedin;
     }
-    return `https://www.linkedin.com/in/${dm.name.toLowerCase().replace(/ /g, '-')}`;
+    return "#";
   };
 
-  const totalOrgs = companies.length || 1429;
-  const totalDMs = contacts.length || 8342;
-  const activeMissions = campaign?.drafts_count || 12;
+  const totalOrgs = rawCompanies.length;
+  const totalDMs = contacts.length;
+  const activeMissions = contacts.filter(dm => dm.status && (dm.status.includes("SENT") || dm.status.includes("BOOKED"))).length;
 
   return (
-    <div className="flex h-[calc(100vh-80px)] w-full bg-[#F8FAFC] overflow-hidden">
-      {/* 1. Sidebar Panel: Fixed, non-slidable layout */}
-      <aside className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between py-6 shrink-0 h-full overflow-hidden select-none">
-        <div className="flex flex-col gap-1 px-3">
-          <button
-            onClick={() => setActiveView("DASHBOARD")}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all ${
-              activeView === "DASHBOARD" 
-                ? "bg-slate-50 text-slate-900 border border-slate-100 font-black" 
-                : "text-slate-400 hover:bg-slate-50/60"
-            }`}
-          >
-            <LayoutDashboard size={18} />
-            COMPANIES
-          </button>
+    <div className="flex h-full w-full bg-surgical-bg overflow-hidden">
+      {/* 1. Sidebar Panel: Conditionally Hidden */}
+      {!hideSidebar && (
+        <aside className="w-64 bg-surgical-navy flex flex-col justify-between py-10 shrink-0 h-full overflow-hidden select-none">
+          <div className="flex flex-col gap-1 px-4">
+            <button
+              onClick={() => setActiveView("DASHBOARD")}
+              className={`flex items-center gap-3 px-5 py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all ${
+                activeView === "DASHBOARD" 
+                  ? "bg-white/10 text-white shadow-xl" 
+                  : "text-slate-400 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <LayoutDashboard size={18} />
+              COMPANIES
+            </button>
 
-          <button
-            onClick={() => setActiveView("PIPELINE")}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all ${
-              activeView === "PIPELINE" 
-                ? "bg-slate-50 text-slate-900 border border-slate-100 font-black" 
-                : "text-slate-400 hover:bg-slate-50/60"
-            }`}
-          >
-            <Layers size={18} />
-            LEAD PIPELINE
-          </button>
+            <button
+              onClick={() => setActiveView("PIPELINE")}
+              className={`flex items-center gap-3 px-5 py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all ${
+                activeView === "PIPELINE" 
+                  ? "bg-white/10 text-white shadow-xl" 
+                  : "text-slate-400 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <Layers size={18} />
+              LEAD PIPELINE
+            </button>
 
-          <button
-            onClick={() => setActiveView("ANALYSIS")}
-            className={`flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-extrabold uppercase tracking-wider transition-all ${
-              activeView === "ANALYSIS" 
-                ? "bg-slate-50 text-slate-900 border border-slate-100 font-black" 
-                : "text-slate-400 hover:bg-slate-50/60"
-            }`}
-          >
-            <BarChart2 size={18} />
-            ANALYSIS
-          </button>
-        </div>
+            <button
+              onClick={() => setActiveView("ANALYSIS")}
+              className={`flex items-center gap-3 px-5 py-4 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all ${
+                activeView === "ANALYSIS" 
+                  ? "bg-white/10 text-white shadow-xl" 
+                  : "text-slate-400 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <BarChart2 size={18} />
+              ANALYSIS
+            </button>
+          </div>
 
-        <div className="px-3">
-          <button className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-extrabold text-slate-400 hover:bg-slate-50 transition-all uppercase tracking-wider">
-            <LogOut size={18} />
-            LOG OUT
-          </button>
-        </div>
-      </aside>
+          <div className="px-3">
+            <button className="flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-extrabold text-slate-400 hover:bg-slate-50 transition-all uppercase tracking-wider">
+              <LogOut size={18} />
+              LOG OUT
+            </button>
+          </div>
+        </aside>
+      )}
 
       {/* 2. Content view: scrollable only within bounds */}
-      <main className="flex-grow p-8 overflow-y-auto overflow-x-hidden bg-[#F8FAFC] h-full select-none">
+      <main className={`flex-grow p-8 overflow-y-auto overflow-x-hidden h-full select-none ${hideSidebar ? "bg-surgical-bg" : "bg-[#F8FAFC]"}`}>
+        {hideSidebar && (
+          <div className="flex items-center gap-2 mb-8 bg-white p-1.5 rounded-2xl w-fit border border-surgical-border shadow-sm">
+            {[
+              { id: "DASHBOARD", label: "Companies", icon: Building2 },
+              { id: "PIPELINE", label: "Prospects", icon: Users },
+              { id: "ANALYSIS", label: "Analysis", icon: BarChart2 }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveView(tab.id)}
+                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                  activeView === tab.id
+                    ? "bg-surgical-navy text-white shadow-lg shadow-surgical-navy/20"
+                    : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                <tab.icon size={14} />
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
         <AnimatePresence mode="wait">
           {activeView === "DASHBOARD" && (
             <motion.div
@@ -249,8 +308,8 @@ const LeadLedger = ({ campaign }) => {
 
                 {/* Metrics row */}
                 <div className="flex items-center gap-4 flex-wrap">
-                  <div className="bg-white border border-slate-100 p-3 px-5 rounded-2xl shadow-sm flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
+                  <div className="bg-white border border-surgical-border p-3 px-6 rounded-2xl shadow-sm flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-surgical-navy">
                       <Layers size={18} />
                     </div>
                     <div>
@@ -286,9 +345,9 @@ const LeadLedger = ({ campaign }) => {
                 <div className="flex justify-end items-center mb-4">
                   <button
                     onClick={handleExport}
-                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-red-500/20 active:scale-95"
+                    className="flex items-center gap-2 bg-surgical-navy hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md shadow-surgical-navy/20 active:scale-95"
                   >
-                    <ArrowLeft className="rotate-180" size={14} /> Export
+                    <Download size={14} /> Export Protocol
                   </button>
                 </div>
 
@@ -319,7 +378,8 @@ const LeadLedger = ({ campaign }) => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: index * 0.01 }}
-                            className="hover:bg-slate-50/50 transition-colors group"
+                            onClick={() => setSelectedCompany(item)}
+                            className="hover:bg-slate-50 transition-colors group cursor-pointer"
                           >
                             <td className="px-3 py-3">
                               <div className="flex items-center gap-2.5">
@@ -354,17 +414,17 @@ const LeadLedger = ({ campaign }) => {
                             </td>
                             <td className="px-3 py-3">
                               {item.status === 'REJECTED' ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[9px] font-bold rounded-lg border bg-rose-50/60 text-rose-500 border-rose-100 uppercase tracking-wider">
-                                   <div className="w-1.5 h-1.5 bg-rose-500 rounded-full" /> Rejected
-                                </span>
+                                 <span className="inline-flex items-center gap-1.5 px-3 py-1 text-[9px] font-black rounded-lg border bg-slate-50 text-slate-400 border-slate-200 uppercase tracking-widest">
+                                    Rejected
+                                 </span>
                               ) : item.status === 'PENDING' ? (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[9px] font-bold rounded-lg border bg-amber-50/60 text-amber-500 border-amber-100 uppercase tracking-wider">
-                                   <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" /> Pending
-                                </span>
+                                 <span className="inline-flex items-center gap-1.5 px-3 py-1 text-[9px] font-black rounded-lg border bg-amber-50 text-amber-600 border-amber-200 uppercase tracking-widest">
+                                    Pending
+                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1 px-2.5 py-1 text-[9px] font-bold rounded-lg border bg-emerald-50/60 text-emerald-600 border-emerald-100 uppercase tracking-wider">
-                                   <div className="w-1.5 h-1.5 bg-emerald-600 rounded-full" /> Approved
-                                </span>
+                                 <span className="inline-flex items-center gap-1.5 px-3 py-1 text-[9px] font-black rounded-lg border bg-surgical-navy text-white border-surgical-navy uppercase tracking-widest shadow-sm">
+                                    Approved
+                                 </span>
                               )}
                             </td>
                           </motion.tr>
@@ -466,7 +526,14 @@ const LeadLedger = ({ campaign }) => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: index * 0.01 }}
-                            className="hover:bg-slate-50/50 transition-colors group"
+                            onClick={() => {
+                              const draft = (campaign.drafts || []).find(d => d.decision_maker_id === item.id);
+                              if (draft) {
+                                setDraftEditData({ subject: draft.subject, body: draft.body, email: item.email });
+                                setSelectedDraft(draft);
+                              }
+                            }}
+                            className="hover:bg-slate-50 transition-colors group cursor-pointer"
                           >
                             <td className="px-4 py-4 border-r border-slate-100">
                               <div className="flex flex-col">
@@ -558,13 +625,10 @@ const LeadLedger = ({ campaign }) => {
             const sentDMs = contacts.filter(dm => dm.status && (dm.status.includes("SENT") || dm.status.includes("BOOKED"))).length;
             const positiveReplies = contacts.filter(dm => dm.reply_intent === "POSITIVE").length;
 
-            const totalIntent = draftedDMs + sentDMs + positiveReplies;
-            const hasIntents = totalIntent > 0;
-
-            const finalPos = hasIntents ? positiveReplies : Math.max(1, Math.floor(totalDMsAnalysed * 0.15));
-            const finalNeu = hasIntents ? draftedDMs : Math.max(1, Math.floor(totalDMsAnalysed * 0.55));
-            const finalNeg = hasIntents ? (totalDMsAnalysed - finalPos - finalNeu) : Math.max(0, totalDMsAnalysed - finalPos - finalNeu);
-            const sumForIntent = (finalPos + finalNeu + finalNeg) || 1;
+            const finalPos = positiveReplies;
+            const finalNeu = draftedDMs + (totalDMsAnalysed - draftedDMs - sentDMs - positiveReplies);
+            const finalNeg = sentDMs - positiveReplies; // Simplified for visual breakdown
+            const sumForIntent = totalDMsAnalysed || 1;
 
             return (
               <motion.div
@@ -727,7 +791,7 @@ const LeadLedger = ({ campaign }) => {
                               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Replies & active orbits</span>
                             </div>
                           </div>
-                          <span className="text-sm font-black text-slate-800 tabular-nums">{positiveReplies || Math.max(1, Math.floor(totalDMsAnalysed * 0.15))}</span>
+                          <span className="text-sm font-black text-slate-800 tabular-nums">{positiveReplies}</span>
                         </div>
                       </div>
                     </div>
@@ -790,6 +854,22 @@ const LeadLedger = ({ campaign }) => {
           })()}
         </AnimatePresence>
       </main>
+
+      {/* V2 Intelligence Modals */}
+      <CompanyIntelModal 
+        selectedCompany={selectedCompany} 
+        onClose={() => setSelectedCompany(null)} 
+      />
+      
+      <DraftEditorModal
+        selectedDraft={selectedDraft}
+        campaign={campaign}
+        draftEditData={draftEditData}
+        onDraftEditChange={setDraftEditData}
+        onClose={() => setSelectedDraft(null)}
+        onSave={handleSaveDraft}
+        isSaving={isSaving}
+      />
     </div>
   );
 };

@@ -21,7 +21,7 @@ const CreateCampaign = () => {
       return;
     }
     setError("");
-    navigate("/create/query", { state: { campaignName } });
+    navigate("/create/setup", { state: { campaignName } });
   };
 
   return (

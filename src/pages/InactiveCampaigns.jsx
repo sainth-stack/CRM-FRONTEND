@@ -121,7 +121,8 @@ const InactiveCampaigns = () => {
   const filteredCampaigns = campaigns
     .filter(c => 
       c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.query.toLowerCase().includes(searchQuery.toLowerCase())
+      (c.target_industry || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.target_location || "").toLowerCase().includes(searchQuery.toLowerCase())
     )
     .sort((a, b) => {
       const dateA = new Date(a.created_at);
@@ -269,7 +270,7 @@ const InactiveCampaigns = () => {
                         </span>
                       </div>
                       <p className="text-slate-300 font-bold text-xs line-clamp-1 max-w-4xl lowercase italic select-none">
-                        {campaign.query}
+                        {[campaign.target_industry, campaign.target_location].filter(Boolean).join(" | ") || "Campaign setup validated"}
                       </p>
                     </div>
                   </div>

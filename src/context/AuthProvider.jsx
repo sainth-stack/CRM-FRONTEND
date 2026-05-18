@@ -12,6 +12,7 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [token, setToken] = useState(localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY));
     const [hasMailbox, setHasMailbox] = useState(false);
+    const [hasCalendar, setHasCalendar] = useState(false);
     const [mailboxHealth, setMailboxHealth] = useState(null);
     const [loading, setLoading] = useState(true);
     const refreshTimeoutRef = useRef(null);
@@ -41,6 +42,7 @@ export const AuthProvider = ({ children }) => {
         setToken(null);
         setUser(null);
         setHasMailbox(false);
+        setHasCalendar(false);
         setMailboxHealth(null);
     }, [clearRefreshTimer]);
 
@@ -133,6 +135,7 @@ export const AuthProvider = ({ children }) => {
                 const userData = await response.json();
                 setUser(userData);
                 setHasMailbox(userData.has_mailbox);
+                setHasCalendar(userData.has_calendar);
                 setMailboxHealth(userData.mailbox_health || null);
                 return true;
             }
@@ -277,6 +280,31 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const getCalAuthorizationUrl = async () => {
+        try {
+            const response = await axios.get(`${API_BASE_URL}/connect/cal/url`, {
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            return response.data?.url;
+        } catch (error) {
+            console.error("Failed to initialize Cal.com authorization:", error);
+            throw error;
+        }
+    };
+
+    const connectCalCalendar = async (code, state) => {
+        try {
+            const response = await axios.post(`${API_BASE_URL}/connect/cal/callback`,
+                { code, state },
+                { headers: { 'Authorization': `Bearer ${token}` } }
+            );
+            return response.data;
+        } catch (error) {
+            console.error("Cal.com calendar connection failed:", error);
+            throw error;
+        }
+    };
+
     const demoSignup = async (email, password) => {
         const response = await fetch(`${API_BASE_URL}/auth/demo/signup`, {
             method: 'POST',
@@ -314,11 +342,14 @@ export const AuthProvider = ({ children }) => {
             token, 
             isLoggedIn: !!user, 
             hasMailbox, 
+            hasCalendar,
             mailboxHealth,
             login, 
             logout, 
             getMailboxAuthorizationUrl,
             connectMailbox, 
+            getCalAuthorizationUrl,
+            connectCalCalendar,
             demoSignup,
             verifyDemoOtp,
             loading, 

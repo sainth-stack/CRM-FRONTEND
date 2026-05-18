@@ -8,12 +8,15 @@ import {
   Linkedin, MessageSquare, ChevronRight,
   Monitor, PhoneCall, FileBarChart,
   X, Edit3, Send, Trash, Maximize2, Clock, Calendar, Link2,
-  TrendingUp, PieChart, Target, ShieldCheck, LayoutDashboard
+  TrendingUp, PieChart, Target, ShieldCheck, LayoutDashboard,
+  Activity, BarChart3, Zap
 } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "../config";
 import LeadLedger from "./LeadLedger";
 import ResearchTabs from "./ResearchTabs";
+import MissionSidebar from "../components/campaign-workspace/MissionSidebar";
+import DraftEditorModal from "../components/campaign-workspace/DraftEditorModal";
 
 const formatTimeAgo = (timestamp) => {
   if (!timestamp) return "Never";
@@ -25,6 +28,23 @@ const formatTimeAgo = (timestamp) => {
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return date.toLocaleDateString();
+};
+
+const formatTimeLeft = (targetDateString) => {
+  if (!targetDateString) return "TBD";
+  const target = new Date(targetDateString);
+  const now = new Date();
+  const diffMs = target - now;
+  
+  if (diffMs < 0) return "Elapsed";
+  
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+  
+  if (diffDays > 0) return `${diffDays}d ${diffHours}h left`;
+  if (diffHours > 0) return `${diffHours}h ${diffMinutes}m left`;
+  return `${diffMinutes}m left`;
 };
 
 const ensureAbsoluteUrl = (url, fallbackName = "") => {
@@ -57,35 +77,52 @@ const cleanEmailReply = (body) => {
   return cleaned;
 };
 
-const DiscoveryTimer = ({ scheduledTime }) => {
-  const [timeLeft, setTimeLeft] = useState("");
+const ProgressTracker = ({ status }) => {
+  const stages = [
+    { id: "PENDING", label: "Ingestion" },
+    { id: "STAGE_1_CSV_TRIMMED", label: "Validation" },
+    { id: "STAGE_2_USER_INTEL_COMPLETE", label: "Brand DNA" },
+    { id: "STAGE_3_ICP_FILTERED", label: "ICP Filter" },
+    { id: "STAGE_4_RESEARCH_COMPLETE", label: "Deep Research" },
+    { id: "STAGE_5_STAKEHOLDERS_RANKED", label: "Stakeholders" },
+    { id: "STAGE_6_DRAFTING_COMPLETE", label: "Drafting" },
+  ];
 
-  useEffect(() => {
-    const calculate = () => {
-      const diff = new Date(scheduledTime) - new Date();
-      if (diff <= 0) return "Starting Now";
-      
-      const parts = [];
-      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-      const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-      const mins = Math.floor((diff / (1000 * 60)) % 60);
-      
-      if (days > 0) parts.push(`${days}d`);
-      if (hours > 0) parts.push(`${hours}h`);
-      parts.push(`${mins}m`);
-      
-      setTimeLeft(parts.join(" "));
-    };
-
-    calculate();
-    const interval = setInterval(calculate, 60000);
-    return () => clearInterval(interval);
-  }, [scheduledTime]);
-
+  let currentIdx = stages.findIndex(s => s.id === status);
+  if (status === "COMPLETED") {
+    currentIdx = stages.length; // all completed
+  }
+  
   return (
-    <div className="flex items-center gap-2 text-brand-primary font-black animate-pulse">
-      <Clock size={14} />
-      {timeLeft}
+    <div className="w-full bg-white border-b border-surgical-border px-10 py-8 select-none">
+      <div className="max-w-[1200px] mx-auto relative">
+        {/* Connection Line */}
+        <div className="absolute top-[18px] left-0 right-0 h-[2px] bg-slate-100 z-0" />
+        
+        <div className="flex items-center justify-between relative z-10">
+          {stages.map((stage, idx) => {
+            const isCompleted = idx < currentIdx || status === "COMPLETED";
+            const isActive = idx === currentIdx;
+
+            return (
+              <div key={stage.id} className="flex flex-col items-center gap-3">
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-500 font-bold text-sm ${
+                  isCompleted ? "bg-surgical-navy text-white shadow-lg shadow-surgical-navy/20" :
+                  isActive ? "bg-surgical-navy text-white ring-4 ring-blue-50" :
+                  "bg-white border-2 border-slate-100 text-slate-300"
+                }`}>
+                  {isCompleted ? <CheckCircle2 size={18} /> : <span>{idx + 1}</span>}
+                </div>
+                <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors duration-500 ${
+                  isActive ? "text-surgical-navy" : "text-slate-400"
+                }`}>
+                  {stage.label}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
     </div>
   );
 };
@@ -95,6 +132,10 @@ const CampaignWorkspace = () => {
   const [campaign, setCampaign] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("research");
+  const [monitorTab, setMonitorTab] = useState("monitor"); // monitor, drafts
+  const [discoveryTab, setDiscoveryTab] = useState("drafts"); // drafts, scheduled
+  const [showRefineModal, setShowRefineModal] = useState(false);
+  const [refineAnswers, setRefineAnswers] = useState({});
   const [researchTab, setResearchTab] = useState("mission_briefing");
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [selectedDraft, setSelectedDraft] = useState(null);
@@ -139,6 +180,90 @@ const CampaignWorkspace = () => {
       }, 5000);
     }
   };
+
+  // Dynamic, consolidated chronological sequence builder
+  const getUnifiedHistory = (dm) => {
+    if (!dm) return [];
+    const events = [];
+
+    // 1. Prospect Identified Event
+    if (dm.created_at || campaign?.created_at) {
+      events.push({
+        type: "PROSPECT_IDENTIFIED",
+        timestamp: dm.created_at || campaign.created_at,
+        title: "Prospect Qualified",
+        label: "Stage 5: Stakeholder Profiling",
+        icon: Target,
+        color: "text-red-500 bg-red-50 border-red-100",
+        content: {
+          score: dm.relevance_score,
+          reason: dm.relevance_explanation || dm.similarity_score?.reason || "Lead qualified through high-fidelity strategic matching."
+        }
+      });
+    }
+
+    // 2. Draft Events
+    const dmDrafts = campaign?.drafts?.filter(d => String(d.decision_maker_id) === String(dm.id)) || [];
+    dmDrafts.forEach(draft => {
+      if (draft.created_at) {
+        events.push({
+          type: "EMAIL_DRAFTED",
+          timestamp: draft.created_at,
+          title: `Outreach Protocol Drafted (${draft.draft_type || "INITIAL"})`,
+          label: "Stage 6: Ghostwriting Pipeline",
+          icon: Bot,
+          color: "text-amber-500 bg-amber-50 border-amber-100",
+          content: {
+            subject: draft.subject,
+            body: draft.body,
+            isApproved: draft.is_approved,
+            status: draft.status,
+            id: draft.id
+          }
+        });
+      }
+    });
+
+    // 3. Communication Logs (Sent and Received)
+    const dmLogs = dm.logs || [];
+    dmLogs.forEach(log => {
+      const timestamp = log.received_at || log.created_at;
+      if (timestamp) {
+        if (log.direction === "SENT") {
+          events.push({
+            type: "EMAIL_SENT",
+            timestamp: timestamp,
+            title: "Outbound Dispatch Complete",
+            label: "Mission Dispatch",
+            icon: Send,
+            color: "text-indigo-600 bg-indigo-50 border-indigo-100",
+            content: {
+              subject: log.subject,
+              body: log.body,
+              id: log.id
+            }
+          });
+        } else {
+          events.push({
+            type: "EMAIL_RECEIVED",
+            timestamp: timestamp,
+            title: "Signal Captured (Reply)",
+            label: "Inbound Signal",
+            icon: MessageSquare,
+            color: "text-emerald-600 bg-emerald-50 border-emerald-100",
+            content: {
+              subject: log.subject,
+              body: log.body,
+              id: log.id
+            }
+          });
+        }
+      }
+    });
+
+    // Sort chronologically (oldest first)
+    return events.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+  };
   const handleBatchDispatch = async () => {
     // Strategic Batch Deployment Protocol
     alert("Initiating Synchronized Batch Dispatch for all validated modules.");
@@ -164,6 +289,9 @@ const CampaignWorkspace = () => {
   const handleSendMessage = async (draftId, name) => {
     setSendingId(draftId);
     try {
+        // Operational Gate: Explicitly authorize the draft for deployment
+        await axios.post(`${API_BASE_URL}/drafts/${draftId}/approve`);
+        // Deploy the mission
         await axios.post(`${API_BASE_URL}/drafts/${draftId}/send`);
         alert(`Mission Accomplished: Engagement protocol targeting ${name} has been deployed successfully.`);
         await fetchCampaignDetails();
@@ -174,6 +302,32 @@ const CampaignWorkspace = () => {
     } finally {
         setSendingId(null);
     }
+  };
+
+  const handleUpdatePrompt = async (newPrompt) => {
+    setIsSaving(true);
+    try {
+      await axios.patch(`${API_BASE_URL}/campaigns/${id}`, { prompt: newPrompt });
+      await fetchCampaignDetails();
+      setShowRefineModal(false);
+      setRefineAnswers({});
+      alert("Mission Briefing Successfully Updated. System re-validating...");
+    } catch (error) {
+      console.error("Error updating prompt:", error);
+      alert("Failed to synchronize mission refinement.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleRefineSubmit = () => {
+    // Combine original prompt with answers to questions
+    const answersText = Object.entries(refineAnswers)
+      .map(([q, a]) => `Q: ${q}\nA: ${a}`)
+      .join("\n\n");
+    
+    const enhancedPrompt = `${campaign.prompt}\n\n--- Clarification Updates ---\n${answersText}`;
+    handleUpdatePrompt(enhancedPrompt);
   };
 
   const handleSaveDraft = async () => {
@@ -223,13 +377,18 @@ const CampaignWorkspace = () => {
     );
     if (allFinalized) return "COMPLETED";
 
-    // Strategic Backend Status Mapping
+    // Strategic Backend Status Mapping (6-Stage V3)
     switch (String(campaign.status).toUpperCase()) {
-      case "RESEARCHING_USER_COMPANY": return "RESEARCHING";
-      case "FINDING_TARGET_COMPANIES": return "IDENTIFYING TARGETS";
-      case "FINDING_DECISION_MAKERS": return "MAPPING STAKEHOLDERS";
-      case "DRAFTING_EMAILS": return "DRAFTING OUTREACH";
-      case "COMPLETED": return "MONITORING";
+      case "INPUT_VALIDATED": return "INPUT VALIDATED";
+      case "PENDING": return "CSV INGESTION";
+      case "STAGE_1_CSV_TRIMMED": return "DATA FILTERING";
+      case "STAGE_2_USER_INTEL_COMPLETE": return "BRAND ANALYSIS";
+      case "STAGE_3_ICP_FILTERED": return "GATEKEEPER VALIDATION";
+      case "STAGE_4_RESEARCH_COMPLETE": return "DEEP RESEARCH";
+      case "STAGE_5_STAKEHOLDERS_RANKED": return "PERSONA MAPPING";
+      case "STAGE_6_DRAFTING_COMPLETE": return "ENGAGEMENT READY";
+      case "COMPLETED": return "MISSION FINISHED";
+      case "INTERVENTION_NEEDED": return "INTERVENTION REQUIRED";
       default: return campaign.status || "NEW";
     }
   };
@@ -237,761 +396,535 @@ const CampaignWorkspace = () => {
   const hasDrafts = campaign.drafts_count > 0;
 
   return (
-    <div className="min-h-screen bg-[#f8fafc]">
-      {/* 1. Tactical Ribbon Header */}
-      <header className="fixed top-0 left-0 right-0 h-20 bg-white border-b border-slate-200 z-50 px-10 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <Link to="/active" className="p-2 hover:bg-slate-50 rounded-xl transition-colors text-slate-400">
-            <ArrowLeft size={20} strokeWidth={3} />
-          </Link>
-          <div className="h-8 w-[1px] bg-slate-200" />
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-red-500 text-white flex items-center justify-center font-bold text-sm">
-              {campaign.name ? campaign.name[0].toUpperCase() : 'A'}
-            </div>
-            <div className="flex flex-col">
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Active Mission</span>
-              <h1 className="text-lg font-bold text-slate-900 tracking-tight uppercase truncate max-w-[200px]">
-                {campaign.name}
-              </h1>
+    <div className="flex h-screen overflow-hidden bg-surgical-bg font-sans select-none">
+      <MissionSidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        campaignName={campaign.name} 
+      />
+
+      <div className="flex-grow flex flex-col overflow-hidden">
+        <header className="h-20 bg-white border-b border-surgical-border px-10 flex items-center justify-between shrink-0 z-20">
+          <div className="flex items-center gap-6">
+            <Link 
+              to="/active" 
+              className="p-2.5 bg-slate-50 border border-surgical-border text-slate-400 hover:text-surgical-navy rounded-xl transition-all shadow-sm"
+            >
+              <ArrowLeft size={18} />
+            </Link>
+            <div className="h-8 w-px bg-slate-100" />
+            <h1 className="text-xl font-black text-slate-900 tracking-tight uppercase italic leading-none">
+              Mission Control
+            </h1>
+          </div>
+
+          <div className="flex items-center gap-6">
+             <div className="flex flex-col items-end">
+               <span className="text-[10px] font-black text-surgical-navy uppercase tracking-widest leading-none">Operation Lifecycle</span>
+               <span className="text-[11px] font-black text-slate-900 border-b-2 border-surgical-navy tracking-tighter uppercase">{getDisplayStatus()}</span>
+             </div>
+             <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+               <Bot size={20} />
+             </div>
+          </div>
+        </header>
+
+        <ProgressTracker status={campaign.status} />
+
+        {campaign.status === "INTERVENTION_NEEDED" && (
+          <div className="bg-amber-50 border-y border-amber-200 px-10 py-6 animate-pulse-subtle">
+            <div className="max-w-[1200px] mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 bg-amber-100 text-amber-600 rounded-2xl flex items-center justify-center shrink-0 border border-amber-200 shadow-sm">
+                  <AlertCircle size={24} strokeWidth={2.5} />
+                </div>
+                <div className="space-y-1">
+                  <h3 className="text-sm font-black text-amber-900 uppercase tracking-tight">Strategic Intervention Required</h3>
+                  <p className="text-xs font-bold text-amber-700/80 max-w-2xl leading-relaxed">
+                    AI Intelligence has identified gaps in your mission briefing. 
+                    <span className="block mt-1 font-black uppercase text-[10px]">
+                      Missing: {campaign.input_validation_review?.missing_elements?.join(", ") || "Clarity in target/objective"}
+                    </span>
+                  </p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowRefineModal(true)}
+                className="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-amber-600/10 flex items-center gap-2 shrink-0"
+              >
+                <Edit3 size={14} /> Refine Briefing
+              </button>
             </div>
           </div>
-        </div>
-
-        <nav className="flex items-center gap-8">
-          <button 
-            onClick={() => setActiveTab("research")}
-            className={`relative flex items-center gap-2 px-1 py-4 text-sm font-semibold tracking-wider transition-all ${activeTab === "research" ? "text-slate-900" : "text-slate-500 hover:text-slate-800"}`}
-          >
-            Research
-            {activeTab === "research" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500" />}
-          </button>
-
-          <button 
-            onClick={() => setActiveTab("dashboard")}
-            className={`relative flex items-center gap-2 px-1 py-4 text-sm font-semibold tracking-wider transition-all ${activeTab === "dashboard" ? "text-slate-900" : "text-slate-500 hover:text-slate-800"}`}
-          >
-            Dashboard
-            {activeTab === "dashboard" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500" />}
-          </button>
-
-          <button 
-            onClick={() => setActiveTab("monitor")}
-            className={`relative flex items-center gap-2 px-1 py-4 text-sm font-semibold tracking-wider transition-all ${activeTab === "monitor" ? "text-slate-900" : "text-slate-500 hover:text-slate-800"}`}
-          >
-            Monitor
-            {activeTab === "monitor" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500" />}
-          </button>
-
-          <button 
-            onClick={() => setActiveTab("discovery")}
-            className={`relative flex items-center gap-2 px-1 py-4 text-sm font-semibold tracking-wider transition-all ${activeTab === "discovery" ? "text-slate-900" : "text-slate-500 hover:text-slate-800"}`}
-          >
-            Discovery Call
-            {activeTab === "discovery" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500" />}
-          </button>
-
-          <button 
-            onClick={() => setActiveTab("report")}
-            className={`relative flex items-center gap-2 px-1 py-4 text-sm font-semibold tracking-wider transition-all ${activeTab === "report" ? "text-slate-900" : "text-slate-500 hover:text-slate-800"}`}
-          >
-            Report
-            {activeTab === "report" && <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-red-500" />}
-          </button>
-        </nav>
-
-        <div className="flex items-center gap-6">
-           {campaign.status === "FINDING_DECISION_MAKERS" && (
-             <div className="flex items-center gap-2 px-3 py-1 bg-indigo-50 border border-indigo-100 rounded-full animate-pulse">
-               <Loader2 className="w-3 h-3 text-indigo-600 animate-spin" />
-               <span className="text-[10px] font-black text-indigo-700 uppercase tracking-widest">
-                 Agent Active: Stakeholder Mapping...
-               </span>
-             </div>
-           )}
-           <div className="flex flex-col items-end">
-             <span className="text-[10px] font-black text-brand-primary uppercase tracking-widest leading-none">Operation Lifecycle</span>
-             <span className="text-[11px] font-black text-slate-900 border-b-2 border-brand-primary tracking-tighter uppercase">{getDisplayStatus()}</span>
-           </div>
-           <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-             <Bot size={20} />
-           </div>
-        </div>
-      </header>
-
-      <main className={
-        activeTab === "dashboard" || activeTab === "research"
-          ? "pt-20 h-screen overflow-hidden bg-[#f8fafc]"
-          : "pt-24 pb-20 px-10 max-w-[1600px] mx-auto"
-      }>
-        {activeTab === "dashboard" && (
-          <LeadLedger campaign={campaign} />
         )}
 
-        {activeTab === "research" && (
-          <ResearchTabs 
-            campaign={campaign}
-            researchTab={researchTab}
-            setResearchTab={setResearchTab}
-            setSelectedCompany={setSelectedCompany}
-            setSelectedDraft={setSelectedDraft}
-            setDraftEditData={setDraftEditData}
-            setActiveTab={setActiveTab}
-          />
-        )}
+        <main className="flex-grow overflow-y-auto bg-surgical-bg">
+          <AnimatePresence mode="wait">
+            {activeTab === "dashboard" && (
+              <motion.div
+                key="dashboard"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="h-full"
+              >
+                <LeadLedger campaign={campaign} hideSidebar={true} />
+              </motion.div>
+            )}
 
-        {activeTab === "monitor" && (
-           <div className="max-w-[1440px] mx-auto space-y-12">
-              {/* Part 1: Page Header */}
-              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-8 select-none">
-                 <div>
-                    <span className="px-3 py-1 bg-red-50 text-red-600 border border-red-100 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm self-start mb-2 inline-block">Refinement Suite</span>
-                    <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight leading-tight uppercase italic">Outreach Review & Launch</h2>
-                    <p className="text-slate-400 font-semibold text-sm">Review highly personalized messaging drafts and initiate outreach.</p>
-                 </div>
-                 <button 
-                   onClick={handleBatchDispatch}
-                   className="px-6 py-3.5 bg-red-600 hover:bg-red-700 text-white rounded-[18px] font-bold text-xs uppercase tracking-widest hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center gap-3 shadow-lg shadow-red-500/10 shrink-0"
-                 >
-                    <Send size={16} strokeWidth={3} />
-                    Synchronized Batch Dispatch
-                 </button>
-              </div>
+            {activeTab === "research" && (
+              <motion.div
+                key="research"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="h-full"
+              >
+                <ResearchTabs 
+                  campaign={campaign} 
+                  researchTab={researchTab}
+                  setResearchTab={setResearchTab}
+                  setSelectedCompany={setSelectedCompany}
+                  setSelectedDraft={setSelectedDraft}
+                  setDraftEditData={setDraftEditData}
+                  setActiveTab={setActiveTab}
+                />
+              </motion.div>
+            )}
 
-              {/* Part 2: Engagement Tracker Table */}
-              <div className="bg-white rounded-[32px] border border-slate-100/80 overflow-hidden shadow-sm mb-12 select-none">
-                <div className="px-8 py-6 border-b border-slate-50 bg-slate-50/20 flex items-center justify-between">
+            {activeTab === "monitor" && (
+              <motion.div
+                key="monitor"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="p-10 max-w-[1600px] mx-auto space-y-8"
+              >
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-4 select-none">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center border border-red-100/60 shadow-sm">
-                      <FileBarChart size={18} strokeWidth={3} />
+                    <div className="w-12 h-12 bg-surgical-navy/5 text-surgical-navy rounded-xl flex items-center justify-center border border-surgical-navy/10 shadow-sm">
+                      <BarChart3 size={20} strokeWidth={3} />
                     </div>
                     <div>
-                      <h3 className="text-base font-extrabold text-slate-900 uppercase italic tracking-tight leading-none">Active Engagement Tracker</h3>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Real-time Outreach Lifecycle Monitoring</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse">
-                    <thead>
-                      <tr className="bg-slate-50/30">
-                        <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Prospect</th>
-                        <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Organization</th>
-                        <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Live Status</th>
-                        <th className="px-8 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Mission Pulse</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                       {(campaign.dms || []).filter(dm => !["NEW", "SYNCED"].includes(dm.status)).length === 0 ? (
-                        <tr>
-                          <td colSpan="4" className="px-8 py-16 text-center">
-                            <div className="flex flex-col items-center gap-3 text-slate-300">
-                              <Loader2 className="animate-spin text-red-500" size={32} />
-                              <p className="text-xs font-bold uppercase tracking-widest">Awaiting first deployment...</p>
-                            </div>
-                          </td>
-                        </tr>
-                      ) : (
-                        (campaign.dms || []).filter(dm => !["NEW", "SYNCED"].includes(dm.status)).map((dm) => {
-                          const company = campaign.target_companies.find(c => String(c.id) === String(dm.target_company_id));
-                          
-                          let displayStatus = "Waiting for Reply";
-                          let statusColor = "bg-blue-50 text-blue-500 border-blue-100";
-                          let dotColor = "bg-blue-500";
-                          
-                          if (dm.status === "TERMINATED") {
-                            displayStatus = "Terminated";
-                            statusColor = "bg-slate-50 text-slate-400 border-slate-200";
-                            dotColor = "bg-slate-300";
-                          } else if (dm.status === "MEETING_BOOKED" || dm.status === "DATE_AND_MEETING_SECURED") {
-                            displayStatus = "Meeting Booked";
-                            statusColor = "bg-emerald-50 text-emerald-600 border-emerald-100";
-                            dotColor = "bg-emerald-500";
-                          } else if (dm.status.includes("DRAFTED")) {
-                            displayStatus = "Action Required (Approval)";
-                            statusColor = "bg-amber-50 text-amber-600 border-amber-100";
-                            dotColor = "bg-amber-500 animate-pulse";
-                          } else if (dm.status === "DISCOVERY_CALL" || dm.status === "WAITING_FOR_REPLY") {
-                            displayStatus = "Discovery Protocol";
-                            statusColor = "bg-emerald-50 text-emerald-600 border-emerald-100";
-                            dotColor = "bg-emerald-500";
-                          }
-                          
-                          const initials = (dm.name || "P")
-                            .split(" ")
-                            .filter(Boolean)
-                            .map(w => w[0])
-                            .join("")
-                            .toUpperCase()
-                            .slice(0, 2);
-
-                          return (
-                            <tr key={dm.id} className="hover:bg-slate-50/40 transition-colors group">
-                              <td className="px-8 py-5">
-                                <div className="flex items-center gap-3.5">
-                                  <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 text-white flex items-center justify-center font-bold text-xs shadow-sm select-none">
-                                    {initials}
-                                  </div>
-                                  <div className="flex flex-col">
-                                    <div className="flex items-center gap-2">
-                                      <p className="text-sm font-extrabold text-slate-800 tracking-tight leading-none uppercase">{dm.name}</p>
-                                      {dm.reply_intent && (
-                                        <span className={`px-2 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-tighter border ${
-                                          dm.reply_intent === 'POSITIVE' ? 'bg-emerald-500 text-white border-emerald-600' :
-                                          dm.reply_intent === 'NEGATIVE' ? 'bg-rose-500 text-white border-rose-600' :
-                                          'bg-amber-400 text-white border-amber-500'
-                                        }`}>
-                                          {dm.reply_intent}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">{dm.position || "Stakeholder"}</p>
-                                  </div>
-                                  <button 
-                                    onClick={() => setShowHistoryDM(dm)}
-                                    className="p-2 opacity-0 group-hover:opacity-100 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-red-600 transition-all shadow-sm"
-                                    title="View Communication History"
-                                  >
-                                    <MessageSquare size={14} strokeWidth={2.5} />
-                                  </button>
-                                </div>
-                              </td>
-                              <td className="px-8 py-5">
-                                <div className="flex flex-col gap-0.5">
-                                  <p className="text-xs font-extrabold text-slate-800 uppercase tracking-tight">{company?.name || "Target Organization"}</p>
-                                  <div className="flex items-center gap-1.5 text-slate-300">
-                                     <Globe size={11} />
-                                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate max-w-[120px]">{company?.website?.replace(/(https?:\/\/|www\.|\/)/g, "") || "Connect"}</span>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="px-8 py-5">
-                                <div 
-                                  onClick={() => dm.status.includes("DRAFTED") && scrollToDraft(dm.id)}
-                                  className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl border ${statusColor} text-[10px] font-black uppercase tracking-widest ${dm.status.includes("DRAFTED") ? "cursor-pointer hover:scale-105 active:scale-95 transition-all shadow-sm" : ""}`}
-                                >
-                                  <div className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
-                                  {displayStatus}
-                                  {dm.status.includes("DRAFTED") && <ChevronRight size={10} strokeWidth={4} />}
-                                </div>
-                              </td>
-                              <td className="px-8 py-5 text-right">
-                                <p className="text-[11px] font-black text-slate-800 uppercase italic tracking-tight">
-                                  {(() => {
-                                    if (dm.status === "TERMINATED") return "Mission Complete";
-                                    if (dm.status === "MEETING_BOOKED" || dm.status === "DATE_AND_MEETING_SECURED") return "Discovery Call Scheduled";
-                                    if (dm.status.includes("DRAFTED")) {
-                                       return `SIGNAL CAPTURED: ${dm.reply_intent || "ANALYZING"}`;
-                                    }
-                                    if (dm.status === "INITIAL_SENT") return "Waiting for Initial Protocol";
-                                    if (dm.status.includes("FOLLOWUP") && dm.status.includes("SENT")) return `Waiting for Follow-up #${dm.followup_count || 1}`;
-                                    if (dm.status === "WAITING_FOR_REPLY" || dm.status === "DISCOVERY_CALL") return "Waiting for Discovery Reply";
-                                    return "Active Engagement";
-                                  })()}
-                                </p>
-                                <div className="flex flex-col items-end gap-1 mt-1">
-                                  <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest italic leading-none">
-                                    {dm.status.includes("DRAFTED") ? "Awaiting Executive Authorization" : "Awaiting Interaction Signal"}
-                                  </p>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* Part 3: Pending Approvals */}
-              <div className="flex items-center gap-4 mb-6 select-none">
-                 <div className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center border border-red-100/60 shadow-sm">
-                   <Mail size={18} strokeWidth={3} />
-                 </div>
-                 <div>
-                    <h3 className="text-base font-extrabold text-slate-900 uppercase italic tracking-tight leading-none">Pending Approvals</h3>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Authorize messaging for deployment</p>
-                 </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-16">
-                 {(campaign.drafts || []).filter(d => {
-                    const dm = campaign.dms.find(dm => dm.id === d.decision_maker_id);
-                    return String(d.status).includes("DRAFTED") && dm?.status !== "TERMINATED";
-                 }).length === 0 ? (
-                    <div className="col-span-full py-16 flex flex-col items-center justify-center gap-4 bg-slate-50/50 rounded-[32px] border border-dashed border-slate-100/80">
-                      <CheckCircle2 size={40} className="text-emerald-500" />
-                      <div className="text-center">
-                        <h4 className="text-base font-extrabold text-slate-800 uppercase italic tracking-tight mb-0.5">All Modules Initialized</h4>
-                        <p className="text-slate-400 font-semibold text-xs">No outreach items awaiting authorization.</p>
-                      </div>
-                    </div>
-                 ) : (
-                    (campaign.drafts || []).filter(d => {
-                       const dm = campaign.dms.find(dm => dm.id === d.decision_maker_id);
-                       return String(d.status).includes("DRAFTED") && dm?.status !== "TERMINATED" && dm?.status !== "DISCOVERY_CALL";
-                    }).map((draft) => {
-                    const dm = campaign.dms.find(d => d.id === draft.decision_maker_id);
-                    const co = campaign.target_companies.find(c => c.id === dm?.target_company_id);
-                    const prospectEmail = dm?.email || `${dm?.name.toLowerCase().replace(/ /g, ".")}@${co?.website?.replace(/(https?:\/\/|www\.|\/)/g, "")}`;
-                    
-                    const initials = (dm?.name || "P")
-                      .split(" ")
-                      .filter(Boolean)
-                      .map(w => w[0])
-                      .join("")
-                      .toUpperCase()
-                      .slice(0, 2);
-
-                    return (
-                      <motion.div 
-                        key={draft.id}
-                        id={`draft-card-${draft.id}`}
-                        initial={{ opacity: 0, scale: 0.98 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        whileHover={{ y: -4, scale: 1.01 }}
-                        onClick={() => {
-                           const email = dm?.email || `${dm?.name.toLowerCase().replace(/ /g, ".")}@${co?.website?.replace(/(https?:\/\/|www\.|\/)/g, "")}`;
-                           setDraftEditData({ subject: draft.subject, body: draft.body, email: email });
-                           setSelectedDraft(draft);
-                        }}
-                        className={`bg-white rounded-[32px] p-8 shadow-sm transition-all relative overflow-hidden group cursor-pointer flex flex-col h-[400px] border border-slate-100/80 hover:border-red-100/60 ${String(highlightedDraftId) === String(draft.id) ? 'ring-4 ring-red-500 ring-offset-4 border-2 border-red-500 scale-[1.02] z-[100] shadow-2xl shadow-red-500/20' : ''}`}
-                      >
-                         <div className="absolute top-0 right-0 p-8 opacity-5">
-                            <Mail size={100} strokeWidth={1} />
-                         </div>
-
-                         <div className="relative z-10 flex flex-col h-full">
-                            <div className="flex items-start justify-between mb-6">
-                               <div className="space-y-1">
-                                  <p className="text-[9px] font-black text-red-500 uppercase tracking-widest leading-none mb-1 select-none">Review Phase</p>
-                                  <h4 className="text-xl font-extrabold text-slate-900 tracking-tight leading-tight uppercase select-none">{dm?.name}</h4>
-                                  <div className="flex flex-col gap-0.5">
-                                     <p className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">{co?.name}</p>
-                                     <p className="text-[10px] font-bold text-slate-300 italic lowercase select-all">{prospectEmail}</p>
-                                  </div>
-                               </div>
-                               <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 text-white flex items-center justify-center font-bold text-sm shadow-sm select-none">
-                                  {initials}
-                                </div>
-                            </div>
-
-                            <div className="space-y-3 flex-grow overflow-hidden mb-6 select-none">
-                               <div className="bg-slate-50/60 rounded-xl p-3.5 border border-slate-100/80">
-                                  <p className="text-[8px] font-bold text-slate-400 uppercase underline decoration-red-500/20 mb-1 tracking-widest">Subject Line</p>
-                                  <p className="text-xs font-bold text-slate-800 tracking-tight leading-snug line-clamp-1">{draft.subject}</p>
-                                </div>
-                               <div className="bg-slate-50/60 rounded-xl p-4 border border-slate-100/80 flex-grow">
-                                  <p className="text-[8px] font-bold text-slate-400 uppercase underline decoration-red-500/20 mb-2 tracking-widest">Content snippet</p>
-                                  <p className="text-xs font-medium text-slate-600 italic leading-relaxed line-clamp-3">
-                                     "{draft.body}"
-                                  </p>
-                               </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-50 mt-auto select-none">
-                               <button 
-                                 onClick={(e) => {
-                                   e.stopPropagation();
-                                   handleSendMessage(draft.id, dm?.name);
-                                 }}
-                                 disabled={sendingId === draft.id || draft.status === "DEPLOYED"}
-                                 className={`py-3.5 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${draft.status === "DEPLOYED" ? "bg-emerald-500 text-white shadow-emerald-500/20" : "bg-red-600 hover:bg-red-700 text-white shadow-lg shadow-red-500/10 hover:scale-[1.01] active:scale-[0.99]"}`}
-                               >
-                                  {sendingId === draft.id ? <Loader2 size={14} className="animate-spin" /> : (draft.status === "DEPLOYED" ? <CheckCircle2 size={14} strokeWidth={3} /> : <Send size={14} strokeWidth={3} />)}
-                                   {sendingId === draft.id ? "Deploying" : "Authorize"}
-                                </button>
-                                <button 
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                  }}
-                                  className="py-3.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/60 text-slate-400 hover:text-red-600 rounded-xl font-bold text-[11px] uppercase tracking-widest transition-all flex items-center justify-center gap-2"
-                                >
-                                   <Trash size={14} strokeWidth={2.5} />
-                                   Terminate
-                                </button>
-                             </div>
-                          </div>
-                      </motion.div>
-                    );
-                  })
-                 )}
-              </div>
-           </div>
-        )}
-
-        {activeTab === "discovery" && (
-           <div className="max-w-[1440px] mx-auto space-y-16">
-                             {/* Part 1: Engagement Outreach Drafts (Discovery) */}
-              <section>
-                                 <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-10 select-none">
-                  <div className="flex items-center gap-4">
-                                        <div className="w-12 h-12 bg-red-50 text-red-600 rounded-xl flex items-center justify-center border border-red-100 shadow-sm">
-                       <Edit3 size={20} strokeWidth={3} />
-                     </div>
-                     <div>
-                        <span className="px-3 py-1 bg-red-50 text-red-600 border border-red-100 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm self-start mb-2 inline-block">Refinement Suite</span>
-                        <h3 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight uppercase italic">Engagement Outreach Drafts</h3>
-                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest leading-none">Discovery Phase Invitation Controls</p>
-                     </div>
-                   </div>
-                   <div className="px-5 py-2.5 bg-slate-50 border border-slate-100 rounded-2xl text-[11px] font-extrabold text-slate-500 uppercase tracking-widest shadow-sm">
-                     {(campaign.dms || []).filter(dm => dm.status === "DISCOVERY_CALL" || dm.status === "WAITING_FOR_REPLY").length} Active Protocols
-                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {(campaign.dms || []).filter(dm => dm.status === "DISCOVERY_CALL" || dm.status === "WAITING_FOR_REPLY").map(dm => {
-                    const dmDrafts = (campaign.drafts || []).filter(d => d.decision_maker_id === dm.id);
-                    const draft = dmDrafts[0];
-                    const co = campaign.target_companies.find(c => c.id === dm.target_company_id);
-                    
-                    if (!draft) return null;
-
-                    return (
-                      <motion.div 
-                         key={dm.id}
-                         initial={{ opacity: 0, scale: 0.98 }}
-                         animate={{ opacity: 1, scale: 1 }}
-                         className="bg-white rounded-[32px] p-8 shadow-sm border border-slate-100/80 transition-all hover:border-red-100/60 flex flex-col h-[400px] select-none"
-                       >
-                          <div className="flex flex-col h-full">
-                             <div className="flex items-start justify-between mb-6">
-                               <div className="space-y-1 flex-grow">
-                                 <div className="flex items-center gap-2">
-                                   <span className={`px-2.5 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-tighter ${dm.status === "WAITING_FOR_REPLY" ? "bg-orange-50 text-orange-500 border border-orange-100" : "bg-red-50 text-red-500 border border-red-100"}`}>
-                                     {dm.status === "WAITING_FOR_REPLY" ? "Awaiting Reply" : "Ready to Draft"}
-                                   </span>
-                                   {dm.reply_intent && (
-                                     <span className={`px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-tighter border ${
-                                       dm.reply_intent === 'POSITIVE' ? 'bg-emerald-500 text-white border-emerald-600' :
-                                       dm.reply_intent === 'NEGATIVE' ? 'bg-rose-500 text-white border-rose-600' :
-                                       'bg-amber-400 text-white border-amber-500'
-                                     }`}>
-                                       {dm.reply_intent}
-                                     </span>
-                                   )}
-                                 </div>
-                                 <h4 className="text-lg font-extrabold text-slate-800 tracking-tight leading-tight uppercase pt-2">{dm.name}</h4>
-                                 <p className="text-[11px] font-bold text-slate-400 uppercase tracking-tight">{co?.name}</p>
-                               </div>
-                               <button 
-                                 onClick={() => {
-                                   setDraftEditData({ subject: draft.subject, body: draft.body, email: dm.email });
-                                   setSelectedDraft(draft);
-                                 }}
-                                 className="h-11 w-11 bg-slate-50 text-slate-400 rounded-xl hover:bg-red-50 hover:text-red-600 border border-slate-200/60 hover:border-red-100 flex items-center justify-center transition-all shadow-sm group-hover:scale-105 shrink-0"
-                               >
-                                 <Maximize2 size={16} />
-                               </button>
-                             </div>
-
-                             <div className="bg-slate-50/60 rounded-xl p-4 border border-slate-100/80 flex-grow mb-6 select-text">
-                                <p className="text-[8px] font-bold text-slate-400 uppercase underline decoration-red-500/20 mb-2 tracking-widest">Discovery Request Bundle</p>
-                                <p className="text-xs font-bold text-slate-800 tracking-tight leading-snug line-clamp-1 mb-1.5">{draft.subject}</p>
-                                <p className="text-[13px] font-medium text-slate-600 italic leading-relaxed line-clamp-3">
-                                   "{draft.body}"
-                                 </p>
-                             </div>
-
-                             <button 
-                                onClick={() => handleSendMessage(draft.id, dm.name)}
-                                disabled={sendingId === draft.id || dm.status === "WAITING_FOR_REPLY"}
-                                className={`w-full py-4 rounded-2xl font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-3 ${dm.status === "WAITING_FOR_REPLY" ? "bg-slate-100 text-slate-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white shadow-lg shadow-red-500/10 hover:scale-[1.01] active:scale-[0.99]"}`}
-                             >
-                                {sendingId === draft.id ? <Loader2 size={16} className="animate-spin" /> : (dm.status === "WAITING_FOR_REPLY" ? <Clock size={16} /> : <Send size={16} />)}
-                                {dm.status === "WAITING_FOR_REPLY" ? "In Orbit (Waiting)" : "Deploy Discovery Protocol"}
-                             </button>
-                          </div>
-                       </motion.div>
-                    );
-                  })}
-                </div>
-              </section>
-
-              {/* Part 2: Strategic Meeting Intel (Booked) */}
-              <section>
-                 <div className="flex items-center gap-4 mb-10 select-none">
-                    <div className="w-12 h-12 bg-red-50 text-red-600 border border-red-100 rounded-xl flex items-center justify-center shadow-sm">
-                      <Calendar size={20} strokeWidth={3} />
-                    </div>
-                    <div>
-                        <span className="px-3 py-1 bg-red-50 text-red-600 border border-red-100 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm self-start mb-2 inline-block">Engagement Suite</span>
-                        <h3 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight uppercase italic">Strategic Meeting Intel</h3>
-                        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Confirmed Stakeholder Engagements</p>
+                      <span className="px-2.5 py-0.5 bg-surgical-navy/5 text-surgical-navy border border-surgical-navy/10 rounded-lg text-[10px] font-black uppercase tracking-widest self-start mb-1 inline-block">Tactical Suite</span>
+                      <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight uppercase italic leading-none">Outreach Hub</h3>
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-[32px] border border-slate-100/80 overflow-hidden shadow-sm">
+                  {/* Sub-Navigation Tabs */}
+                  <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-surgical-border shadow-sm">
+                    <button
+                      onClick={() => setMonitorTab("monitor")}
+                      className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                        monitorTab === "monitor"
+                          ? "bg-surgical-navy text-white shadow-lg shadow-surgical-navy/20"
+                          : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      <Activity size={14} />
+                      Monitor
+                    </button>
+                    <button
+                      onClick={() => setMonitorTab("drafts")}
+                      className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                        monitorTab === "drafts"
+                          ? "bg-surgical-navy text-white shadow-lg shadow-surgical-navy/20"
+                          : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                      }`}
+                    >
+                      <Mail size={14} />
+                      Drafts Outreach
+                    </button>
+                  </div>
+                </div>
+
+                {monitorTab === "monitor" ? (
+                  <div className="bg-white rounded-[32px] border border-surgical-border overflow-hidden shadow-sm">
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
-                          <tr className="bg-slate-50/30">
-                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Company Repository</th>
-                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Stakeholder</th>
-                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Meeting Target (IST)</th>
-                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Countdown Protocol</th>
-                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Coordinate (Link)</th>
+                          <tr className="bg-slate-50/50">
+                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Stakeholder Protocol</th>
+                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Organization</th>
+                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Live Status</th>
+                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Engagement Link</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                           {(campaign.dms || []).filter(dm => dm.status === "MEETING_BOOKED" || dm.status === "DATE_AND_MEETING_SECURED").length === 0 ? (
-                             <tr>
-                               <td colSpan="5" className="px-8 py-16 text-center">
-                                  <div className="flex flex-col items-center gap-4 text-slate-300">
-                                    <Bot size={40} strokeWidth={1} className="opacity-20 text-red-400" />
-                                    <p className="text-xs font-bold uppercase tracking-widest italic animate-pulse">Scanning for confirmed bookings...</p>
-                                  </div>
-                               </td>
-                             </tr>
-                           ) : (
-                             (campaign.dms || []).filter(dm => dm.status === "MEETING_BOOKED" || dm.status === "DATE_AND_MEETING_SECURED").map((dm) => {
-                               const co = campaign.target_companies.find(c => c.id === dm.target_company_id);
-                               const initials = (dm.name || "P")
-                                 .split(" ")
-                                 .filter(Boolean)
-                                 .map(w => w[0])
-                                 .join("")
-                                 .toUpperCase()
-                                 .slice(0, 2);
-
-                               return (
-                                 <tr key={dm.id} className="hover:bg-slate-50/40 transition-colors group">
-                                    <td className="px-8 py-6">
-                                       <p className="text-sm font-extrabold text-slate-800 uppercase tracking-tight">{co?.name}</p>
-                                    </td>
-                                    <td className="px-8 py-6">
-                                       <div className="flex items-center gap-3">
-                                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 text-white flex items-center justify-center font-bold text-xs shadow-sm">
-                                            {initials}
-                                          </div>
-                                          <p className="text-sm font-bold text-slate-700">{dm.name}</p>
-                                       </div>
-                                    </td>
-                                    <td className="px-8 py-6">
-                                       <p className="text-[11px] font-extrabold text-slate-800 uppercase tabular-nums">
-                                          {new Date(dm.scheduled_time).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true }).replace(',', ' @')}
-                                       </p>
-                                    </td>
-                                    <td className="px-8 py-6">
-                                       <DiscoveryTimer scheduledTime={dm.scheduled_time} />
-                                    </td>
-                                    <td className="px-8 py-6 text-right">
-                                       <a 
-                                         href={dm.meeting_link} target="_blank" rel="noreferrer"
-                                         className="inline-flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/10 hover:scale-[1.02] active:scale-[0.98] transition-all"
-                                       >
-                                         <Link2 size={13} strokeWidth={3} />
-                                         Access Bridge
-                                       </a>
-                                    </td>
-                                 </tr>
-                               );
-                             })
-                           )}
+                          {(campaign.dms || []).filter(dm => !["NEW", "SYNCED"].includes(dm.state || dm.status)).length === 0 ? (
+                            <tr>
+                              <td colSpan="4" className="px-8 py-20 text-center">
+                                <div className="flex flex-col items-center gap-4 text-slate-300">
+                                  <Bot size={40} strokeWidth={1} className="opacity-20 text-surgical-navy" />
+                                  <p className="text-xs font-bold uppercase tracking-widest italic">Awaiting initial signal deployment...</p>
+                                </div>
+                              </td>
+                            </tr>
+                          ) : (
+                            (campaign.dms || []).filter(dm => !["NEW", "SYNCED"].includes(dm.state || dm.status)).map(dm => {
+                              const co = campaign.target_companies.find(c => c.id === dm.target_company_id);
+                              const dmStatus = dm.state || dm.status || "NEW";
+                              return (
+                                <tr key={dm.id} className="hover:bg-slate-50/50 transition-colors group">
+                                  <td className="px-8 py-6">
+                                    <div className="flex items-center gap-4">
+                                      <div className="w-10 h-10 rounded-xl bg-surgical-navy/5 text-surgical-navy flex items-center justify-center font-black text-xs border border-surgical-navy/10">
+                                        {(dm.name || "P").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                                      </div>
+                                      <div>
+                                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight leading-none mb-1">{dm.name}</p>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{dm.position || "Decision Maker"}</p>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-8 py-6 text-sm font-bold text-slate-500 uppercase">{co?.name}</td>
+                                  <td className="px-8 py-6 text-center">
+                                    <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter ${
+                                      dmStatus.includes("SENT") ? "bg-surgical-navy text-white" :
+                                      dmStatus.includes("REPLIED") ? "bg-emerald-500 text-white" :
+                                      "bg-slate-100 text-slate-500"
+                                    }`}>
+                                      {dmStatus.replace(/_/g, " ")}
+                                    </span>
+                                  </td>
+                                  <td className="px-8 py-6 text-right">
+                                    <button 
+                                      onClick={() => setShowHistoryDM(dm)}
+                                      className="px-4 py-2 bg-slate-50 hover:bg-surgical-navy hover:text-white text-slate-400 border border-slate-100 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
+                                    >
+                                      View Chain
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })
+                          )}
                         </tbody>
                       </table>
                     </div>
                   </div>
-              </section>
-           </div>
-        )}
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {(() => {
+                      const standardDrafts = (campaign.drafts || []).filter(d => d.status === "DRAFTED" && d.draft_type !== "DISCOVERY");
+                      if (standardDrafts.length === 0) {
+                        return (
+                          <div className="col-span-full bg-white rounded-[32px] border border-surgical-border p-20 text-center flex flex-col items-center gap-4">
+                            <Mail size={48} className="text-slate-200" strokeWidth={1} />
+                            <p className="text-sm font-black text-slate-400 uppercase tracking-widest italic">No pending outreach protocols drafted.</p>
+                          </div>
+                        );
+                      }
+                      return standardDrafts.map((draft) => {
+                        const dm = campaign.dms?.find(d => d.id === draft.decision_maker_id);
+                        const co = campaign.target_companies?.find(c => c.id === dm?.target_company_id);
+                        return (
+                          <motion.div
+                            key={draft.id}
+                            layout
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="bg-white rounded-[28px] border border-surgical-border p-6 shadow-sm hover:shadow-xl hover:shadow-surgical-navy/5 transition-all flex flex-col justify-between"
+                          >
+                            <div className="space-y-4">
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center font-black text-xs border border-red-100">
+                                    {(dm?.name || "P").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{dm?.name}</p>
+                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{co?.name}</p>
+                                  </div>
+                                </div>
+                                <div className="px-2 py-1 bg-slate-50 border border-slate-100 rounded-lg text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                                  Draft
+                                </div>
+                              </div>
+                              
+                              <div className="space-y-2">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-1">Subject</p>
+                                <p className="text-xs font-bold text-slate-800 line-clamp-1 italic">{draft.subject}</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-1 mt-3">Message Snippet</p>
+                                <p className="text-[11px] font-medium text-slate-500 line-clamp-3 leading-relaxed">
+                                  {draft.body.replace(/<[^>]*>/g, '').slice(0, 150)}...
+                                </p>
+                              </div>
+                            </div>
 
-        {activeTab === "report" && (
-           <div className="max-w-[1200px] mx-auto space-y-12 select-none">
-              {/* Report Header: Aggregate Intelligence */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {[
-                  { label: "Total Profiled", value: campaign.target_companies_count, icon: Search, color: "text-red-600", bg: "bg-red-50 border border-red-100/60" },
-                  { label: "Avg Alignment", value: `${Math.round(campaign.target_companies.reduce((acc, c) => acc + (c.similarity_score?.score || 0), 0) / (campaign.target_companies_count || 1))}%`, icon: Target, color: "text-red-600", bg: "bg-red-50 border border-red-100/60" },
-                  { label: "Total Prospects", value: (campaign.dms || []).length, icon: Users, color: "text-red-600", bg: "bg-red-50 border border-red-100/60" }
-                ].map((stat, i) => (
-                  <div key={i} className="bg-white p-6 rounded-3xl border border-slate-100/80 shadow-sm flex items-center gap-5 hover:scale-[1.01] transition-transform">
-                    <div className={`w-14 h-14 ${stat.bg} ${stat.color} rounded-2xl flex items-center justify-center shrink-0 shadow-sm`}>
-                      <stat.icon size={22} strokeWidth={2.5} />
+                            <div className="flex items-center gap-3 mt-8">
+                              <button
+                                onClick={() => {
+                                  setDraftEditData({ subject: draft.subject, body: draft.body, email: dm?.email || "" });
+                                  setSelectedDraft(draft);
+                                }}
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-slate-100"
+                              >
+                                <Edit3 size={14} /> Refine
+                              </button>
+                              <button
+                                onClick={() => handleSendMessage(draft.id, dm?.name)}
+                                disabled={sendingId === draft.id}
+                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-surgical-navy hover:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md shadow-surgical-navy/20 disabled:opacity-50"
+                              >
+                                {sendingId === draft.id ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                                Deploy
+                              </button>
+                            </div>
+                          </motion.div>
+                        );
+                      });
+                    })()}
+                  </div>
+                )}
+              </motion.div>
+            )}
+
+            {activeTab === "history" && (
+              <motion.div
+                key="history"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="p-10 max-w-[1600px] mx-auto space-y-8"
+              >
+                <div className="flex items-center justify-between mb-8">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-surgical-navy/5 text-surgical-navy rounded-xl flex items-center justify-center border border-surgical-navy/10 shadow-sm">
+                      <PhoneCall size={20} strokeWidth={3} />
                     </div>
                     <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1.5">{stat.label}</p>
-                      <h4 className="text-2xl md:text-3xl font-black text-slate-900 uppercase tracking-tight leading-none">{stat.value}</h4>
+                      <span className="px-2.5 py-0.5 bg-surgical-navy/5 text-surgical-navy border border-surgical-navy/10 rounded-lg text-[10px] font-black uppercase tracking-widest self-start mb-1 inline-block">Coordination Protocol</span>
+                      <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight uppercase italic leading-none">Discovery Calls</h3>
                     </div>
                   </div>
-                ))}
-              </div>
 
-              {/* Company List: Multi-Threaded Intelligence Repository */}
-              <section className="bg-white rounded-[32px] border border-slate-100/80 overflow-hidden shadow-sm select-none">
-                <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/20">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-red-50 border border-red-100/60 rounded-xl flex items-center justify-center text-red-600 shadow-sm">
-                      <PieChart size={18} strokeWidth={3} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-black text-slate-900 uppercase italic tracking-tight">Organizational Intelligence Repository</h3>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Vertical Campaign Audit</p>
-                    </div>
+                  {/* Sub-navigation for Discovery Calls */}
+                  <div className="flex bg-slate-50 border border-slate-100 p-1 rounded-xl">
+                    <button
+                      onClick={() => setDiscoveryTab("drafts")}
+                      className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                        discoveryTab === "drafts" ? "bg-white text-surgical-navy shadow-sm border border-slate-200/60" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100/50"
+                      }`}
+                    >
+                      <PhoneCall size={14} /> Pending Drafts
+                    </button>
+                    <button
+                      onClick={() => setDiscoveryTab("scheduled")}
+                      className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
+                        discoveryTab === "scheduled" ? "bg-white text-surgical-navy shadow-sm border border-slate-200/60" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100/50"
+                      }`}
+                    >
+                      <Calendar size={14} /> Scheduled Meetings
+                    </button>
                   </div>
                 </div>
 
-                <div className="divide-y divide-slate-100">
-                  {campaign.target_companies.map((company) => {
-                    const companyDMs = (campaign.dms || []).filter(dm => dm.target_company_id === company.id);
-                    const isExpanded = expandedReportCompany === company.id;
-                    const companyInitials = (company.name || "C")
-                      .split(" ")
-                      .filter(Boolean)
-                      .map(w => w[0])
-                      .join("")
-                      .toUpperCase()
-                      .slice(0, 2);
-                    
-                    return (
-                      <div key={company.id} className="flex flex-col border-b border-slate-50 last:border-0">
-                        <div 
-                          onClick={() => setExpandedReportCompany(isExpanded ? null : company.id)}
-                          className="px-8 py-5 hover:bg-slate-50/40 transition-all cursor-pointer group flex items-center justify-between select-none"
+                {discoveryTab === "drafts" ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {(() => {
+                    const discoveryDrafts = (campaign.drafts || []).filter(d => d.status === "DRAFTED" && d.draft_type === "DISCOVERY");
+                    if (discoveryDrafts.length === 0) {
+                      return (
+                        <div className="col-span-full bg-white rounded-[32px] border border-surgical-border p-20 text-center flex flex-col items-center gap-4">
+                          <PhoneCall size={48} className="text-slate-200" strokeWidth={1} />
+                          <p className="text-sm font-black text-slate-400 uppercase tracking-widest italic">No discovery calls pending coordination.</p>
+                        </div>
+                      );
+                    }
+                    return discoveryDrafts.map((draft) => {
+                      const dm = campaign.dms?.find(d => d.id === draft.decision_maker_id);
+                      const co = campaign.target_companies?.find(c => c.id === dm?.target_company_id);
+                      return (
+                        <motion.div
+                          key={draft.id}
+                          layout
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="bg-white rounded-[28px] border border-surgical-border p-6 shadow-sm hover:shadow-xl hover:shadow-surgical-navy/5 transition-all flex flex-col justify-between"
                         >
-                          <div className="flex items-center gap-5 flex-grow">
-                            <div className={`w-11 h-11 rounded-xl flex items-center justify-center transition-all font-black text-xs shadow-sm shrink-0 select-none ${isExpanded ? 'bg-red-600 text-white shadow-red-500/10' : 'bg-red-50 text-red-600 border border-red-100 group-hover:bg-red-600 group-hover:text-white'}`}>
-                              {companyInitials}
-                            </div>
-                            <div>
-                              <h4 className={`text-base font-extrabold uppercase tracking-tight transition-colors ${isExpanded ? 'text-red-600' : 'text-slate-800 group-hover:text-red-600'}`}>
-                                {company.name}
-                              </h4>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Target Organization</p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center gap-10">
-                            <div className="text-right">
-                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Alignment</p>
-                              <span className="text-sm font-extrabold text-red-600">{company.similarity_score?.score || 0}%</span>
+                          <div className="space-y-4">
+                            <div className="flex items-start justify-between">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-black text-xs border border-amber-100">
+                                  {(dm?.name || "P").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                                </div>
+                                <div>
+                                  <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{dm?.name}</p>
+                                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{co?.name}</p>
+                                </div>
+                              </div>
+                              <div className="px-2 py-1 bg-amber-50 border border-amber-100 text-amber-600 rounded-lg text-[8px] font-black uppercase tracking-widest">
+                                Discovery
+                              </div>
                             </div>
                             
-                            <div className="text-right w-24">
-                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none mb-1">Prospects</p>
-                              <div className="flex items-center justify-end gap-1.5 text-slate-600">
-                                 <Users size={13} strokeWidth={3} />
-                                 <span className="text-sm font-extrabold">{companyDMs.length}</span>
-                              </div>
-                            </div>
-
-                            <div className={`text-slate-300 transition-all duration-300 ${isExpanded ? 'rotate-90 text-red-600' : 'group-hover:text-red-600'}`}>
-                               <ChevronRight size={18} strokeWidth={3} />
+                            <div className="space-y-2">
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-1">Subject</p>
+                              <p className="text-xs font-bold text-slate-800 line-clamp-1 italic">{draft.subject}</p>
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-1 mt-3">Message Snippet</p>
+                              <p className="text-[11px] font-medium text-slate-500 line-clamp-3 leading-relaxed">
+                                {draft.body.replace(/<[^>]*>/g, '').slice(0, 150)}...
+                              </p>
                             </div>
                           </div>
-                        </div>
 
-                        <AnimatePresence>
-                          {isExpanded && (
-                            <motion.div 
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: "auto", opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              transition={{ duration: 0.25, ease: "easeInOut" }}
-                              className="overflow-hidden bg-slate-50/40 select-none"
+                          <div className="flex items-center gap-3 mt-8">
+                            <button
+                              onClick={() => {
+                                setDraftEditData({ subject: draft.subject, body: draft.body, email: dm?.email || "" });
+                                setSelectedDraft(draft);
+                              }}
+                              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-slate-100"
                             >
-                              <div className="px-8 pb-8 pt-2 space-y-4">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
-                                  {[
-                                    { label: "Phone Protocol", value: company.contact_number, icon: PhoneCall },
-                                    { label: "HQ Coordinates", value: company.location, icon: Globe },
-                                    { label: "Corporate Email", value: company.contact_email, icon: Mail }
-                                  ].map((item, idx) => (
-                                    <div key={idx} className="bg-white p-4.5 rounded-2xl border border-slate-100/80 shadow-sm hover:border-red-100/50 transition-all select-text">
-                                      <div className="flex items-center gap-2 mb-1.5">
-                                        <item.icon size={13} className="text-red-500" />
-                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">{item.label}</span>
+                              <Edit3 size={14} /> Refine
+                            </button>
+                            <button
+                              onClick={() => handleSendMessage(draft.id, dm?.name)}
+                              disabled={sendingId === draft.id}
+                              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-surgical-navy hover:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md shadow-surgical-navy/20 disabled:opacity-50"
+                            >
+                              {sendingId === draft.id ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                              Deploy
+                            </button>
+                          </div>
+                        </motion.div>
+                      );
+                    });
+                  })()}
+                  </div>
+                ) : (
+                  <div className="bg-white rounded-[32px] border border-surgical-border overflow-hidden shadow-sm">
+                    <div className="px-10 py-6 border-b border-surgical-border flex items-center justify-between bg-slate-50/30">
+                      <h3 className="text-lg font-black text-slate-900 uppercase italic tracking-tight">Scheduled Intelligence Briefings</h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50 border-b border-surgical-border">
+                            <th className="py-4 px-10 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Prospect</th>
+                            <th className="py-4 px-10 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Organization</th>
+                            <th className="py-4 px-10 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Coordinate</th>
+                            <th className="py-4 px-10 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Time Remaining</th>
+                            <th className="py-4 px-10 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Action</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-surgical-border bg-white">
+                          {(() => {
+                            const scheduledDMs = (campaign.dms || []).filter(dm => dm.status === "MEETING_BOOKED" || dm.scheduled_time_utc);
+                            if (scheduledDMs.length === 0) {
+                              return (
+                                <tr>
+                                  <td colSpan="5" className="py-20 text-center">
+                                    <Calendar size={48} className="text-slate-200 mx-auto mb-4" strokeWidth={1} />
+                                    <p className="text-sm font-black text-slate-400 uppercase tracking-widest italic">No meetings scheduled.</p>
+                                  </td>
+                                </tr>
+                              );
+                            }
+                            return scheduledDMs.map(dm => {
+                              const co = campaign.target_companies?.find(c => c.id === dm.target_company_id);
+                              return (
+                                <tr key={dm.id} className="hover:bg-slate-50/50 transition-colors">
+                                  <td className="py-4 px-10">
+                                    <div className="flex items-center gap-3">
+                                      <div className="w-8 h-8 rounded-lg bg-surgical-navy/5 text-surgical-navy flex items-center justify-center font-black text-[10px] border border-surgical-navy/10 shrink-0">
+                                        {(dm.name || "P").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
                                       </div>
-                                      <p className="text-xs font-extrabold text-slate-800 truncate uppercase tabular-nums">{item.value || "N/A"}</p>
+                                      <div>
+                                        <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{dm.name}</p>
+                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{dm.position || "Stakeholder"}</p>
+                                      </div>
                                     </div>
-                                  ))}
-                                </div>
-                                <div className="flex items-center gap-3 mb-5 select-none">
-                                  <div className="h-[1px] flex-grow bg-slate-100" />
-                                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest whitespace-nowrap leading-none select-none">Mapped Stakeholders</span>
-                                  <div className="h-[1px] flex-grow bg-slate-100" />
-                                </div>
-                                {companyDMs.length === 0 ? (
-                                  <div className="p-6 bg-white border border-slate-100/80 rounded-2xl flex flex-col items-center justify-center gap-3 text-center select-none shadow-sm">
-                                    <Bot size={28} className="text-red-400 opacity-40 animate-pulse" />
-                                    <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wide leading-none">No Mapped Stakeholders for this Profile</p>
-                                  </div>
-                                ) : (
-                                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {companyDMs.map((dm) => {
-                                      const dmInitials = (dm.name || "P")
-                                        .split(" ")
-                                        .filter(Boolean)
-                                        .map(w => w[0])
-                                        .join("")
-                                        .toUpperCase()
-                                        .slice(0, 2);
+                                  </td>
+                                  <td className="py-4 px-10 text-xs font-bold text-slate-700">{co?.name || "Unknown"}</td>
+                                  <td className="py-4 px-10 text-xs text-slate-500 font-medium">{dm.email}</td>
+                                  <td className="py-4 px-10">
+                                    <span className="px-3 py-1 bg-amber-50 text-amber-600 border border-amber-100 rounded-lg text-[10px] font-black uppercase tracking-widest whitespace-nowrap inline-flex items-center gap-1.5">
+                                      <Clock size={12} strokeWidth={3} /> {formatTimeLeft(dm.scheduled_time_utc)}
+                                    </span>
+                                  </td>
+                                  <td className="py-4 px-10 text-right">
+                                    {dm.meeting_link ? (
+                                      <a href={dm.meeting_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-surgical-navy text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all hover:bg-slate-800 shadow-sm shadow-surgical-navy/10">
+                                        <Link2 size={12} /> Join Link
+                                      </a>
+                                    ) : (
+                                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">TBA</span>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            });
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </motion.div>
+            )}
 
-                                      return (
-                                        <div 
-                                          key={dm.id}
-                                          className="bg-white p-4.5 rounded-2xl border border-slate-100/80 shadow-sm flex items-center justify-between group/dm hover:border-red-100/50 transition-all select-none"
-                                        >
-                                           <div className="flex items-center gap-4">
-                                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 text-white flex items-center justify-center font-extrabold text-xs group-hover/dm:scale-105 transition-all shadow-sm">
-                                              {dmInitials}
-                                            </div>
-                                            <div>
-                                              <button 
-                                                onClick={() => setShowHistoryDM(dm)}
-                                                className="text-sm font-extrabold text-slate-800 tracking-tight hover:text-red-600 transition-colors cursor-pointer text-left uppercase leading-tight select-text"
-                                              >
-                                                {dm.name}
-                                              </button>
-                                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide leading-none pt-0.5">{dm.position}</p>
-                                            </div>
-                                          </div>
-                                          <div className="flex items-center gap-2">
-                                            <a 
-                                              href={ensureAbsoluteUrl(dm.linkedin)} 
-                                              target="_blank" rel="noreferrer"
-                                              className="p-2 text-slate-400 hover:text-[#0a66c2] transition-all hover:scale-110 active:scale-95 shrink-0"
-                                              onClick={(e) => e.stopPropagation()}
-                                            >
-                                              <Linkedin size={16} />
-                                            </a>
-                                            <div className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter ${
-                                              (dm.status === "MEETING_BOOKED" || dm.status === "DATE_AND_MEETING_SECURED") ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : 
-                                              dm.status.includes("SENT") ? "bg-blue-50 text-blue-600 border border-blue-100" : 
-                                              "bg-slate-50 text-slate-500 border border-slate-100"
-                                            }`}>
-                                              {dm.status.replace(/_/g, " ")}
-                                            </div>
-                                            {dm.reply_intent && (
-                                              <div className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter shadow-sm border ${
-                                                dm.reply_intent === 'POSITIVE' ? 'bg-emerald-500 text-white border-emerald-600' :
-                                                dm.reply_intent === 'NEGATIVE' ? 'bg-rose-500 text-white border-rose-600' :
-                                                'bg-amber-400 text-white border-amber-500'
-                                              }`}>
-                                                {dm.reply_intent}
-                                              </div>
-                                            )}
-                                          </div>
-                                        </div>
-                                      );
-                                    })}
-                                  </div>
-                                )}
-                              </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+            {activeTab === "report" && (
+              <motion.div
+                key="report"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="p-10 max-w-[1600px] mx-auto space-y-12"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  {[
+                    { label: "Target Profiles", value: campaign.target_companies_count, icon: Search, color: "text-surgical-navy", bg: "bg-surgical-navy/5 border border-surgical-navy/10" },
+                    { label: "Pipeline Status", value: campaign.status === "COMPLETED" ? "FINISHED" : "ACTIVE", icon: Zap, color: "text-surgical-navy", bg: "bg-surgical-navy/5 border border-surgical-navy/10" },
+                    { label: "Mission Impact", value: `${Math.round((campaign.dms || []).filter(d => d.status === 'MEETING_BOOKED').length / (campaign.target_companies_count || 1) * 100)}%`, icon: Target, color: "text-surgical-navy", bg: "bg-surgical-navy/5 border border-surgical-navy/10" }
+                  ].map((stat, i) => (
+                    <div key={i} className="bg-white p-8 rounded-[32px] border border-surgical-border shadow-sm flex items-center gap-6">
+                      <div className={`w-16 h-16 ${stat.bg} ${stat.color} rounded-2xl flex items-center justify-center shrink-0`}>
+                        <stat.icon size={28} strokeWidth={2.5} />
                       </div>
-                    );
-                  })}
+                      <div>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{stat.label}</p>
+                        <h4 className="text-3xl font-black text-slate-900 uppercase tracking-tight leading-none">{stat.value}</h4>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-              </section>
-           </div>
-        )}
-      </main>
+
+                <div className="bg-white rounded-[32px] border border-surgical-border overflow-hidden shadow-sm">
+                   <div className="px-10 py-6 border-b border-surgical-border flex items-center justify-between bg-slate-50/30">
+                      <h3 className="text-lg font-black text-slate-900 uppercase italic tracking-tight">Intelligence Repository</h3>
+                      <span className="px-3 py-1 bg-surgical-navy/5 text-surgical-navy border border-surgical-navy/10 rounded-lg text-[10px] font-black uppercase tracking-widest">
+                        {campaign.target_companies.length} Records Profiled
+                      </span>
+                   </div>
+                   <div className="divide-y divide-slate-50">
+                      {campaign.target_companies.map(company => (
+                        <div key={company.id} className="px-10 py-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
+                           <div className="flex items-center gap-5">
+                              <div className="w-12 h-12 bg-surgical-navy/5 text-surgical-navy rounded-xl flex items-center justify-center font-black text-sm border border-surgical-navy/10">
+                                 {company.name[0].toUpperCase()}
+                              </div>
+                              <div>
+                                 <h4 className="font-extrabold text-slate-900 uppercase tracking-tight leading-none mb-1">{company.name}</h4>
+                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{company.location || "Global Ops"}</p>
+                              </div>
+                           </div>
+                           <button 
+                             onClick={() => setSelectedCompany(company)}
+                             className="text-[10px] font-black text-surgical-navy uppercase tracking-widest underline underline-offset-4 decoration-2 decoration-surgical-navy/20 hover:text-surgical-navy/70 transition-all"
+                           >
+                              Access Intelligence
+                           </button>
+                        </div>
+                      ))}
+                   </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </main>
+      </div>
 
       {/* Target Intel Professional Overlay */}
       <AnimatePresence>
@@ -1057,7 +990,7 @@ const CampaignWorkspace = () => {
                                 <span className="text-lg font-black text-slate-900 bg-red-50 text-red-600 px-2.5 py-1 rounded-lg border border-red-100 shadow-sm">{score}%</span>
                              </div>
                              <p className="text-slate-600 font-medium text-xs leading-relaxed italic bg-slate-50/80 p-3.5 rounded-xl border border-slate-100/60">
-                                "{reason}"
+                                {selectedCompany.relevance_explanation ? `"${selectedCompany.relevance_explanation}"` : "Strategic alignment verified via target sector analysis."}
                              </p>
                           </div>
 
@@ -1065,33 +998,17 @@ const CampaignWorkspace = () => {
                           <div className="space-y-3 pt-2">
                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Strategic Attributes</p>
                              <div className="grid grid-cols-1 gap-2.5">
-                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 flex items-center gap-3.5 group hover:border-red-100/60 transition-all shadow-sm">
-                                   <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-red-500 group-hover:bg-red-50 transition-colors">
+                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 flex items-start gap-3.5 group hover:border-red-100/60 transition-all shadow-sm">
+                                   <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-red-500 group-hover:bg-red-50 transition-colors shrink-0">
                                       <Monitor size={16} />
                                    </div>
                                    <div>
                                       <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Headquarters</p>
-                                      <p className="text-xs font-bold text-slate-800 uppercase tracking-tight truncate">{selectedCompany.location || "Global Operations"}</p>
+                                      <p className="text-xs font-bold text-slate-800 uppercase tracking-tight">{selectedCompany.location || "Global Operations"}</p>
                                    </div>
                                 </div>
-                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 flex items-center gap-3.5 group hover:border-red-100/60 transition-all shadow-sm">
-                                   <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-red-500 group-hover:bg-red-50 transition-colors">
-                                      <Mail size={16} />
-                                   </div>
-                                   <div>
-                                      <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Inbound Email</p>
-                                      <p className="text-xs font-bold text-slate-800 lowercase tracking-tight truncate">{selectedCompany.contact_email || "N/A"}</p>
-                                   </div>
-                                </div>
-                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 flex items-center gap-3.5 group hover:border-red-100/60 transition-all shadow-sm">
-                                   <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-red-500 group-hover:bg-red-50 transition-colors">
-                                      <PhoneCall size={16} />
-                                   </div>
-                                   <div>
-                                      <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Contact Line</p>
-                                      <p className="text-xs font-bold text-slate-800 uppercase tracking-tight truncate">{selectedCompany.contact_number || "N/A"}</p>
-                                   </div>
-                                </div>
+
+
                              </div>
                           </div>
                        </div>
@@ -1103,7 +1020,7 @@ const CampaignWorkspace = () => {
                           <div>
                              <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4 underline decoration-red-500/20 underline-offset-4 decoration-2">Deep Research Insight</h3>
                              <p className="text-slate-600 font-medium text-sm leading-relaxed whitespace-pre-wrap bg-slate-50/50 p-6 rounded-[20px] border border-slate-100">
-                                {selectedCompany.deep_research || "Intelligent reconnaissance summary and company core research insights are currently processing."}
+                                {selectedCompany.research_summary || selectedCompany.deep_research || "No deep research data available for this entity."}
                              </p>
                           </div>
                        </div>
@@ -1136,123 +1053,15 @@ const CampaignWorkspace = () => {
       </AnimatePresence>
 
       {/* Engagement Protocol Modal */}
-      <AnimatePresence>
-        {selectedDraft && (() => {
-          const dm = campaign.dms.find(d => d.id === selectedDraft.decision_maker_id);
-          const co = campaign.target_companies.find(c => c.id === dm?.target_company_id);
-
-          return (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12">
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                onClick={() => setSelectedDraft(null)}
-                className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
-              />
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="relative w-full max-w-5xl bg-white rounded-[32px] shadow-2xl overflow-y-auto max-h-[85vh] z-10 border border-slate-100 flex flex-col"
-              >
-                 {/* Close Button */}
-                 <button 
-                   onClick={() => setSelectedDraft(null)}
-                   className="absolute top-6 right-6 w-10 h-10 bg-slate-50 border border-slate-200/60 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all z-20 shadow-sm"
-                 >
-                   <X size={20} />
-                 </button>
-
-                 <div className="grid grid-cols-1 md:grid-cols-12 h-full flex-1">
-                    {/* Left Column: Context & Metadata */}
-                    <div className="md:col-span-5 p-8 md:p-10 bg-slate-50/50 border-r border-slate-100 space-y-8 flex flex-col justify-between">
-                       <div className="space-y-6">
-                          {/* Logo/Icon Header */}
-                          <div className="flex items-center gap-4">
-                             <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/10 flex items-center justify-center font-black text-xl tracking-tight select-none">
-                                {(dm?.name || "P")
-                                  .split(" ")
-                                  .filter(Boolean)
-                                  .map(w => w[0])
-                                  .join("")
-                                  .toUpperCase()
-                                  .slice(0, 2)}
-                             </div>
-                             <div className="flex flex-col">
-                                <span className="px-2.5 py-0.5 bg-red-50 border border-red-100 text-red-600 rounded-lg text-[10px] font-extrabold uppercase tracking-wider self-start mb-1 shadow-sm">Draft Refinement</span>
-                                <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">{dm?.name}</h2>
-                             </div>
-                          </div>
-
-                          <div className="space-y-4">
-                             <div className="p-5 bg-white rounded-2xl border border-slate-100 shadow-sm space-y-1">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Target Organization</span>
-                                <p className="text-sm font-extrabold text-slate-800">{co?.name || "Unknown Organization"}</p>
-                             </div>
-                          </div>
-
-                          {/* Editable Email */}
-                          <div className="space-y-3 pt-2">
-                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Deployment Coordinate</p>
-                             <div className="bg-white p-5 rounded-2xl border border-slate-100 focus-within:border-red-500/30 transition-all shadow-sm space-y-1.5">
-                                <span className="text-[9px] font-black text-slate-300 uppercase tracking-widest leading-none">Recipient Email</span>
-                                <input 
-                                  value={draftEditData.email}
-                                  onChange={(e) => setDraftEditData({ ...draftEditData, email: e.target.value })}
-                                  className="w-full bg-transparent font-bold text-slate-800 outline-none text-sm tracking-tight"
-                                />
-                             </div>
-                          </div>
-                       </div>
-                    </div>
-
-                    {/* Right Column: Editable Message Content */}
-                    <div className="md:col-span-7 p-8 md:p-10 space-y-6 flex flex-col justify-between bg-white h-full">
-                       <div className="space-y-6 flex-1 pr-2 select-text">
-                          <div className="bg-slate-50/60 p-5 rounded-xl border border-slate-100 focus-within:border-red-500/30 transition-all">
-                             <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-2 block select-none">Strategic Subject Header</span>
-                             <input 
-                               value={draftEditData.subject}
-                               onChange={(e) => setDraftEditData({ ...draftEditData, subject: e.target.value })}
-                               className="w-full bg-transparent font-black text-slate-900 outline-none text-base tracking-tight leading-relaxed"
-                             />
-                          </div>
-
-                          <div className="bg-slate-50/60 p-6 rounded-[20px] border border-slate-100 focus-within:border-red-500/30 transition-all flex-grow">
-                             <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-3 block select-none">Narrative Protocol Body</span>
-                             <textarea 
-                               value={draftEditData.body}
-                               onChange={(e) => setDraftEditData({ ...draftEditData, body: e.target.value })}
-                               className="w-full bg-transparent font-medium text-slate-600 outline-none text-sm leading-relaxed min-h-[220px] resize-none"
-                             />
-                          </div>
-                       </div>
-
-                       {/* Action Controls Footer */}
-                       <div className="pt-6 border-t border-slate-100 grid grid-cols-2 gap-4">
-                          <button 
-                            onClick={() => setSelectedDraft(null)}
-                            className="w-full py-4 bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-200 rounded-2xl font-bold text-sm uppercase tracking-widest hover:scale-[1.01] active:scale-[0.99] transition-all"
-                          >
-                             Discard Changes
-                          </button>
-                          <button 
-                            onClick={handleSaveDraft}
-                            disabled={isSaving}
-                            className="w-full py-4 bg-red-600 hover:bg-red-700 disabled:bg-red-300 text-white rounded-2xl font-bold text-sm uppercase tracking-widest hover:scale-[1.01] active:scale-[0.99] transition-all flex items-center justify-center gap-3 shadow-lg shadow-red-500/10"
-                          >
-                             {isSaving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} strokeWidth={3} />}
-                             Save & Refine
-                          </button>
-                       </div>
-                    </div>
-                 </div>
-              </motion.div>
-            </div>
-          );
-        })()}
-      </AnimatePresence>
+      <DraftEditorModal
+        selectedDraft={selectedDraft}
+        campaign={campaign}
+        draftEditData={draftEditData}
+        onDraftEditChange={setDraftEditData}
+        onClose={() => setSelectedDraft(null)}
+        onSave={handleSaveDraft}
+        isSaving={isSaving}
+      />
 
       {/* Interaction History Drawer */}
       <AnimatePresence>
@@ -1293,57 +1102,143 @@ const CampaignWorkspace = () => {
               </div>
 
               <div className="flex-grow overflow-y-auto p-6 md:p-8 space-y-8 bg-slate-50/20 relative">
-                <div className="absolute left-[43px] md:left-[51px] top-8 bottom-8 w-0.5 bg-slate-100/80" />
+                {/* Visual Connection Line */}
+                <div className="absolute left-[42px] md:left-[50px] top-12 bottom-12 w-[2px] bg-slate-100 z-0" />
+                
+                {getUnifiedHistory(showHistoryDM).map((event, idx) => {
+                  const Icon = event.icon;
+                  const isExpanded = expandedNodes.includes(event.type + idx);
+                  
+                  return (
+                    <div key={idx} className="relative flex gap-5 md:gap-6 z-10">
+                      <div className={`w-9 h-9 rounded-xl border-2 flex items-center justify-center shadow-sm shrink-0 ${event.color}`}>
+                        <Icon size={16} strokeWidth={2.5} />
+                      </div>
+                      
+                      <div 
+                        onClick={() => toggleNodeExpansion(event.type + idx)}
+                        className="bg-white p-5 rounded-2xl border border-slate-100/80 shadow-sm flex-grow cursor-pointer hover:bg-slate-50/30 transition-all"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">
+                            {event.label} • {formatTimeAgo(event.timestamp)}
+                          </p>
+                          {event.content.id && (
+                            <div className="p-1 px-1.5 rounded bg-slate-50 border border-slate-100 text-[8px] font-bold text-slate-400 uppercase tracking-tighter">
+                              Sync ID: #{String(event.content.id).slice(-4)}
+                            </div>
+                          )}
+                        </div>
+                        
+                        <p className="text-xs font-extrabold text-slate-800 uppercase italic tracking-tight mb-2">
+                          {event.type === "PROSPECT_IDENTIFIED" 
+                            ? `${event.title} (Score: ${event.content.score}/100)` 
+                            : event.type === "EMAIL_DRAFTED"
+                              ? `Subject: ${event.content.subject}`
+                              : `Subject: ${event.content.subject}`
+                          }
+                        </p>
+                        
+                        <div className={`text-sm leading-relaxed text-slate-600 font-medium ${isExpanded ? '' : 'line-clamp-3'}`}>
+                          {event.type === "PROSPECT_IDENTIFIED" ? (
+                            <p className="italic">"{event.content.reason}"</p>
+                          ) : (
+                            <p className="whitespace-pre-wrap italic bg-slate-50/50 p-3 rounded-lg border border-slate-100/50">
+                              {cleanEmailReply(event.content.body)}
+                            </p>
+                          )}
+                        </div>
+                        
+                        {event.type === "EMAIL_DRAFTED" && (
+                          <div className="mt-3 flex items-center justify-between">
+                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
+                              event.content.isApproved ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                            }`}>
+                              {event.content.isApproved ? "Approved" : "Awaiting Approval"}
+                            </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowHistoryDM(null);
+                                scrollToDraft(showHistoryDM.id);
+                              }}
+                              className="text-[9px] font-black text-surgical-navy hover:underline uppercase tracking-wider"
+                            >
+                              Go to draft Editor →
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
-                <div className="relative flex gap-5 md:gap-6">
-                   <div className="z-10 bg-white w-9 h-9 rounded-xl border-2 border-slate-100 flex items-center justify-center text-red-500 shadow-sm shrink-0">
-                      <Target size={16} strokeWidth={3} />
-                   </div>
-                   <div 
-                      onClick={() => toggleNodeExpansion('strategy')}
-                      className="bg-white p-5 rounded-2xl border border-slate-100/80 shadow-sm flex-grow cursor-pointer hover:border-red-100/40 hover:bg-slate-50/30 transition-all"
-                   >
-                      <p className="text-[9px] font-bold text-red-600 uppercase tracking-widest mb-1 select-none">Stage 0: Targeting Strategy</p>
-                      <p className="text-xs font-extrabold text-slate-800 uppercase italic tracking-tight mb-2 select-none">Strategic Alignment Identification</p>
-                      <p className={`text-sm font-semibold text-slate-600 italic leading-relaxed select-text ${expandedNodes.includes('strategy') ? '' : 'line-clamp-3'}`}>
-                         "{showHistoryDM.similarity_score?.reason || "Lead identified through high-intent LinkedIn reconnaissance."}"
-                      </p>
-                   </div>
+      {/* Refinement Modal - Moved out of the drawer for clean independent rendering */}
+      <AnimatePresence>
+        {showRefineModal && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowRefineModal(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-2xl bg-white rounded-[32px] shadow-2xl p-10 overflow-y-auto max-h-[90vh] z-10 border border-slate-100"
+            >
+              <div className="space-y-8">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center border border-amber-100">
+                    <Bot size={28} strokeWidth={2.5} />
+                  </div>
+                  <div>
+                    <h2 className="text-2xl font-black text-slate-900 uppercase italic tracking-tight">Mission Intelligence Refinement</h2>
+                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Provide the missing coordinates to mobilize research.</p>
+                  </div>
                 </div>
 
-                {(!showHistoryDM.logs || showHistoryDM.logs.length === 0) ? (
-                  <div className="relative flex gap-5 md:gap-6 opacity-40">
-                    <div className="z-10 bg-slate-50 w-9 h-9 rounded-xl border-2 border-slate-100 flex items-center justify-center text-slate-400 shadow-sm shrink-0">
-                       <Clock size={16} strokeWidth={3} />
+                <div className="space-y-6">
+                  {(campaign.input_validation_review?.clarification_questions || ["Could you provide more detail on your target audience and value proposition?"]).map((q, i) => (
+                    <div key={i} className="space-y-3">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                        <span className="w-5 h-5 bg-slate-100 text-slate-500 rounded-full flex items-center justify-center text-[8px]">{i+1}</span>
+                        {q}
+                      </label>
+                      <textarea 
+                        value={refineAnswers[q] || ""}
+                        onChange={(e) => setRefineAnswers({ ...refineAnswers, [q]: e.target.value })}
+                        className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 text-sm font-medium text-slate-700 outline-none focus:border-amber-500/30 transition-all min-h-[80px] resize-none"
+                        placeholder="Type your response here..."
+                      />
                     </div>
-                    <div className="flex flex-col justify-center">
-                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">Awaiting Live Engagement Response...</p>
-                    </div>
-                  </div>
-                ) : (
-                  [...showHistoryDM.logs].reverse().map((log, i) => {
-                    const isFirstLog = i === 0;
-                    return (
-                      <div key={i} className="relative flex gap-5 md:gap-6">
-                         <div className={`z-10 w-9 h-9 rounded-xl border flex items-center justify-center shadow-sm shrink-0 ${log.direction === 'SENT' ? 'bg-indigo-600 border-indigo-700 text-white' : 'bg-emerald-600 border-emerald-700 text-white'}`}>
-                            {log.direction === 'SENT' ? (isFirstLog ? <Bot size={16} strokeWidth={2.5} /> : <Mail size={16} strokeWidth={2.5} />) : <MessageSquare size={16} strokeWidth={2.5} />}
-                         </div>
-                         <div className={`p-5 rounded-2xl border shadow-sm flex-grow select-text ${log.direction === 'SENT' ? 'bg-white border-slate-100 hover:border-indigo-100' : 'bg-white border-slate-100 hover:border-emerald-100'} transition-all`}>
-                            <div className="flex items-center justify-between mb-2 select-none">
-                               <p className={`text-[9px] font-bold uppercase tracking-widest ${log.direction === 'SENT' ? 'text-indigo-600' : 'text-emerald-600'}`}>
-                                  {log.direction === 'SENT' ? (isFirstLog ? 'Mission Alpha: Inaugural Signal' : 'Mission Outbound') : 'Signal Captured'} • {formatTimeAgo(log.received_at)}
-                                </p>
-                               <div className="p-1 px-1.5 rounded bg-slate-50 border border-slate-100 text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Sync ID: #{String(log.id).slice(-4)}</div>
-                            </div>
-                            <p className="text-sm font-extrabold text-slate-800 uppercase italic tracking-tight mb-1">Subject: {log.subject}</p>
-                            <p className={`text-sm font-medium leading-relaxed whitespace-pre-wrap ${log.direction === 'SENT' ? 'text-slate-600 italic' : 'text-slate-600 font-medium'}`}>
-                               {cleanEmailReply(log.body)}
-                            </p>
-                         </div>
-                      </div>
-                    );
-                  })
-                )}
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-4 pt-4">
+                  <button 
+                    onClick={() => setShowRefineModal(false)}
+                    className="flex-1 py-4 bg-slate-50 hover:bg-slate-100 text-slate-500 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    onClick={handleRefineSubmit}
+                    disabled={isSaving || Object.keys(refineAnswers).length === 0}
+                    className="flex-[2] py-4 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-200 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-amber-600/10 flex items-center justify-center gap-2"
+                  >
+                    {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} className="fill-white" />}
+                    Synchronize Refinements
+                  </button>
+                </div>
               </div>
             </motion.div>
           </div>

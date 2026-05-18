@@ -1,6 +1,6 @@
 import React from "react";
 import { 
-  FileBarChart, Target, Users, Send, Trash, ArrowLeft, Globe, Linkedin, PieChart, Bot, Search, CheckCircle2, Loader2
+  FileBarChart, Target, Users, Send, Trash, ArrowLeft, Globe, Linkedin, PieChart, Bot, Search, CheckCircle2, Loader2, ShieldCheck
 } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "../config";
@@ -83,17 +83,7 @@ const ResearchTabs = ({
           </button>
         </div>
 
-        <div className="px-8 flex flex-col gap-4">
-          <button
-            onClick={() => {
-              window.location.href = "/";
-            }}
-            className="flex items-center gap-3 text-sm font-semibold text-slate-500 hover:text-slate-800 transition-all"
-          >
-            <ArrowLeft size={18} className="text-slate-400" />
-            Log Out
-          </button>
-        </div>
+
       </div>
 
       {/* Content area */}
@@ -117,68 +107,134 @@ const ResearchTabs = ({
                 <ArrowLeft className="rotate-180" size={16} /> Export
               </button>
             </div>
+            
+            {/* Mission Context Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="bg-white rounded-[24px] border border-slate-200 p-6 shadow-sm flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 flex items-center justify-center text-brand-primary">
+                  <Search size={24} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Target Criteria</p>
+                  <p className="text-sm font-bold text-slate-700">
+                    {[campaign.target_industry, campaign.target_location].filter(Boolean).join(" • ") || "N/A"}
+                  </p>
+                </div>
+              </div>
+              <div className="bg-white rounded-[24px] border border-slate-200 p-6 shadow-sm flex items-center gap-4">
+                <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500">
+                  <Bot size={24} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Strategic Intent (Prompt)</p>
+                  <p className="text-sm font-bold text-slate-700">{campaign.prompt || "N/A"}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 1: Company Summary - Full Width Row */}
+            <div className="bg-white rounded-[24px] border border-slate-200 p-8 shadow-sm flex flex-col">
+              <div className="flex items-center gap-2.5 mb-5">
+                <PieChart className="text-slate-400" size={18} />
+                <h3 className="text-base font-bold text-slate-900">Company Intelligence Summary</h3>
+              </div>
+              <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap font-medium flex-1">
+                {campaign.user_intel?.company_summary || campaign.user_intel?.deep_research || "Conducting corporate intelligence logs..."}
+              </p>
+            </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="bg-white rounded-[24px] border border-slate-200 p-8 shadow-sm h-full flex flex-col">
+              {/* Card 2: Core Offerings & Industries */}
+              <div className="bg-white rounded-[24px] border border-slate-200 p-8 shadow-sm flex flex-col h-full">
                 <div className="flex items-center gap-2.5 mb-5">
-                  <PieChart className="text-slate-400" size={18} />
-                  <h3 className="text-base font-bold text-slate-900">Market Presence Analytics</h3>
+                  <Target className="text-slate-400" size={18} />
+                  <h3 className="text-base font-bold text-slate-900">Services & Market Footprint</h3>
                 </div>
-                <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap font-medium flex-1">
-                  {campaign.user_intel?.deep_research || "Conducting corporate intelligence logs..."}
-                </p>
+                
+                <div className="space-y-6">
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Core Services</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(typeof campaign.user_intel?.offerings === 'string' ? JSON.parse(campaign.user_intel.offerings || '[]') : campaign.user_intel?.offerings || []).map((s, i) => (
+                        <span key={i} className="bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg text-[10px] font-semibold text-slate-600">{s}</span>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Target Customer Profiles</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(campaign.user_intel?.target_customers || []).map((ind, i) => (
+                        <span key={i} className="bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-lg text-[10px] font-semibold text-emerald-600">{ind}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="flex flex-col gap-8 h-full">
-                <div className="bg-white rounded-[24px] border border-slate-200 p-8 shadow-sm flex flex-col h-auto flex-1">
-                  <div className="flex items-center gap-2.5 mb-5">
-                    <Target className="text-slate-400" size={18} />
-                    <h3 className="text-base font-bold text-slate-900">Core Offerings</h3>
+              {/* Card 3: Competitive Edge & Tone */}
+              <div className="bg-white rounded-[24px] border border-slate-200 p-8 shadow-sm flex flex-col h-full">
+                <div className="flex items-center gap-2.5 mb-5">
+                  <ShieldCheck className="text-slate-400" size={18} />
+                  <h3 className="text-base font-bold text-slate-900">Strategic Posture</h3>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="p-4 bg-red-50 rounded-2xl border border-red-100">
+                    <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-1">Brand Mission</p>
+                    <p className="text-sm font-bold text-slate-700">{campaign.user_intel?.motto || "High-Fidelity Outreach Operation"}</p>
                   </div>
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {campaign.user_intel?.offerings ? (
-                      (() => {
-                        try {
-                          return JSON.parse(campaign.user_intel.offerings).map((o, idx) => (
-                            <span key={idx} className="bg-slate-50 border border-slate-200 px-3.5 py-1.5 rounded-lg text-xs font-semibold text-slate-600">
-                              {o}
-                            </span>
-                          ));
-                        } catch (e) {
-                          return <p className="text-slate-400 italic">No offerings found.</p>;
-                        }
-                      })()
-                    ) : (
-                      <p className="text-slate-400 italic">No offerings found.</p>
-                    )}
-                    {campaign.user_intel?.core_focus && (
-                      <span className="bg-red-50 border border-red-200 px-3.5 py-1.5 rounded-lg text-xs font-bold text-red-500">
-                        Core Focus: {campaign.user_intel?.core_focus}
-                      </span>
-                    )}
+                  
+                  <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Competitive Advantages</p>
+                    <ul className="space-y-2">
+                      {(campaign.user_intel?.competitive_advantages || []).slice(0, 4).map((adv, i) => (
+                        <li key={i} className="text-xs font-bold text-slate-600 flex items-start gap-2">
+                          <div className="w-1.5 h-1.5 rounded-full bg-brand-primary mt-1.5 shrink-0" />
+                          {adv}
+                        </li>
+                      ))}
+                    </ul>
                   </div>
                 </div>
+              </div>
+            </div>
 
-                {/* Campaign Inputs Card */}
-                <div className="bg-white rounded-[24px] border border-slate-200 p-8 shadow-sm flex flex-col h-auto flex-1">
-                  <div className="flex items-center gap-2.5 mb-5">
-                    <Bot className="text-slate-400" size={18} />
-                    <h3 className="text-base font-bold text-slate-900">Campaign Inputs</h3>
-                  </div>
-                  <div className="grid grid-cols-1 gap-3">
-                    <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Target Persona / Query</p>
-                      <p className="text-sm font-bold text-slate-700">{campaign.query || "N/A"}</p>
+            {/* Proof Points & Pains Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+               {/* Card 4: Proof Points */}
+               <div className="bg-white rounded-[24px] border border-slate-200 p-8 shadow-sm">
+                <div className="flex items-center gap-2.5 mb-5">
+                  <CheckCircle2 className="text-emerald-500" size={18} />
+                  <h3 className="text-base font-bold text-slate-900">Validation & Proof Points</h3>
+                </div>
+                <div className="grid grid-cols-1 gap-3">
+                  {(campaign.user_intel?.proof_points || []).map((point, i) => (
+                    <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                      <div className="w-6 h-6 rounded-lg bg-white flex items-center justify-center text-emerald-500 shadow-sm border border-slate-100">
+                        <CheckCircle2 size={14} />
+                      </div>
+                      <p className="text-xs font-bold text-slate-700">{point}</p>
                     </div>
-                    <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Target Industry</p>
-                      <p className="text-sm font-bold text-slate-700">{campaign.target_industry || "N/A"}</p>
+                  ))}
+                </div>
+              </div>
+
+              {/* Card 5: Capability-to-Pain Strategy */}
+              <div className="bg-white rounded-[24px] border border-slate-200 p-8 shadow-sm">
+                <div className="flex items-center gap-2.5 mb-5">
+                  <Users className="text-rose-500" size={18} />
+                  <h3 className="text-base font-bold text-slate-900">Surgical Pain-Map Intelligence</h3>
+                </div>
+                <div className="space-y-4">
+                  {(campaign.user_intel?.capability_to_pain_map || []).slice(0, 3).map((item, i) => (
+                    <div key={i} className="p-4 bg-rose-50/50 rounded-2xl border border-rose-100/50">
+                      <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-1">Target Pain</p>
+                      <p className="text-xs font-bold text-slate-800 mb-2">{item.pain}</p>
+                      <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1">Strategy</p>
+                      <p className="text-[10px] font-medium text-slate-600 italic">{item.solution}</p>
                     </div>
-                    <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Target Location</p>
-                      <p className="text-sm font-bold text-slate-700">{campaign.target_location || "N/A"}</p>
-                    </div>
-                  </div>
+                  ))}
                 </div>
               </div>
             </div>
@@ -214,21 +270,36 @@ const ResearchTabs = ({
                   <div
                     key={company.id}
                     onClick={() => setSelectedCompany(company)}
-                    className="bg-white rounded-[24px] border border-slate-200 p-6 cursor-pointer hover:shadow-xl hover:shadow-slate-100 transition-all flex flex-col justify-between h-[280px]"
+                    className="bg-white rounded-[24px] border border-slate-200 p-6 cursor-pointer hover:shadow-xl hover:shadow-slate-100 transition-all flex flex-col justify-between min-h-[280px] h-full"
                   >
                     <div className="flex flex-col gap-4">
                       <div className="flex items-start justify-between gap-4">
-                        <h4 className="text-lg font-bold text-slate-900 tracking-tight leading-snug">
+                        <h4 className="text-lg font-bold text-slate-900 tracking-tight leading-snug min-w-0 break-words flex-1">
                           {company.name}
                         </h4>
-                        <span className="px-2.5 py-0.5 bg-emerald-50 text-emerald-500 rounded-full border border-emerald-200 text-xs font-bold whitespace-nowrap">
-                          Approved
+                        <span className={`shrink-0 px-2.5 py-0.5 rounded-full border text-[10px] font-black uppercase tracking-widest whitespace-nowrap ${
+                          company.status === 'RESEARCHED' ? 'bg-surgical-navy text-white border-surgical-navy' : 'bg-blue-50 text-surgical-cobalt border-blue-200'
+                        }`}>
+                          {company.status === 'RESEARCHED' ? 'Deep Dossier' : 'Accepted'}
                         </span>
                       </div>
 
-                      <p className="text-slate-500 font-medium text-sm leading-relaxed line-clamp-3">
-                        {company.deep_research || "No deep research data."}
-                      </p>
+                      <div className="space-y-3">
+                         <div className="p-3 bg-slate-50 rounded-xl border border-surgical-border">
+                            <p className="text-[9px] font-black text-surgical-navy uppercase tracking-widest mb-1">AI Reasoning</p>
+                            <p className="text-[11px] font-bold text-slate-700 line-clamp-3 italic leading-relaxed">
+                               "{company.relevance_explanation || "Strategic match based on industry alignment and capabilities."}"
+                            </p>
+                         </div>
+                         {company.research_summary && (
+                            <div className="p-3 bg-white rounded-xl border border-surgical-border shadow-sm">
+                               <p className="text-[9px] font-black text-surgical-cobalt uppercase tracking-widest mb-1">Deep Intelligence</p>
+                               <p className="text-[10px] font-bold text-slate-600 line-clamp-2">
+                                  {company.research_summary}
+                               </p>
+                            </div>
+                         )}
+                      </div>
                     </div>
 
                     <div className="flex flex-col gap-4 mt-auto pt-4">
@@ -294,8 +365,7 @@ const ResearchTabs = ({
                   return (
                     <div
                       key={dm.id}
-                      onClick={() => setSelectedCompany(company)}
-                      className="bg-white rounded-[24px] border border-slate-200 p-6 cursor-pointer hover:shadow-xl hover:shadow-slate-100 transition-all flex flex-col justify-between h-[260px]"
+                      className="bg-white rounded-[24px] border border-slate-200 p-6 flex flex-col justify-between min-h-[260px] h-full"
                     >
                       <div className="flex flex-col gap-4">
                         <div className="flex items-center gap-4">
@@ -318,11 +388,14 @@ const ResearchTabs = ({
                         </div>
 
                         <div className="flex flex-col gap-1">
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                            Corporate Influence
-                          </span>
-                          <p className="text-slate-600 font-medium text-sm leading-relaxed line-clamp-2">
-                            {dm.relevance_explanation || dm.similarity_score?.reason || "High-priority corporate decision maker."}
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                              Persona Fit
+                            </span>
+                            <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">{Math.round(dm.relevance_score || 0)}%</span>
+                          </div>
+                          <p className="text-slate-600 font-bold text-xs leading-relaxed line-clamp-3 italic">
+                            "{dm.relevance_explanation || "Strategic decision-maker match."}"
                           </p>
                         </div>
                       </div>
@@ -383,7 +456,7 @@ const ResearchTabs = ({
                         setDraftEditData({ subject: draft.subject, body: draft.body, email: email });
                         setSelectedDraft(draft);
                       }}
-                      className="bg-white rounded-[24px] border border-slate-200 p-6 cursor-pointer hover:shadow-xl hover:shadow-slate-100 transition-all flex flex-col justify-between h-[380px]"
+                      className="bg-white rounded-[24px] border border-slate-200 p-6 cursor-pointer hover:shadow-xl hover:shadow-slate-100 transition-all flex flex-col justify-between min-h-[380px] h-full"
                     >
                       <div className="flex flex-col gap-4 h-full overflow-hidden">
                         <div className="flex items-center gap-4 shrink-0">
@@ -460,7 +533,7 @@ const ResearchTabs = ({
                 {campaign.target_companies?.filter(co => co.status === 'REJECTED').map((company) => (
                   <div
                     key={company.id}
-                    className="bg-slate-50/50 rounded-[24px] border border-slate-200 p-6 cursor-pointer hover:shadow-xl hover:shadow-slate-100 transition-all flex flex-col justify-between h-[270px] opacity-85 hover:opacity-100 grayscale hover:grayscale-0"
+                    className="bg-slate-50/50 rounded-[24px] border border-slate-200 p-6 cursor-pointer hover:shadow-xl hover:shadow-slate-100 transition-all flex flex-col justify-between min-h-[270px] h-full opacity-85 hover:opacity-100 grayscale hover:grayscale-0"
                   >
                     <div className="flex flex-col gap-4">
                       <div className="flex items-start justify-between gap-4">
@@ -472,9 +545,12 @@ const ResearchTabs = ({
                         </span>
                       </div>
 
-                      <p className="text-slate-500 font-medium text-sm leading-relaxed line-clamp-3">
-                        {company.deep_research || "Strategic alignment criteria not met."}
-                      </p>
+                      <div className="p-4 bg-red-50/30 rounded-xl border border-red-100/50">
+                        <p className="text-[9px] font-black text-red-400 uppercase tracking-widest mb-1">Disqualification Logic</p>
+                        <p className="text-slate-500 font-bold text-xs leading-relaxed italic">
+                          "{company.relevance_explanation || "Structural mismatch identified during ICP audit."}"
+                        </p>
+                      </div>
                     </div>
 
                     <div className="flex flex-col gap-4 mt-auto pt-4">

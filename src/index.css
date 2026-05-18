@@ -9,6 +9,13 @@
   --color-brand-operational: #10B981; /* Emerald Precision */
   --color-brand-dark: #111827;
   --color-brand-light: #f8fafc;
+
+  /* Surgical Theme: Decision Intelligence */
+  --color-surgical-navy: #0F172A;
+  --color-surgical-cobalt: #1E40AF;
+  --color-surgical-slate: #475569;
+  --color-surgical-bg: #F8FAFC;
+  --color-surgical-border: #E2E8F0;
   
   --font-outfit: "Outfit", sans-serif;
   

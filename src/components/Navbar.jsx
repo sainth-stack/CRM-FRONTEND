@@ -26,7 +26,7 @@ const Navbar = () => {
       <div className="w-full px-4 md:px-6 h-20 flex items-center justify-between">
         {/* Logo Branding */}
         <Link to="/" className="flex items-center gap-3 group">
-           <img src="/logo.png" alt="AI-PRIORI Logo" className="w-14 h-14 object-cover rounded-full group-hover:scale-105 transition-transform shrink-0 mix-blend-multiply" />
+           <img src="/logo.jpg" alt="AI-PRIORI Logo" className="w-14 h-14 object-cover rounded-full group-hover:scale-105 transition-transform shrink-0 mix-blend-multiply" />
             <div className="flex flex-col items-start leading-none shrink-0 font-outfit">
               <span className="font-extrabold text-3xl md:text-4xl tracking-tighter text-red-600 leading-none uppercase select-none">
                  AI-PRIORI

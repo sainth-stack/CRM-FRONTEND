@@ -1,14 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
-import { Mail, Shield, CheckCircle2, XCircle, RefreshCcw } from 'lucide-react';
+import { Mail, Shield, CheckCircle2, XCircle, RefreshCcw, Calendar } from 'lucide-react';
+import axios from 'axios';
+import API_BASE_URL from '../config';
 
 const MAILBOX_REDIRECT_STORAGE_KEY = 'mailbox_oauth_redirect_uri';
 
 const Settings = () => {
-    const { getMailboxAuthorizationUrl, user, mailboxHealth } = useAuth();
+    const { getMailboxAuthorizationUrl, getCalAuthorizationUrl, user, mailboxHealth } = useAuth();
     const [connecting, setConnecting] = useState(false);
     const [status, setStatus] = useState(null); // 'success', 'error'
+
+    // Cal.com states
+    const [calConnected, setCalConnected] = useState(false);
+    const [calEventTypeId, setCalEventTypeId] = useState('');
+    const [calTimezone, setCalTimezone] = useState('UTC');
+    const [loadingCal, setLoadingCal] = useState(true);
+    const [savingCal, setSavingCal] = useState(false);
+    const [disconnectingCal, setDisconnectingCal] = useState(false);
+    const [connectingCal, setConnectingCal] = useState(false);
+
+    const fetchCalStatus = async () => {
+        try {
+            const res = await axios.get(`${API_BASE_URL}/connect/cal/status`);
+            setCalConnected(res.data.connected);
+            setCalEventTypeId(res.data.cal_event_type_id || '');
+            setCalTimezone(res.data.cal_timezone || 'UTC');
+        } catch (err) {
+            console.error("Failed to fetch Cal.com status:", err);
+        } finally {
+            setLoadingCal(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchCalStatus();
+    }, []);
 
     const startMailboxAuthorization = async () => {
         setConnecting(true);
@@ -31,6 +59,53 @@ const Settings = () => {
             console.error("Mailbox authorization initialization failed:", error);
             setStatus('error');
             setConnecting(false);
+        }
+    };
+
+    const startCalAuthorization = async () => {
+        setConnectingCal(true);
+        try {
+            const url = await getCalAuthorizationUrl();
+            if (!url) {
+                throw new Error('Authorization URL was not returned.');
+            }
+            window.location.assign(url);
+        } catch (error) {
+            console.error("Cal.com authorization initialization failed:", error);
+            setConnectingCal(false);
+        }
+    };
+
+    const saveCalSettings = async () => {
+        setSavingCal(true);
+        try {
+            await axios.post(`${API_BASE_URL}/connect/cal/settings`, {
+                event_type_id: calEventTypeId ? parseInt(calEventTypeId) : null,
+                timezone: calTimezone
+            });
+            alert("Calendar settings saved successfully!");
+        } catch (error) {
+            console.error("Failed to save Cal.com settings:", error);
+            alert("Failed to save calendar settings.");
+        } finally {
+            setSavingCal(false);
+        }
+    };
+
+    const disconnectCal = async () => {
+        if (!window.confirm("Are you sure you want to disconnect your Cal.com calendar?")) return;
+        setDisconnectingCal(true);
+        try {
+            await axios.delete(`${API_BASE_URL}/connect/cal`);
+            setCalConnected(false);
+            setCalEventTypeId('');
+            setCalTimezone('UTC');
+            alert("Calendar disconnected successfully.");
+        } catch (error) {
+            console.error("Failed to disconnect Cal.com calendar:", error);
+            alert("Failed to disconnect calendar.");
+        } finally {
+            setDisconnectingCal(false);
         }
     };
 
@@ -149,6 +224,107 @@ const Settings = () => {
                                         Try Again
                                     </button>
                                 </motion.div>
+                            )}
+                        </div>
+                    </section>
+
+                    <section className="bg-white p-8 rounded-3xl shadow-lg border border-zinc-100 mt-8">
+                        <div className="flex items-start justify-between mb-8">
+                            <div>
+                                <h2 className="text-xl font-extrabold text-brand-primary uppercase tracking-tight mb-2">
+                                    Calendar Scheduling Sync
+                                </h2>
+                                <p className="text-sm text-zinc-500 font-medium leading-relaxed">
+                                    Bridge your personal Cal.com calendar to coordinate live campaign outreach slots and handle direct meeting bookings.
+                                </p>
+                            </div>
+                            <div className="p-3 bg-brand-primary/5 rounded-2xl">
+                                <Calendar className="w-6 h-6 text-brand-primary" />
+                            </div>
+                        </div>
+
+                        <div className="space-y-6">
+                            {loadingCal ? (
+                                <div className="flex items-center justify-center py-6">
+                                    <RefreshCcw className="w-6 h-6 animate-spin text-zinc-400" />
+                                </div>
+                            ) : !calConnected ? (
+                                <button
+                                    onClick={startCalAuthorization}
+                                    disabled={connectingCal}
+                                    className="w-full flex items-center justify-center gap-3 px-8 py-4 bg-brand-primary text-white rounded-2xl font-bold text-lg hover:bg-brand-primary/90 transition-all shadow-xl shadow-brand-primary/20 active:scale-95 disabled:opacity-50"
+                                >
+                                    {connectingCal ? (
+                                        <>
+                                            <RefreshCcw className="w-5 h-5 animate-spin" />
+                                            Redirecting to Cal.com...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Calendar className="w-5 h-5" />
+                                            Connect Cal.com Calendar
+                                        </>
+                                    )}
+                                </button>
+                            ) : (
+                                <div className="space-y-6">
+                                    <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3">
+                                        <CheckCircle2 className="w-6 h-6 text-emerald-500" />
+                                        <div>
+                                            <h4 className="font-bold text-emerald-800">Cal.com Bridge Active</h4>
+                                            <p className="text-xs text-emerald-600">Your calendar is authorized and connected via secure OAuth 2.0.</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <div>
+                                            <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest mb-2">
+                                                Event Type ID
+                                            </label>
+                                            <input 
+                                                type="number"
+                                                value={calEventTypeId}
+                                                onChange={(e) => setCalEventTypeId(e.target.value)}
+                                                placeholder="e.g. 5137238"
+                                                className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary font-bold text-zinc-800"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-black text-zinc-400 uppercase tracking-widest mb-2">
+                                                Scheduling Timezone
+                                            </label>
+                                            <select 
+                                                value={calTimezone}
+                                                onChange={(e) => setCalTimezone(e.target.value)}
+                                                className="w-full px-4 py-3 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-brand-primary/20 focus:border-brand-primary font-bold text-zinc-800"
+                                            >
+                                                <option value="UTC">UTC</option>
+                                                <option value="US/Eastern">US/Eastern</option>
+                                                <option value="US/Central">US/Central</option>
+                                                <option value="US/Pacific">US/Pacific</option>
+                                                <option value="Europe/London">Europe/London</option>
+                                                <option value="Asia/Kolkata">Asia/Kolkata</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex gap-4">
+                                        <button
+                                            onClick={saveCalSettings}
+                                            disabled={savingCal}
+                                            className="flex-1 py-3 bg-brand-primary text-white rounded-xl font-bold hover:bg-brand-primary/95 transition-all shadow-md active:scale-98 disabled:opacity-50"
+                                        >
+                                            {savingCal ? "Saving..." : "Save Settings"}
+                                        </button>
+                                        <button
+                                            onClick={disconnectCal}
+                                            disabled={disconnectingCal}
+                                            className="px-6 py-3 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl font-bold hover:bg-rose-100 hover:text-rose-700 transition-all active:scale-98 disabled:opacity-50"
+                                        >
+                                            {disconnectingCal ? "Disconnecting..." : "Disconnect"}
+                                        </button>
+                                    </div>
+                                </div>
                             )}
                         </div>
                     </section>

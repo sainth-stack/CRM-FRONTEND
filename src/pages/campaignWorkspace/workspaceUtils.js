@@ -45,6 +45,8 @@ export const getCampaignDisplayStatus = (campaign) => {
   if (allFinalized) return "COMPLETED";
 
   switch (String(campaign.status).toUpperCase()) {
+    case "INPUT_VALIDATED":
+      return "INPUT VALIDATED";
     case "RESEARCHING_USER_COMPANY":
       return "RESEARCHING";
     case "FINDING_TARGET_COMPANIES":

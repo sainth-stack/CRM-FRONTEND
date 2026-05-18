@@ -5,7 +5,7 @@ import { Bot, Zap, AlertCircle, Loader2 } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "../config";
 
-const DefineQuery = () => {
+const CampaignSetup = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const campaignName = location.state?.campaignName || "New Campaign";
@@ -13,20 +13,29 @@ const DefineQuery = () => {
   const [userUrl, setUserUrl] = useState("");
   const [targetIndustry, setTargetIndustry] = useState("");
   const [targetLocation, setTargetLocation] = useState("");
-  const [targetEmployeeCount, setTargetEmployeeCount] = useState("");
+  const [targetEmployeeCount, setTargetEmployeeCount] = useState("51-200");
+  const [prompt, setPrompt] = useState("");
+  const [file, setFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
   const [error, setError] = useState("");
 
   const validateUrl = (url) => {
     if (!url.trim()) return false;
-    const domainRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
+    const domainRegex = /^(https?:\/\/)?([a-z0-9-]+\.)+[a-z]{2,24}([/\w .-]*)*\/?$/i;
     return domainRegex.test(url);
   };
 
   const handleUrlChange = (val) => {
-    setUserUrl(val);
-    if (validateUrl(val)) {
+    let cleanVal = val.trim();
+    if (cleanVal && !cleanVal.startsWith("http://") && !cleanVal.startsWith("https://")) {
+      // Only prefix if it looks like they are starting a domain (e.g. has a dot or enough chars)
+      if (cleanVal.includes(".") || cleanVal.length > 5) {
+        cleanVal = "https://" + cleanVal;
+      }
+    }
+    setUserUrl(cleanVal);
+    if (validateUrl(cleanVal)) {
       setIsVerified(true);
       setError("");
     } else {
@@ -41,39 +50,67 @@ const DefineQuery = () => {
       setError("Mission Origin URL must be verified before deployment.");
       return;
     }
-    if (!targetIndustry.trim()) {
-      setError("Please specify the target industry.");
+    if (targetIndustry.trim().length < 2) {
+      setError("Please specify the target industry (min 2 chars).");
       return;
     }
-    if (!targetLocation.trim()) {
-      setError("Please specify the target location.");
+    if (targetLocation.trim().length < 2) {
+      setError("Please specify the target location (min 2 chars).");
+      return;
+    }
+    if (!file) {
+      setError("Please upload a CSV lead source before deployment.");
+      return;
+    }
+    if (!file.name.toLowerCase().endsWith(".csv")) {
+      setError("Only CSV lead source files are supported.");
       return;
     }
 
     setError("");
     setIsLoading(true);
 
+    const formData = new FormData();
+    formData.append("name", campaignName);
+    formData.append("user_url", userUrl);
+    formData.append("target_industry", targetIndustry);
+    formData.append("target_location", targetLocation);
+    formData.append("target_employee_count", targetEmployeeCount);
+    formData.append("prompt", prompt);
+    formData.append("file", file);
+
     try {
-      const response = await axios.post(`${API_BASE_URL}/campaigns`, {
-        name: campaignName,
-        user_url: userUrl,
-        target_industry: targetIndustry,
-        target_location: targetLocation,
-        target_employee_count: targetEmployeeCount || null,
-        query: `Targeting ${targetIndustry} in ${targetLocation}${targetEmployeeCount ? ' with size ' + targetEmployeeCount : ''}`,
+      const response = await axios.post(`${API_BASE_URL}/campaigns`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
       });
       
+      if (response.data?.status === "needs_clarification") {
+        const questions = response.data.clarification_questions || [];
+        setError(questions[0] || "Please clarify the campaign setup inputs before continuing.");
+        return;
+      }
       const campaignId = response.data.id;
       navigate(`/campaign/${campaignId}`);
     } catch (error) {
       console.error("Error starting campaign:", error);
-      setError("Deployment failed. System synchronization error.");
+      setError(error.response?.data?.detail || "Deployment failed. System synchronization error.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const canDeploy = isVerified && targetIndustry.trim().length > 3 && targetLocation.trim().length > 2 && !isLoading;
+  const canDeploy = isVerified && targetIndustry.trim().length >= 2 && targetLocation.trim().length >= 2 && !!file && !isLoading;
+
+  const getButtonText = () => {
+    if (isLoading) return "Validating Inputs...";
+    if (!isVerified) return "Verify URL to Enable";
+    if (targetIndustry.trim().length < 2) return "Specify Industry to Enable";
+    if (targetLocation.trim().length < 2) return "Specify Location to Enable";
+    if (!file) return "Upload CSV to Enable";
+    return "Validate Campaign Inputs";
+  };
 
   return (
     <div className="min-h-[90vh] flex items-center justify-center relative px-6 overflow-hidden py-20">
@@ -96,9 +133,9 @@ const DefineQuery = () => {
           </div>
           <div>
              <h1 className="text-2xl font-black text-[#1e293b] tracking-tight leading-none italic uppercase">
-              Mission Deployment
+              Campaign Setup
             </h1>
-            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mt-2">v3.0 Agentic Architecture</p>
+            <p className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mt-2">Input Validation</p>
           </div>
         </div>
         
@@ -137,7 +174,7 @@ const DefineQuery = () => {
              </div>
           </div>
 
-          {/* Phase 2: Targeting Protocol Refined */}
+          {/* Campaign targeting inputs */}
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div className="space-y-4">
@@ -182,13 +219,54 @@ const DefineQuery = () => {
                     </label>
                   </div>
                </div>
-               <input
-                  type="text"
+               <select
                   value={targetEmployeeCount}
                   onChange={(e) => setTargetEmployeeCount(e.target.value)}
-                  placeholder="e.g., 51-200, 500+, 10-50"
-                  className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl px-6 py-4 text-[#1e293b] font-bold focus:bg-white focus:border-brand-primary outline-none transition-all placeholder:text-zinc-300 shadow-sm text-sm"
+                  className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl px-6 py-4 text-[#1e293b] font-bold focus:bg-white focus:border-brand-primary outline-none transition-all shadow-sm text-sm"
+               >
+                 <option>1-10</option>
+                 <option>11-50</option>
+                 <option>51-200</option>
+                 <option>201-500</option>
+                 <option>501-1000</option>
+                 <option>1000+</option>
+               </select>
+            </div>
+
+            <div className="space-y-4">
+               <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1 h-4 bg-red-500 rounded-full" />
+                  <label className="text-[12px] font-black text-[#1e293b] uppercase tracking-wider">
+                    Strategic Mission Context (Prompt)
+                  </label>
+               </div>
+               <textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  placeholder="e.g., Target companies struggling with AI scaling who need fractional CTO services..."
+                  className="w-full bg-zinc-50 border border-zinc-200 rounded-2xl px-6 py-4 text-[#1e293b] font-bold focus:bg-white focus:border-brand-primary outline-none transition-all placeholder:text-zinc-300 shadow-sm text-sm h-32"
                />
+            </div>
+
+            <div className="space-y-4">
+               <div className="flex items-center gap-2 mb-2">
+                  <div className="w-1 h-4 bg-emerald-500 rounded-full" />
+                  <label className="text-[12px] font-black text-[#1e293b] uppercase tracking-wider">
+                    Prospect CSV Injection <span className="text-zinc-400 lowercase italic">(Required for seed targeting)</span>
+                  </label>
+               </div>
+               <div className="relative border-2 border-dashed border-zinc-200 rounded-2xl p-8 text-center hover:border-brand-primary transition-colors cursor-pointer bg-zinc-50/50">
+                  <input 
+                    type="file" 
+                    accept=".csv"
+                    className="absolute inset-0 opacity-0 cursor-pointer"
+                    onChange={e => setFile(e.target.files[0])}
+                  />
+                  <p className="text-sm font-bold text-zinc-500">
+                    {file ? file.name : "Click to upload target CSV file"}
+                  </p>
+                  <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mt-2">Strictly .CSV Format Authorization</p>
+               </div>
             </div>
           </div>
 
@@ -217,7 +295,7 @@ const DefineQuery = () => {
               }`}
             >
               {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className={`w-5 h-5 ${canDeploy ? 'fill-brand-primary text-brand-primary' : 'text-zinc-300'}`} />}
-              {isLoading ? "Synchronizing Subsystems..." : isVerified ? "Initialize Campaign Deployment" : "Verify URL to Enable"}
+              {getButtonText()}
             </button>
           </div>
         </form>
@@ -236,4 +314,4 @@ const DefineQuery = () => {
   );
 };
 
-export default DefineQuery;
+export default CampaignSetup;

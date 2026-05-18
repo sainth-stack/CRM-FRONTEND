@@ -2,7 +2,7 @@ import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import RootLayout from "./layouts/RootLayout";
 import Home from "./pages/Home";
 import CreateCampaign from "./pages/CreateCampaign";
-import DefineQuery from "./pages/DefineQuery";
+import CampaignSetup from "./pages/CampaignSetup";
 import ActiveCampaigns from "./pages/ActiveCampaigns";
 import InactiveCampaigns from "./pages/InactiveCampaigns";
 import CampaignWorkspace from "./pages/CampaignWorkspace";
@@ -12,8 +12,10 @@ import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import SetupPassword from "./pages/SetupPassword";
 import MailboxPermissionBarrier from "./components/MailboxPermissionBarrier";
+import CalendarPermissionBarrier from "./components/CalendarPermissionBarrier";
 import DemoExpiryBarrier from "./components/DemoExpiryBarrier";
 import ConnectMailbox from "./pages/ConnectMailbox";
+import ConnectCalendar from "./pages/ConnectCalendar";
 import DemoSignUp from "./pages/DemoSignUp";
 import VerifyDemoOTP from "./pages/VerifyDemoOTP";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
@@ -57,25 +59,30 @@ const ManagementRoute = ({ children }) => {
 };
 
 function AppContents() {
-  const { isLoggedIn, user, hasMailbox, loading } = useAuth();
+  const { isLoggedIn, user, hasMailbox, hasCalendar, loading } = useAuth();
   const location = useLocation();
 
   if (loading) return <div className="min-h-screen bg-[#050505] flex items-center justify-center font-bold text-zinc-600">Synchronizing Session...</div>;
 
   const searchParams = new URLSearchParams(location.search);
   const hasOAuthCallbackParams = searchParams.has("code") && searchParams.has("state");
-  if (hasOAuthCallbackParams && location.pathname !== "/auth/google/callback") {
+  if (hasOAuthCallbackParams && location.pathname !== "/auth/google/callback" && location.pathname !== "/connect-calendar") {
     return <Navigate to={`/auth/google/callback${location.search}`} replace />;
   }
 
   // Strategic UI Suppression: Do not show the barrier if we are currently 
   // on the connection page or if the user is an administrative identity.
-  const isConnectionPage = location.pathname === "/connect-mailbox" || location.pathname === "/auth/google/callback";
+  const isConnectionPage = location.pathname === "/connect-mailbox" || location.pathname === "/auth/google/callback" || location.pathname === "/connect-calendar";
   const showMailboxBarrier = isLoggedIn && !hasMailbox && !isConnectionPage;
+  
+  // Temporary Bypass: Disabled until Cal.com OAuth Client is approved. Change to standard check when ready:
+  // const showCalendarBarrier = isLoggedIn && hasMailbox && !hasCalendar && !isConnectionPage;
+  const showCalendarBarrier = false;
 
   return (
     <>
       {showMailboxBarrier && <MailboxPermissionBarrier />}
+      {showCalendarBarrier && <CalendarPermissionBarrier />}
       <DemoExpiryBarrier>
         <Routes>
           <Route path="/" element={<RootLayout />}>
@@ -94,9 +101,11 @@ function AppContents() {
             <Route path="connect-mailbox" element={<ProtectedRoute><ConnectMailbox /></ProtectedRoute>} />
             <Route path="auth/google/callback" element={<ProtectedRoute><ConnectMailbox /></ProtectedRoute>} />
             
+            <Route path="connect-calendar" element={<ProtectedRoute><ConnectCalendar /></ProtectedRoute>} />
+            
             {/* Protected & Capability-Enforced Routes */}
             <Route path="create" element={<CapabilityRoute><CreateCampaign /></CapabilityRoute>} />
-            <Route path="create/query" element={<CapabilityRoute><DefineQuery /></CapabilityRoute>} />
+            <Route path="create/setup" element={<CapabilityRoute><CampaignSetup /></CapabilityRoute>} />
             <Route path="active" element={<CapabilityRoute><ActiveCampaigns /></CapabilityRoute>} />
             <Route path="inactive" element={<CapabilityRoute><InactiveCampaigns /></CapabilityRoute>} />
             <Route path="campaign/:id" element={<CapabilityRoute><CampaignWorkspace /></CapabilityRoute>} />

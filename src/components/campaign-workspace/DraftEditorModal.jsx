@@ -25,90 +25,147 @@ const DraftEditorModal = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+          className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm"
         />
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-4xl bg-white rounded-[40px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10"
+          className="relative w-full max-w-[1000px] bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] z-10 font-sans"
         >
-          <div className="p-8 border-b border-slate-50 flex items-center justify-between">
+          {/* Header */}
+          <div className="p-6 flex items-center justify-between border-b border-slate-100">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-brand-primary/10 text-brand-primary rounded-2xl flex items-center justify-center">
-                <Mail size={24} />
+              <div className="w-12 h-12 bg-surgical-navy rounded-lg flex items-center justify-center text-white font-black text-xl shadow-md">
+                {(dm?.name || "TW").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
               </div>
               <div>
-                <h3 className="text-xl font-black text-slate-900 uppercase italic tracking-tight">Executive Protocol Refinement</h3>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Stakeholder Analysis Hub</p>
+                <span className="px-2 py-0.5 bg-red-50 text-red-500 rounded text-[9px] font-black uppercase tracking-widest inline-block mb-1">
+                  Draft Refinement
+                </span>
+                <h3 className="text-xl font-bold text-slate-900 leading-none">{dm?.name || "Stakeholder Name"}</h3>
               </div>
             </div>
-            <button onClick={onClose} className="p-3 hover:bg-slate-50 rounded-xl text-slate-400 transition-colors">
-              <X size={24} />
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600 transition-colors">
+              <X size={20} />
             </button>
           </div>
 
-          <div className="flex-grow overflow-y-auto p-10 space-y-8">
-            <div className="grid grid-cols-2 gap-8">
-              <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                <p className="text-[10px] font-black text-brand-primary uppercase tracking-widest mb-2">Stakeholder</p>
-                <p className="text-xl font-black text-slate-900 tracking-tight">{dm?.name}</p>
+          {/* Body content with side-by-side layout */}
+          <div className="flex flex-col md:flex-row flex-grow overflow-hidden">
+            
+            {/* Left Sidebar - Meta Data */}
+            <div className="w-full md:w-[320px] bg-[#F8FAFC] p-8 flex flex-col gap-6 overflow-y-auto border-r border-slate-100">
+              
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                  Target Organization
+                </label>
+                <div className="bg-white p-3.5 rounded-lg border border-slate-200 text-sm font-semibold text-slate-800 shadow-sm">
+                  {company?.name || "Company Name"}
+                </div>
               </div>
-              <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                <p className="text-[10px] font-black text-brand-primary uppercase tracking-widest mb-2">Organization</p>
-                <p className="text-xl font-black text-slate-900 tracking-tight">{company?.name}</p>
-              </div>
-            </div>
 
-            <div className="space-y-6">
-              <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 focus-within:border-brand-primary transition-colors">
-                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-2 underline decoration-brand-primary/30">
-                  Deployment Coordinate (Email)
-                </p>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                  Recipient Email
+                </label>
                 <input
+                  type="email"
                   value={draftEditData.email}
                   onChange={(event) => onDraftEditChange({ ...draftEditData, email: event.target.value })}
-                  className="w-full bg-transparent font-black text-slate-900 outline-none text-lg tracking-tight"
+                  className="w-full bg-white p-3.5 rounded-lg border border-slate-200 text-sm font-semibold text-slate-800 shadow-sm outline-none focus:border-surgical-navy transition-colors"
+                  placeholder="name@company.com"
                 />
               </div>
-              <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100 focus-within:border-brand-primary transition-colors">
-                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-2 underline decoration-brand-primary/30">
-                  Strategic Subject Line
-                </p>
-                <input
-                  value={draftEditData.subject}
-                  onChange={(event) => onDraftEditChange({ ...draftEditData, subject: event.target.value })}
-                  className="w-full bg-transparent font-black text-slate-900 outline-none text-xl tracking-tight"
-                />
+              
+              {/* V2 Variant Selector (if applicable) */}
+              {selectedDraft.variants && (
+                <div className="mt-auto space-y-2 pt-8 border-t border-slate-200">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
+                     AI Variants
+                   </label>
+                  <div className="flex flex-col gap-2">
+                    {Object.keys(selectedDraft.variants).map((vKey) => (
+                      <button
+                        key={vKey}
+                        onClick={() => {
+                          const variant = selectedDraft.variants[vKey];
+                          onDraftEditChange({
+                            ...draftEditData,
+                            subject: variant.subject,
+                            body: variant.body
+                          });
+                        }}
+                        className={`px-4 py-2.5 rounded-lg text-xs font-bold uppercase tracking-widest transition-all text-left ${
+                          draftEditData.subject === selectedDraft.variants[vKey].subject
+                            ? "bg-surgical-navy text-white shadow-md"
+                            : "bg-white text-slate-500 border border-slate-200 hover:bg-slate-50"
+                        }`}
+                      >
+                        {vKey}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+            {/* Right Main Area - Editor */}
+            <div className="flex-grow flex flex-col p-8 overflow-y-auto bg-white">
+              <div className="space-y-6 flex-grow">
+                
+                {/* Subject Line */}
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-[#8192B4] uppercase tracking-widest block">
+                    Strategic Subject Header
+                  </label>
+                  <div className="relative">
+                    <div className="absolute left-0 top-0 bottom-0 w-1 bg-surgical-navy rounded-l-md" />
+                    <input
+                      type="text"
+                      value={draftEditData.subject}
+                      onChange={(event) => onDraftEditChange({ ...draftEditData, subject: event.target.value })}
+                      className="w-full bg-[#F8FAFC] p-4 pl-6 rounded-md font-bold text-slate-900 outline-none text-base border-none focus:bg-[#F1F5F9] transition-colors"
+                      placeholder="Enter subject line..."
+                    />
+                  </div>
+                </div>
+
+                {/* Email Body */}
+                <div className="space-y-2 flex-grow flex flex-col">
+                  <label className="text-[10px] font-black text-[#8192B4] uppercase tracking-widest block">
+                    Narrative Protocol Body
+                  </label>
+                  <textarea
+                    value={draftEditData.body}
+                    onChange={(event) => onDraftEditChange({ ...draftEditData, body: event.target.value })}
+                    className="w-full flex-grow min-h-[250px] bg-transparent font-medium text-slate-600 outline-none text-[15px] leading-relaxed resize-none pt-2"
+                    placeholder="Compose email..."
+                  />
+                </div>
               </div>
-              <div className="bg-slate-50 rounded-3xl p-10 border border-slate-100 focus-within:border-brand-primary transition-colors">
-                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-4 underline decoration-brand-primary/30">
-                  Narrative Protocol Body
-                </p>
-                <textarea
-                  value={draftEditData.body}
-                  onChange={(event) => onDraftEditChange({ ...draftEditData, body: event.target.value })}
-                  className="w-full bg-transparent font-semibold text-slate-600 outline-none text-[16px] leading-relaxed min-h-[300px] resize-none"
-                />
+
+              {/* Action Footer */}
+              <div className="flex items-center justify-end gap-6 pt-6 border-t border-slate-100 mt-6">
+                <button
+                  onClick={onClose}
+                  className="text-xs font-black text-slate-500 uppercase tracking-widest hover:text-slate-800 transition-colors"
+                >
+                  Discard Changes
+                </button>
+                <button
+                  onClick={onSave}
+                  disabled={isSaving}
+                  className="px-6 py-3 bg-[#1E3A8A] hover:bg-[#152e73] text-white rounded-md font-black text-xs uppercase tracking-widest shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {isSaving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                  Save & Refine
+                </button>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-8 pt-4">
-              <button
-                onClick={onClose}
-                className="w-full py-5 bg-white border border-slate-200 text-slate-400 rounded-2xl font-black text-[13px] uppercase tracking-widest hover:bg-slate-50 transition-all"
-              >
-                Discard Changes
-              </button>
-              <button
-                onClick={onSave}
-                disabled={isSaving}
-                className="w-full py-5 bg-brand-primary text-white rounded-2xl font-black text-[13px] uppercase tracking-widest shadow-xl shadow-brand-primary/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-50"
-              >
-                {isSaving ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} strokeWidth={3} />}
-                Synchronize & Save
-              </button>
-            </div>
           </div>
         </motion.div>
       </div>

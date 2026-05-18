@@ -137,7 +137,8 @@ const ActiveCampaigns = () => {
     .filter(
       (c) =>
         c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.query.toLowerCase().includes(searchQuery.toLowerCase())
+        (c.target_industry || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (c.target_location || "").toLowerCase().includes(searchQuery.toLowerCase())
     )
     .sort((a, b) => {
       const dateA = new Date(a.created_at);
@@ -146,16 +147,28 @@ const ActiveCampaigns = () => {
     });
 
   const getStatusColor = (status) => {
-    switch (status) {
-      case "COMPLETED":
-        return "bg-emerald-50 border border-emerald-100 text-emerald-600";
-      case "FAILED":
-        return "bg-rose-50 border border-rose-100 text-rose-600";
-      case "PENDING":
-        return "bg-amber-50 border border-amber-100 text-amber-600";
-      default:
-        return "bg-red-50 border border-red-100 text-red-600";
-    }
+    const s = String(status).toUpperCase();
+    if (s === "COMPLETED" || s.includes("STAGE_6")) return "bg-emerald-50 border-emerald-100 text-emerald-600";
+    if (s.includes("STAGE_5")) return "bg-indigo-50 border-indigo-100 text-indigo-600";
+    if (s.includes("STAGE_4")) return "bg-blue-50 border-blue-100 text-blue-600";
+    if (s.includes("STAGE_3")) return "bg-purple-50 border-purple-100 text-purple-600";
+    if (s.includes("STAGE_2")) return "bg-rose-50 border-rose-100 text-rose-600";
+    if (s.includes("STAGE_1")) return "bg-amber-50 border-amber-100 text-amber-600";
+    if (s === "FAILED" || s === "ERROR") return "bg-red-50 border-red-100 text-red-600";
+    return "bg-slate-50 border-slate-100 text-slate-500";
+  };
+
+  const getStageProgress = (status) => {
+    const s = String(status).toUpperCase();
+    if (s === "PENDING") return 5;
+    if (s === "INPUT_VALIDATED") return 15;
+    if (s.includes("STAGE_1")) return 30;
+    if (s.includes("STAGE_2")) return 45;
+    if (s.includes("STAGE_3")) return 60;
+    if (s.includes("STAGE_4")) return 75;
+    if (s.includes("STAGE_5")) return 90;
+    if (s.includes("STAGE_6") || s === "COMPLETED") return 100;
+    return 0;
   };
 
   return (
@@ -189,7 +202,7 @@ const ActiveCampaigns = () => {
           />
           <input
             type="text"
-            placeholder="Filter by campaign name or targeting strategy..."
+            placeholder="Filter by campaign name, industry, or location..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full bg-white border border-slate-100/80 rounded-2xl pl-12 pr-6 py-3.5 text-slate-800 font-extrabold outline-none focus:border-red-500/30 focus:shadow-sm transition-all placeholder:text-slate-300 text-sm"
@@ -340,9 +353,25 @@ const ActiveCampaigns = () => {
                           {campaign.status}
                         </span>
                       </div>
-                      <p className="text-slate-400 font-bold text-xs line-clamp-1 max-w-4xl lowercase select-none italic">
-                        {campaign.query}
+                      <p className="text-slate-400 font-bold text-xs line-clamp-1 max-w-4xl lowercase select-none italic mb-3">
+                        {[campaign.target_industry, campaign.target_location].filter(Boolean).join(" | ") || "Campaign setup validated"}
                       </p>
+                      
+                      {/* Intelligence Pipeline Progress */}
+                      <div className="w-full max-w-md space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.1em]">Intelligence Pipeline</span>
+                          <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{getStageProgress(campaign.status)}%</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden border border-slate-50">
+                          <div 
+                            className={`h-full transition-all duration-1000 ease-out rounded-full ${
+                              getStageProgress(campaign.status) === 100 ? 'bg-emerald-500' : 'bg-red-500'
+                            }`}
+                            style={{ width: `${getStageProgress(campaign.status)}%` }}
+                          />
+                        </div>
+                      </div>
                     </div>
                   </Link>
                 </div>
