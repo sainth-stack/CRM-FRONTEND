@@ -47,7 +47,7 @@ const ResearchTabs = ({
           >
             {researchTab === "mission_briefing" && <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-red-500 rounded-r-lg" />}
             <FileBarChart size={18} className={researchTab === "mission_briefing" ? "text-red-500" : "text-slate-400"} />
-            Mission Briefing
+            Briefing
           </button>
           <button
             onClick={() => setResearchTab("lead_pipeline")}
@@ -55,7 +55,7 @@ const ResearchTabs = ({
           >
             {researchTab === "lead_pipeline" && <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-red-500 rounded-r-lg" />}
             <Target size={18} className={researchTab === "lead_pipeline" ? "text-red-500" : "text-slate-400"} />
-            Lead Pipeline
+            Targets
           </button>
           <button
             onClick={() => setResearchTab("stakeholder_intel")}
@@ -63,7 +63,7 @@ const ResearchTabs = ({
           >
             {researchTab === "stakeholder_intel" && <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-red-500 rounded-r-lg" />}
             <Users size={18} className={researchTab === "stakeholder_intel" ? "text-red-500" : "text-slate-400"} />
-            Stakeholder Intel
+            Contacts
           </button>
           <button
             onClick={() => setResearchTab("outreach_protocol")}
@@ -71,7 +71,7 @@ const ResearchTabs = ({
           >
             {researchTab === "outreach_protocol" && <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-red-500 rounded-r-lg" />}
             <Send size={18} className={researchTab === "outreach_protocol" ? "text-red-500" : "text-slate-400"} />
-            Outreach Protocol
+            Drafts
           </button>
           <button
             onClick={() => setResearchTab("rejected_artifacts")}
@@ -79,7 +79,7 @@ const ResearchTabs = ({
           >
             {researchTab === "rejected_artifacts" && <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-red-500 rounded-r-lg" />}
             <Trash size={18} className={researchTab === "rejected_artifacts" ? "text-red-500" : "text-slate-400"} />
-            Rejected Artifacts
+            Disqualified
           </button>
         </div>
 
@@ -245,7 +245,7 @@ const ResearchTabs = ({
           <div className="flex flex-col gap-8 animate-fadeIn">
             <div className="flex items-center justify-between mb-2">
               <div className="flex flex-col gap-1">
-                <h2 className="text-3xl font-bold text-slate-900">Lead Pipeline</h2>
+                <h2 className="text-3xl font-bold text-slate-900">Targets</h2>
                 <p className="text-sm text-slate-400 font-medium">
                   Approved corporate intelligence artifacts for target organizations
                 </p>
@@ -339,7 +339,7 @@ const ResearchTabs = ({
           <div className="flex flex-col gap-8 animate-fadeIn">
             <div className="flex items-center justify-between mb-2">
               <div className="flex flex-col gap-1">
-                <h2 className="text-3xl font-bold text-slate-900">Stakeholder Intel</h2>
+                <h2 className="text-3xl font-bold text-slate-900">Contacts</h2>
                 <p className="text-sm text-slate-400 font-medium">
                   Analyzing key decision-makers and their corporate influence
                 </p>
@@ -365,7 +365,7 @@ const ResearchTabs = ({
                   return (
                     <div
                       key={dm.id}
-                      className="bg-white rounded-[24px] border border-slate-200 p-6 flex flex-col justify-between min-h-[260px] h-full"
+                      className="bg-white rounded-[24px] border border-slate-200 p-6 flex flex-col justify-between min-h-[300px] h-full"
                     >
                       <div className="flex flex-col gap-4">
                         <div className="flex items-center gap-4">
@@ -398,9 +398,25 @@ const ResearchTabs = ({
                             "{dm.relevance_explanation || "Strategic decision-maker match."}"
                           </p>
                         </div>
+
+                        {/* Tenure Intelligence Well */}
+                        <div className="grid grid-cols-2 gap-4 p-3.5 bg-slate-50/80 rounded-xl border border-slate-100 shrink-0">
+                          <div className="flex flex-col">
+                            <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider leading-tight">Role Tenure</span>
+                            <span className="text-xs font-bold text-slate-700 truncate mt-1">
+                              {dm.time_in_role && dm.time_in_role !== "N/A" ? dm.time_in_role : "N/A"}
+                            </span>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider leading-tight">Company Tenure</span>
+                            <span className="text-xs font-bold text-slate-700 truncate mt-1">
+                              {dm.time_at_company && dm.time_at_company !== "N/A" ? dm.time_at_company : "N/A"}
+                            </span>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="flex items-center justify-center pt-3 border-t border-slate-50 mt-auto">
+                      <div className="flex items-center justify-center pt-3 border-t border-slate-50 mt-4">
                         <a
                           href={ensureAbsoluteUrl(dm.linkedin)}
                           target="_blank"
@@ -423,7 +439,7 @@ const ResearchTabs = ({
           <div className="flex flex-col gap-8 animate-fadeIn">
             <div className="flex items-center justify-between mb-2">
               <div className="flex flex-col gap-1">
-                <h2 className="text-3xl font-bold text-slate-900">Outreach Protocol Development</h2>
+                <h2 className="text-3xl font-bold text-slate-900">Drafts</h2>
                 <p className="text-sm text-slate-400 font-medium">
                   Strategic engagement modules for key decision-makers
                 </p>
@@ -456,9 +472,9 @@ const ResearchTabs = ({
                         setDraftEditData({ subject: draft.subject, body: draft.body, email: email });
                         setSelectedDraft(draft);
                       }}
-                      className="bg-white rounded-[24px] border border-slate-200 p-6 cursor-pointer hover:shadow-xl hover:shadow-slate-100 transition-all flex flex-col justify-between min-h-[380px] h-full"
+                      className="bg-white rounded-[24px] border border-slate-200 p-6 cursor-pointer hover:shadow-xl hover:shadow-slate-100 transition-all flex flex-col justify-between min-h-[300px] h-full"
                     >
-                      <div className="flex flex-col gap-4 h-full overflow-hidden">
+                      <div className="flex flex-col gap-3 h-full overflow-hidden">
                         <div className="flex items-center gap-4 shrink-0">
                           <div className="h-12 w-12 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-base border border-slate-200 shrink-0">
                             {dm?.name ? dm.name.split(" ").map(w => w[0]).join("").slice(0, 2).toUpperCase() : "S"}
@@ -484,15 +500,17 @@ const ResearchTabs = ({
 
                         <div className="flex flex-col gap-1 flex-grow overflow-hidden">
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                            Narrative Snippet
+                            Draft Content
                           </span>
-                          <p className="text-slate-600 font-medium text-sm leading-relaxed italic line-clamp-3">
-                            "{draft.body}"
-                          </p>
+                          <div className="p-3 bg-slate-50 rounded-xl border border-slate-100 flex-grow mt-0.5 max-h-[120px] overflow-y-auto custom-scrollbar">
+                            <p className="text-slate-600 font-medium text-xs leading-relaxed whitespace-pre-wrap">
+                              {draft.body}
+                            </p>
+                          </div>
                         </div>
                       </div>
 
-                      <div className="pt-4 border-t border-slate-50 mt-auto text-center shrink-0">
+                      <div className="pt-3 border-t border-slate-50 mt-4 text-center shrink-0">
                         <button className="font-bold text-red-500 text-sm hover:text-red-600 transition-colors inline-flex items-center justify-center gap-1">
                           Review Engagement Protocol →
                         </button>
@@ -509,7 +527,7 @@ const ResearchTabs = ({
           <div className="flex flex-col gap-8 animate-fadeIn">
             <div className="flex items-center justify-between mb-2">
               <div className="flex flex-col gap-1">
-                <h2 className="text-3xl font-bold text-slate-900">Rejected Artifacts</h2>
+                <h2 className="text-3xl font-bold text-slate-900">Disqualified</h2>
                 <p className="text-sm text-slate-400 font-medium">
                   Organizations that did not meet the strategic alignment criteria
                 </p>

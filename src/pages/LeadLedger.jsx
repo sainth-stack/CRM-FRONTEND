@@ -241,7 +241,7 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
               }`}
             >
               <Layers size={18} />
-              LEAD PIPELINE
+              PROSPECTS
             </button>
 
             <button

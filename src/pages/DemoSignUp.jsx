@@ -28,7 +28,7 @@ const DemoSignUp = () => {
     };
 
     return (
-        <div className="relative min-h-screen bg-white flex items-center justify-center p-6 overflow-hidden font-outfit">
+        <div className="relative min-h-screen bg-white flex flex-col items-center p-6 overflow-hidden font-outfit pt-[120px]">
             {/* Sovereign Atmosphere Pulses */}
             <div className="absolute top-[-10%] right-[-5%] w-[800px] h-[800px] bg-brand-primary/5 rounded-full blur-[150px] animate-pulse" />
             <div className="absolute bottom-[-5%] left-[-5%] w-[600px] h-[600px] bg-brand-secondary/5 rounded-full blur-[120px]" />
@@ -40,16 +40,14 @@ const DemoSignUp = () => {
                 className="relative z-10 max-w-lg w-full"
             >
                 {/* Brand Identity Artifact */}
-                <div className="flex flex-col items-center mb-6 pt-16">
-                    <h1 className="text-5xl font-black text-brand-primary tracking-tighter mb-2">
-                        AI-PRIORI
-                    </h1>
-                    <div className="flex items-center gap-2 mb-6">
-                        <span className="text-[10px] font-black text-brand-secondary uppercase tracking-widest">DATA</span>
-                        <span className="text-[10px] font-black text-brand-dark opacity-30">-</span>
-                        <span className="text-[10px] font-black text-brand-accent uppercase tracking-widest">INTELLIGENCE</span>
-                        <span className="text-[10px] font-black text-brand-dark opacity-30">-</span>
-                        <span className="text-[10px] font-black text-brand-primary uppercase tracking-widest">AUTONOMY</span>
+                <div className="flex flex-col items-center mb-6 w-fit mx-auto">
+                    <h1 className="auth-logo-title text-[60px] font-black text-brand-primary leading-none uppercase tracking-tighter mb-1 select-none">AI-PRIORI</h1>
+                    <div className="flex justify-between w-full items-center px-0.5 mt-1 mb-3">
+                        <span className="text-[13px] font-black text-brand-secondary uppercase tracking-widest">DATA</span>
+                        <span className="text-[13px] font-black text-brand-dark opacity-30">•</span>
+                        <span className="text-[13px] font-black text-brand-accent uppercase tracking-widest">INTELLIGENCE</span>
+                        <span className="text-[13px] font-black text-brand-dark opacity-30">•</span>
+                        <span className="text-[13px] font-black text-brand-primary uppercase tracking-widest">AUTONOMY</span>
                     </div>
                     <p className="text-brand-primary font-black tracking-widest uppercase text-[8px] bg-brand-primary/10 py-1 px-4 rounded-full border border-brand-primary/20">
                         Sovereign Assessment Portal

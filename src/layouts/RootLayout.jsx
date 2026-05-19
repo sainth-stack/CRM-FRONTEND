@@ -7,12 +7,15 @@ const RootLayout = () => {
   const { isLoggedIn } = useAuth();
   const location = useLocation();
   const isCampaignWorkspace = location.pathname.startsWith("/campaign");
+  const isHome = location.pathname === "/";
+  const isAuthPage = ["/login", "/forgot-password", "/setup-password", "/demo"].includes(location.pathname);
+  const shouldSuppressPadding = isCampaignWorkspace || isHome || isAuthPage;
 
   return (
     <div className="min-h-screen bg-brand-light flex flex-col font-outfit">
       {!isCampaignWorkspace && <Navbar />}
       
-      <main className={`flex-grow ${isCampaignWorkspace ? "pt-0" : "pt-[84px]"}`}>
+      <main className={`flex-grow ${shouldSuppressPadding ? "pt-0" : "pt-[96px]"}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={isLoggedIn ? "logged-in" : "logged-out"}

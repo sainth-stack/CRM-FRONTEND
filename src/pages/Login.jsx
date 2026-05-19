@@ -28,7 +28,7 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center bg-white font-outfit relative overflow-hidden pt-20">
+    <div className="min-h-screen flex flex-col items-center bg-white font-outfit relative overflow-hidden pt-[120px]">
       {/* Background Subtle Gradient */}
       <div className="absolute top-0 left-0 right-0 h-[500px] bg-gradient-to-b from-brand-primary/5 to-transparent pointer-events-none" />
       
@@ -40,15 +40,13 @@ const Login = () => {
       >
         {/* Logo and Tagline Matching Header */}
         <div className="mb-14 inline-flex flex-col items-center w-fit">
-          <h1 className="text-[52px] font-black text-brand-primary leading-none uppercase tracking-tighter mb-1 select-none">
-            AI-PRIORI
-          </h1>
-          <div className="flex justify-between w-full items-center px-0.5">
-            <span className="text-[12px] font-bold text-brand-secondary uppercase tracking-tight">DATA</span>
-            <span className="text-[12px] font-bold text-brand-dark leading-none opacity-30">•</span>
-            <span className="text-[12px] font-bold text-brand-accent uppercase tracking-tight">INTELLIGENCE</span>
-            <span className="text-[12px] font-bold text-brand-dark leading-none opacity-30">•</span>
-            <span className="text-[12px] font-bold text-brand-primary uppercase tracking-tight">AUTONOMY</span>
+          <h1 className="auth-logo-title text-[60px] font-black text-brand-primary leading-none uppercase tracking-tighter mb-1 select-none">AI-PRIORI</h1>
+          <div className="flex justify-between w-full items-center px-0.5 mt-1">
+            <span className="text-[13px] font-black text-brand-secondary uppercase tracking-widest">DATA</span>
+            <span className="text-[13px] font-black text-brand-dark opacity-30">•</span>
+            <span className="text-[13px] font-black text-brand-accent uppercase tracking-widest">INTELLIGENCE</span>
+            <span className="text-[13px] font-black text-brand-dark opacity-30">•</span>
+            <span className="text-[13px] font-black text-brand-primary uppercase tracking-widest">AUTONOMY</span>
           </div>
         </div>
 

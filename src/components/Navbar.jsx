@@ -23,22 +23,14 @@ const Navbar = () => {
       {/* Premium Red Accent Bar */}
       <div className={`h-1 w-full ${role === 'SUPER_ADMIN' ? 'bg-amber-500' : role === 'ADMIN' ? 'bg-emerald-500' : 'bg-red-600'}`} />
       
-      <div className="w-full px-4 md:px-6 h-20 flex items-center justify-between">
+      <div className="w-full px-4 md:px-6 h-[70px] flex items-center justify-between">
         {/* Logo Branding */}
-        <Link to="/" className="flex items-center gap-3 group">
-           <img src="/logo.jpg" alt="AI-PRIORI Logo" className="w-14 h-14 object-cover rounded-full group-hover:scale-105 transition-transform shrink-0 mix-blend-multiply" />
-            <div className="flex flex-col items-start leading-none shrink-0 font-outfit">
-              <span className="font-extrabold text-3xl md:text-4xl tracking-tighter text-red-600 leading-none uppercase select-none">
-                 AI-PRIORI
-              </span>
-              <div className="flex justify-between w-full items-center mt-1 px-0.5">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter">DATA</span>
-                <span className="text-[10px] font-bold text-slate-300 leading-none">-</span>
-                <span className="text-[10px] font-bold text-red-600 uppercase tracking-tighter">INTELLIGENCE</span>
-                <span className="text-[10px] font-bold text-slate-300 leading-none">-</span>
-                <span className="text-[10px] font-bold text-slate-600 uppercase tracking-tighter">AUTONOMY</span>
-              </div>
-            </div>
+        <Link to="/" className="flex items-center gap-3 group hover:scale-[1.03] active:scale-[0.97] transition-all duration-200 pl-[2px]">
+          <img 
+            src="/Navbar_logo.png" 
+            alt="AI-PRIORI Logo" 
+            className="h-[50px] md:h-[58px] w-auto object-contain shrink-0" 
+          />
         </Link>
 
         {/* Dynamic Command Interface */}
@@ -47,7 +39,7 @@ const Navbar = () => {
             <Link
               key={link.path}
               to={link.path}
-              className={`text-xs font-bold uppercase tracking-wider transition-all relative h-20 flex items-center ${
+              className={`text-xs font-bold uppercase tracking-wider transition-all relative h-[92px] flex items-center ${
                 isActive(link.path) ? "text-red-600 font-extrabold" : "text-slate-500 hover:text-slate-800"
               }`}
             >

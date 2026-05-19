@@ -10,10 +10,10 @@ const MissionSidebar = ({ activeTab, setActiveTab, campaignName }) => {
 
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "research", label: "Research Intel", icon: Globe },
-    { id: "monitor", label: "Outreach Monitor", icon: Mail },
-    { id: "history", label: "Discovery Calls", icon: PhoneCall },
-    { id: "report", label: "Report", icon: FileBarChart },
+    { id: "research", label: "Campaign", icon: Globe },
+    { id: "monitor", label: "Outreach", icon: Mail },
+    { id: "history", label: "Discovery", icon: PhoneCall },
+    { id: "report", label: "Analytics", icon: FileBarChart },
   ];
 
   return (

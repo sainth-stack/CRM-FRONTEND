@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
 @theme {
@@ -17,7 +17,8 @@
   --color-surgical-bg: #F8FAFC;
   --color-surgical-border: #E2E8F0;
   
-  --font-outfit: "Outfit", sans-serif;
+  --font-outfit: "Inter", system-ui, -apple-system, sans-serif;
+  --font-inter: "Inter", system-ui, -apple-system, sans-serif;
   
   --animate-float: float 6s ease-in-out infinite;
 
@@ -25,6 +26,48 @@
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-20px); }
   }
+}
+
+/* Global Failsafe Font Family Override to Enforce Clean Inter Stack */
+* {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif !important;
+}
+
+/* Redefine Tailwind Font Weights to match UI/UX expert feedback (No overbearing 500 or 900 weights) */
+.font-black, 
+.font-extrabold {
+  font-weight: 700 !important; /* Extremely clean, elegant bold instead of heavy black/900 */
+  letter-spacing: -0.02em !important;
+}
+
+.font-bold {
+  font-weight: 600 !important; /* Slick, refined bold weight */
+  letter-spacing: -0.015em !important;
+}
+
+.font-semibold {
+  font-weight: 550 !important; /* Balanced, readable semi-bold */
+  letter-spacing: -0.01em !important;
+}
+
+.font-medium {
+  font-weight: 400 !important; /* Convert overused 500 weight back to ultra-clean, light 400 */
+}
+
+.font-normal {
+  font-weight: 400 !important;
+}
+
+.font-light {
+  font-weight: 300 !important;
+}
+
+/* Clean up letter-spacing for uppercase badges, tags and headers */
+.uppercase, 
+.tracking-widest, 
+.tracking-wider {
+  letter-spacing: 0.08em !important;
+  font-size: 0.95em;
 }
 
 .hero-bg {
@@ -45,8 +88,141 @@
 }
 
 body {
-  @apply bg-[#fdfdff] text-brand-dark font-outfit selection:bg-brand-primary/20;
+  @apply bg-[#F8FAFC] text-brand-dark selection:bg-brand-primary/20;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.05) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.05) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.02) 0px, transparent 50%),
+    radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.02) 0px, transparent 50%);
 }
+
+/* Premium Custom Scrollbars */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 99px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #94A3B8;
+}
+
+/* Global Root Font Size Scaling: Uniformly scales down all REM elements from 16px to 13.5px */
+html {
+  font-size: 13.5px !important;
+}
+
+/* Completely Neutralize Italic / Slanted Styling (As Per UX Guidelines) */
+.italic, i, em {
+  font-style: normal !important;
+}
+
+/* Precise proportional scaling overrides to prevent awkward large headers (Excluding Landing Title) */
+h1:not(.landing-title), .text-4xl:not(.landing-title), .text-\[40px\] {
+  font-size: 1.85rem !important;
+  line-height: 1.25 !important;
+}
+
+h2, .text-3xl {
+  font-size: 1.55rem !important;
+  line-height: 1.3 !important;
+}
+
+h3, .text-2xl {
+  font-size: 1.3rem !important;
+  line-height: 1.35 !important;
+}
+
+.text-xl {
+  font-size: 1.125rem !important;
+}
+
+.text-lg {
+  font-size: 1.0rem !important;
+}
+
+.text-base {
+  font-size: 0.92rem !important;
+}
+
+.text-sm {
+  font-size: 0.85rem !important;
+}
+
+.text-xs {
+  font-size: 0.76rem !important;
+}
+
+.text-\[10px\], .text-\[9px\], .text-\[8px\] {
+  font-size: 0.72rem !important;
+}
+
+/* Explicit high-priority size forcing for the homepage landing title */
+.landing-title {
+  font-size: 3.65rem !important;
+  line-height: 1.08 !important;
+  font-weight: 900 !important; /* Ultra-heavy, high-impact bold characters */
+  text-shadow: 0 4px 16px rgba(0, 0, 0, 0.8) !important; /* Deep, sharp black text-shadow for high-contrast readability */
+}
+@media (min-width: 768px) {
+  .landing-title {
+    font-size: 5.45rem !important;
+    line-height: 1.08 !important;
+  }
+}
+
+/* Explicit high-priority size forcing for the homepage landing description (+1px) */
+.landing-desc {
+  font-size: 1.0rem !important; /* Calibrated mobile size (13.5px, up from 12.4px) */
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.75), 0 4px 14px rgba(251, 192, 45, 0.4) !important; /* Premium gold-glow dual shadow */
+}
+@media (min-width: 768px) {
+  .landing-desc {
+    font-size: 1.2rem !important; /* Calibrated desktop size (16.2px, up from 15.2px) */
+  }
+}
+
+/* Premium Logo Branding Alignment Rules */
+.logo-title {
+  font-size: 1.85rem !important; /* Lock size to prevent navbar responsive shifting/jumping */
+  font-weight: 900 !important;
+  letter-spacing: -0.04em !important;
+  line-height: 0.95 !important;
+  display: block !important;
+}
+
+.logo-subtitle-container {
+  width: 100% !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-top: 2px !important;
+  padding: 0 1px !important;
+}
+
+.logo-sub-item {
+  font-size: 7.5px !important; /* Calibrated size to fit the exact width of 1.85rem title */
+  font-weight: 700 !important;
+  letter-spacing: 0.02em !important;
+  line-height: 1 !important;
+}
+
+.logo-sub-divider {
+  font-size: 8px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+}
+
+/* Auth Pages Logo Title Rule to override global h1 scaling */
+h1.auth-logo-title, .min-h-screen h1.auth-logo-title {
+  font-size: 60px !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.04em !important;
+  line-height: 0.95 !important;
+  display: block !important;
+}
+
+

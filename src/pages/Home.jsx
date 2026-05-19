@@ -47,12 +47,12 @@ const Home = () => {
           <span className="px-3.5 py-1.5 bg-blue-700/40 backdrop-blur-md text-white border border-blue-600/50 rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg mb-6 inline-block select-none">
             Intelligent Outreach Infrastructure
           </span>
-          <h1 className="text-4xl md:text-7xl font-extrabold leading-[1.08] mb-6 tracking-tighter text-white uppercase italic drop-shadow-sm select-none">
+          <h1 className="landing-title text-6xl md:text-8xl font-extrabold leading-[1.08] mb-4 tracking-tighter text-white uppercase italic drop-shadow-sm select-none">
             Scale outreach that<br />
             <span className="text-white">converts</span>
           </h1>
 
-          <p className="text-base md:text-xl text-yellow-400 max-w-2xl mx-auto mb-12 leading-relaxed font-extrabold tracking-wide select-none drop-shadow-sm">
+          <p className="landing-desc text-base md:text-xl text-yellow-400 max-w-2xl mx-auto mb-12 leading-relaxed font-extrabold tracking-wide select-none drop-shadow-sm">
             Stop sending generic spam. Our AI agent researches your prospects, 
             deeply understands their business, and crafts hyper-personalized 
             emails that actually get replies.

@@ -91,7 +91,7 @@ const ForgotPassword = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center bg-white font-outfit relative overflow-hidden pt-20">
+    <div className="min-h-screen flex flex-col items-center bg-white font-outfit relative overflow-hidden pt-[120px]">
       <div className="absolute top-0 left-0 right-0 h-[500px] bg-gradient-to-b from-brand-primary/5 to-transparent pointer-events-none" />
 
       <motion.div 
@@ -100,15 +100,13 @@ const ForgotPassword = () => {
         className="relative z-10 w-full max-w-[520px] px-8 text-center flex flex-col items-center"
       >
         <div className="mb-14 inline-flex flex-col items-center w-fit cursor-pointer" onClick={() => navigate('/')}>
-          <h1 className="text-[52px] font-black text-brand-primary leading-none uppercase tracking-tighter mb-1 select-none">
-            AI-PRIORI
-          </h1>
-          <div className="flex justify-between w-full items-center px-0.5">
-            <span className="text-[12px] font-bold text-brand-secondary uppercase tracking-tight">Data</span>
-            <span className="text-[12px] font-bold text-brand-dark leading-none opacity-30">•</span>
-            <span className="text-[12px] font-bold text-brand-accent uppercase tracking-tight">Intelligence</span>
-            <span className="text-[12px] font-bold text-brand-dark leading-none opacity-30">•</span>
-            <span className="text-[12px] font-bold text-brand-primary uppercase tracking-tight">Autonomy</span>
+          <h1 className="auth-logo-title text-[60px] font-black text-brand-primary leading-none uppercase tracking-tighter mb-1 select-none">AI-PRIORI</h1>
+          <div className="flex justify-between w-full items-center px-0.5 mt-1">
+            <span className="text-[13px] font-black text-brand-secondary uppercase tracking-widest">DATA</span>
+            <span className="text-[13px] font-black text-brand-dark opacity-30">•</span>
+            <span className="text-[13px] font-black text-brand-accent uppercase tracking-widest">INTELLIGENCE</span>
+            <span className="text-[13px] font-black text-brand-dark opacity-30">•</span>
+            <span className="text-[13px] font-black text-brand-primary uppercase tracking-widest">AUTONOMY</span>
           </div>
         </div>
 
@@ -119,18 +117,7 @@ const ForgotPassword = () => {
                 <button onClick={() => navigate('/login')} className="flex items-center gap-2 text-[11px] font-black text-zinc-400 uppercase tracking-widest mb-8 hover:text-brand-primary transition-colors">
                   <ArrowLeft size={14} /> Back to Entry
                 </button>
-                <div className="mb-14 inline-flex flex-col items-center w-full">
-                  <h1 className="text-[52px] font-black text-brand-primary leading-none uppercase tracking-tighter mb-1 select-none">
-                    AI-PRIORI
-                  </h1>
-                  <div className="flex justify-between w-full max-w-[300px] items-center px-0.5">
-                    <span className="text-[12px] font-bold text-brand-secondary uppercase tracking-tight">DATA</span>
-                    <span className="text-[12px] font-bold text-brand-dark leading-none opacity-30">•</span>
-                    <span className="text-[12px] font-bold text-brand-accent uppercase tracking-tight">INTELLIGENCE</span>
-                    <span className="text-[12px] font-bold text-brand-dark leading-none opacity-30">•</span>
-                    <span className="text-[12px] font-bold text-brand-primary uppercase tracking-tight">AUTONOMY</span>
-                  </div>
-                </div>
+                
                 <p className="text-sm text-zinc-500 mb-8 font-medium">Verify your registered email to initialize credential reset.</p>
                 <form onSubmit={handleRequestOTP} className="space-y-6">
                   <div>
