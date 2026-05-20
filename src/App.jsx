@@ -20,6 +20,7 @@ import DemoSignUp from "./pages/DemoSignUp";
 import VerifyDemoOTP from "./pages/VerifyDemoOTP";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import Settings from "./pages/Settings";
 import { useAuth } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
 import { Navigate } from "react-router-dom";
@@ -70,14 +71,10 @@ function AppContents() {
     return <Navigate to={`/auth/google/callback${location.search}`} replace />;
   }
 
-  // Strategic UI Suppression: Do not show the barrier if we are currently 
-  // on the connection page or if the user is an administrative identity.
   const isConnectionPage = location.pathname === "/connect-mailbox" || location.pathname === "/auth/google/callback" || location.pathname === "/connect-calendar";
-  const showMailboxBarrier = isLoggedIn && !hasMailbox && !isConnectionPage;
-  
-  // Temporary Bypass: Disabled until Cal.com OAuth Client is approved. Change to standard check when ready:
-  // const showCalendarBarrier = isLoggedIn && hasMailbox && !hasCalendar && !isConnectionPage;
-  const showCalendarBarrier = false;
+  const isAdministrative = user?.role?.toUpperCase() === "ADMIN" || user?.role?.toUpperCase() === "SUPER_ADMIN";
+  const showMailboxBarrier = isLoggedIn && !hasMailbox && !isConnectionPage && !isAdministrative;
+  const showCalendarBarrier = isLoggedIn && hasMailbox && !hasCalendar && !isConnectionPage && !isAdministrative;
 
   return (
     <>
@@ -102,6 +99,7 @@ function AppContents() {
             <Route path="auth/google/callback" element={<ProtectedRoute><ConnectMailbox /></ProtectedRoute>} />
             
             <Route path="connect-calendar" element={<ProtectedRoute><ConnectCalendar /></ProtectedRoute>} />
+            <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             
             {/* Protected & Capability-Enforced Routes */}
             <Route path="create" element={<CapabilityRoute><CreateCampaign /></CapabilityRoute>} />
