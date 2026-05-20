@@ -47,6 +47,35 @@ const formatTimeLeft = (targetDateString) => {
   return `${diffMinutes}m left`;
 };
 
+const formatMeetingDate = (utcDateString) => {
+  if (!utcDateString) return "—";
+  // Backend stores scheduled_time_utc as naive UTC (no tz suffix)
+  const raw = utcDateString.endsWith("Z") ? utcDateString : utcDateString + "Z";
+  const date = new Date(raw);
+  if (isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+};
+
+const formatMeetingTime = (utcDateString, displayTimezone) => {
+  if (!utcDateString) return "—";
+  const raw = utcDateString.endsWith("Z") ? utcDateString : utcDateString + "Z";
+  const date = new Date(raw);
+  if (isNaN(date.getTime())) return "—";
+  const tz = displayTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  return date.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: tz,
+    timeZoneName: "short",
+  });
+};
+
+
 const ensureAbsoluteUrl = (url, fallbackName = "") => {
   if (!url || url === "#" || url === "N/A" || url === "unknown") {
     if (fallbackName) {
@@ -797,16 +826,25 @@ const CampaignWorkspace = () => {
                   <div className="bg-white rounded-[32px] border border-surgical-border overflow-hidden shadow-sm">
                     <div className="px-10 py-6 border-b border-surgical-border flex items-center justify-between bg-slate-50/30">
                       <h3 className="text-lg font-black text-slate-900 uppercase italic tracking-tight">Scheduled Intelligence Briefings</h3>
+                      <span className="px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg text-[10px] font-black uppercase tracking-widest">
+                        {(campaign.dms || []).filter(dm => dm.status === "MEETING_BOOKED" || dm.scheduled_time_utc).length} Booked
+                      </span>
                     </div>
                     <div className="overflow-x-auto">
                       <table className="w-full text-left border-collapse">
                         <thead>
                           <tr className="bg-slate-50 border-b border-surgical-border">
-                            <th className="py-4 px-10 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Prospect</th>
-                            <th className="py-4 px-10 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Organization</th>
-                            <th className="py-4 px-10 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Coordinate</th>
-                            <th className="py-4 px-10 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Time Remaining</th>
-                            <th className="py-4 px-10 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Action</th>
+                            <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Prospect</th>
+                            <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Organization</th>
+                            <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1.5"><Calendar size={11} strokeWidth={3} /> Meeting Date</span>
+                            </th>
+                            <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
+                              <span className="inline-flex items-center gap-1.5"><Clock size={11} strokeWidth={3} /> Meeting Time</span>
+                            </th>
+                            <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Coordinate</th>
+                            <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Time Remaining</th>
+                            <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Action</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-surgical-border bg-white">
@@ -815,7 +853,7 @@ const CampaignWorkspace = () => {
                             if (scheduledDMs.length === 0) {
                               return (
                                 <tr>
-                                  <td colSpan="5" className="py-20 text-center">
+                                  <td colSpan="7" className="py-20 text-center">
                                     <Calendar size={48} className="text-slate-200 mx-auto mb-4" strokeWidth={1} />
                                     <p className="text-sm font-black text-slate-400 uppercase tracking-widest italic">No meetings scheduled.</p>
                                   </td>
@@ -824,9 +862,12 @@ const CampaignWorkspace = () => {
                             }
                             return scheduledDMs.map(dm => {
                               const co = campaign.target_companies?.find(c => c.id === dm.target_company_id);
+                              const meetingDate = formatMeetingDate(dm.scheduled_time_utc);
+                              const meetingTime = formatMeetingTime(dm.scheduled_time_utc, dm.display_timezone);
+                              const isPast = dm.scheduled_time_utc && new Date(dm.scheduled_time_utc + "Z") < new Date();
                               return (
                                 <tr key={dm.id} className="hover:bg-slate-50/50 transition-colors">
-                                  <td className="py-4 px-10">
+                                  <td className="py-5 px-8">
                                     <div className="flex items-center gap-3">
                                       <div className="w-8 h-8 rounded-lg bg-surgical-navy/5 text-surgical-navy flex items-center justify-center font-black text-[10px] border border-surgical-navy/10 shrink-0">
                                         {(dm.name || "P").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
@@ -837,14 +878,46 @@ const CampaignWorkspace = () => {
                                       </div>
                                     </div>
                                   </td>
-                                  <td className="py-4 px-10 text-xs font-bold text-slate-700">{co?.name || "Unknown"}</td>
-                                  <td className="py-4 px-10 text-xs text-slate-500 font-medium">{dm.email}</td>
-                                  <td className="py-4 px-10">
-                                    <span className="px-3 py-1 bg-amber-50 text-amber-600 border border-amber-100 rounded-lg text-[10px] font-black uppercase tracking-widest whitespace-nowrap inline-flex items-center gap-1.5">
+                                  <td className="py-5 px-8 text-xs font-bold text-slate-700">{co?.name || "Unknown"}</td>
+                                  <td className="py-5 px-8">
+                                    {dm.scheduled_time_utc ? (
+                                      <div className="flex flex-col gap-0.5">
+                                        <span className={`text-xs font-black uppercase tracking-tight ${isPast ? "text-slate-400" : "text-slate-900"}`}>
+                                          {meetingDate}
+                                        </span>
+                                        {isPast && (
+                                          <span className="text-[9px] font-bold text-rose-400 uppercase tracking-widest">Elapsed</span>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">TBD</span>
+                                    )}
+                                  </td>
+                                  <td className="py-5 px-8">
+                                    {dm.scheduled_time_utc ? (
+                                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest whitespace-nowrap border ${
+                                        isPast
+                                          ? "bg-slate-50 text-slate-400 border-slate-100"
+                                          : "bg-emerald-50 text-emerald-700 border-emerald-100"
+                                      }`}>
+                                        <Clock size={11} strokeWidth={3} />
+                                        {meetingTime}
+                                      </span>
+                                    ) : (
+                                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">TBD</span>
+                                    )}
+                                  </td>
+                                  <td className="py-5 px-8 text-xs text-slate-500 font-medium">{dm.email}</td>
+                                  <td className="py-5 px-8">
+                                    <span className={`px-3 py-1 border rounded-lg text-[10px] font-black uppercase tracking-widest whitespace-nowrap inline-flex items-center gap-1.5 ${
+                                      isPast
+                                        ? "bg-slate-50 text-slate-400 border-slate-100"
+                                        : "bg-amber-50 text-amber-600 border-amber-100"
+                                    }`}>
                                       <Clock size={12} strokeWidth={3} /> {formatTimeLeft(dm.scheduled_time_utc)}
                                     </span>
                                   </td>
-                                  <td className="py-4 px-10 text-right">
+                                  <td className="py-5 px-8 text-right">
                                     {dm.meeting_link ? (
                                       <a href={dm.meeting_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-surgical-navy text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all hover:bg-slate-800 shadow-sm shadow-surgical-navy/10">
                                         <Link2 size={12} /> Join Link
@@ -861,6 +934,7 @@ const CampaignWorkspace = () => {
                       </table>
                     </div>
                   </div>
+
                 )}
               </motion.div>
             )}

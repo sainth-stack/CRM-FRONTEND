@@ -54,8 +54,7 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
     
     if (activeView === "ANALYSIS") {
       const token = localStorage.getItem("token");
-      const apiUrl = window.location.hostname === "localhost" ? "http://localhost:8000" : (import.meta.env.VITE_API_URL || "");
-      fetch(`${apiUrl}/campaigns/${campaign.id}/export/analysis`, {
+      fetch(`${API_BASE_URL}/campaigns/${campaign.id}/export/analysis`, {
         headers: token ? { "Authorization": `Bearer ${token}` } : {}
       })
       .then(res => {
