@@ -47,18 +47,29 @@ const formatTimeLeft = (targetDateString) => {
   return `${diffMinutes}m left`;
 };
 
-const formatMeetingDate = (utcDateString) => {
+const formatMeetingDate = (utcDateString, displayTimezone) => {
   if (!utcDateString) return "—";
   // Backend stores scheduled_time_utc as naive UTC (no tz suffix)
   const raw = utcDateString.endsWith("Z") ? utcDateString : utcDateString + "Z";
   const date = new Date(raw);
   if (isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  const tz = displayTimezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+  try {
+    return date.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: tz,
+    });
+  } catch (e) {
+    return date.toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  }
 };
 
 const formatMeetingTime = (utcDateString, displayTimezone) => {
@@ -862,7 +873,7 @@ const CampaignWorkspace = () => {
                             }
                             return scheduledDMs.map(dm => {
                               const co = campaign.target_companies?.find(c => c.id === dm.target_company_id);
-                              const meetingDate = formatMeetingDate(dm.scheduled_time_utc);
+                              const meetingDate = formatMeetingDate(dm.scheduled_time_utc, dm.display_timezone);
                               const meetingTime = formatMeetingTime(dm.scheduled_time_utc, dm.display_timezone);
                               const isPast = dm.scheduled_time_utc && new Date(dm.scheduled_time_utc + "Z") < new Date();
                               return (

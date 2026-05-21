@@ -11,8 +11,6 @@ import ProspectHistory from "./pages/ProspectHistory";
 import Login from "./pages/Login";
 import ForgotPassword from "./pages/ForgotPassword";
 import SetupPassword from "./pages/SetupPassword";
-import MailboxPermissionBarrier from "./components/MailboxPermissionBarrier";
-import CalendarPermissionBarrier from "./components/CalendarPermissionBarrier";
 import DemoExpiryBarrier from "./components/DemoExpiryBarrier";
 import ConnectMailbox from "./pages/ConnectMailbox";
 import ConnectCalendar from "./pages/ConnectCalendar";
@@ -21,6 +19,7 @@ import VerifyDemoOTP from "./pages/VerifyDemoOTP";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Settings from "./pages/Settings";
+import BusinessProfile from "./pages/BusinessProfile";
 import { useAuth } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
 import { Navigate } from "react-router-dom";
@@ -72,14 +71,36 @@ function AppContents() {
   }
 
   const isConnectionPage = location.pathname === "/connect-mailbox" || location.pathname === "/auth/google/callback" || location.pathname === "/connect-calendar";
+  const isProfilePage = location.pathname === "/profile";
   const isAdministrative = user?.role?.toUpperCase() === "ADMIN" || user?.role?.toUpperCase() === "SUPER_ADMIN";
-  const showMailboxBarrier = isLoggedIn && !hasMailbox && !isConnectionPage && !isAdministrative;
+  
+  const showMailboxBarrier = isLoggedIn && !hasMailbox && !isConnectionPage;
   const showCalendarBarrier = isLoggedIn && hasMailbox && !hasCalendar && !isConnectionPage && !isAdministrative;
+  
+  // Business identity is required for AI draft personalization. Only enforce for
+  // USER role (admins don't draft), and only once mailbox+calendar gates are
+  // cleared so the onboarding cascade stays single-modal at any moment.
+  const showProfileBarrier =
+    isLoggedIn &&
+    !isAdministrative &&
+    hasMailbox &&
+    hasCalendar &&
+    user?.profile_complete === false &&
+    !isConnectionPage &&
+    !isProfilePage;
+
+  if (showMailboxBarrier) {
+    return <Navigate to="/connect-mailbox" replace />;
+  }
+  if (showCalendarBarrier) {
+    return <Navigate to="/connect-calendar" replace />;
+  }
+  if (showProfileBarrier) {
+    return <Navigate to="/profile" replace />;
+  }
 
   return (
     <>
-      {showMailboxBarrier && <MailboxPermissionBarrier />}
-      {showCalendarBarrier && <CalendarPermissionBarrier />}
       <DemoExpiryBarrier>
         <Routes>
           <Route path="/" element={<RootLayout />}>
@@ -100,6 +121,7 @@ function AppContents() {
             
             <Route path="connect-calendar" element={<ProtectedRoute><ConnectCalendar /></ProtectedRoute>} />
             <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="profile" element={<ProtectedRoute><BusinessProfile /></ProtectedRoute>} />
             
             {/* Protected & Capability-Enforced Routes */}
             <Route path="create" element={<CapabilityRoute><CreateCampaign /></CapabilityRoute>} />

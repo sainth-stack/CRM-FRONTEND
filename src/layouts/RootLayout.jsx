@@ -8,14 +8,15 @@ const RootLayout = () => {
   const location = useLocation();
   const isCampaignWorkspace = location.pathname.startsWith("/campaign");
   const isHome = location.pathname === "/";
-  const isAuthPage = ["/login", "/forgot-password", "/setup-password", "/demo"].includes(location.pathname);
-  const shouldSuppressPadding = isCampaignWorkspace || isHome || isAuthPage;
+  const isAuthPage = ["/login", "/forgot-password", "/setup-password", "/demo", "/demo/verify"].includes(location.pathname);
+  const isOnboardingOrSettings = ["/profile", "/settings", "/connect-calendar", "/connect-mailbox"].includes(location.pathname);
+  const shouldSuppressPadding = isCampaignWorkspace || isHome || isAuthPage || isOnboardingOrSettings;
 
   return (
     <div className="min-h-screen bg-brand-light flex flex-col font-outfit">
       {!isCampaignWorkspace && <Navbar />}
       
-      <main className={`flex-grow ${shouldSuppressPadding ? "pt-0" : "pt-[96px]"}`}>
+      <main className={`flex-grow ${shouldSuppressPadding ? "pt-0" : "pt-[74px]"}`}>
         <AnimatePresence mode="wait">
           <motion.div
             key={isLoggedIn ? "logged-in" : "logged-out"}

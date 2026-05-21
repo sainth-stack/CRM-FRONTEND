@@ -1,11 +1,50 @@
-import { Link, useLocation } from "react-router-dom";
-import { LayoutGrid, Settings as SettingsIcon, ShieldCheck } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { LayoutGrid, Settings as SettingsIcon, ShieldCheck, User as UserIcon, LogOut } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 const Navbar = () => {
   const { isLoggedIn, logout, user } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
   const isActive = (path) => location.pathname === path;
+
+  // Avatar dropdown state
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [imgError, setImgError] = useState(false);
+  const menuRef = useRef(null);
+
+  // Close on outside click or Escape — no external library needed
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onClick = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+    };
+    const onKey = (e) => { if (e.key === "Escape") setMenuOpen(false); };
+    document.addEventListener("mousedown", onClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
+
+  // No explicit route-change effect needed — clicking a nav <Link> is an outside
+  // click, which the mousedown handler above already uses to close the menu.
+
+  // Derive initial for avatar — prefer full_name when present, fall back to email
+  const avatarInitial = (user?.full_name || user?.email || "?").trim().charAt(0).toUpperCase();
+
+  const handleProfile = () => {
+    setMenuOpen(false);
+    navigate("/profile");
+  };
+
+  const handleLogout = () => {
+    setMenuOpen(false);
+    logout();
+    navigate("/login", { replace: true });
+  };
 
   const role = user?.role?.toUpperCase();
   const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
@@ -72,12 +111,76 @@ const Navbar = () => {
             </>
           )}
           {isLoggedIn && (
-            <button 
-              onClick={logout}
-              className="text-xs font-extrabold uppercase tracking-widest text-slate-400 hover:text-red-600 transition-colors px-3 py-2 select-none"
-            >
-              Sign Out
-            </button>
+            <div className="relative" ref={menuRef}>
+              <div className="flex items-center gap-3">
+                <span className="hidden sm:inline-block text-xs font-black uppercase tracking-widest text-slate-600/90 select-none">
+                  {user?.full_name || user?.email?.split("@")[0]}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen((v) => !v)}
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
+                  aria-label="Account menu"
+                  title={user?.email || "Account"}
+                  className={`w-12 h-12 rounded-full flex items-center justify-center font-extrabold text-sm uppercase tracking-tight shadow-sm border transition-all active:scale-95 overflow-hidden ${
+                    menuOpen
+                      ? "bg-red-600 text-white border-red-600 ring-2 ring-red-500/20"
+                      : "bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100 hover:border-slate-300"
+                  }`}
+                >
+                  {!imgError ? (
+                    <img
+                      src="/default-avatar.png"
+                      alt="User Profile"
+                      className="w-full h-full object-cover rounded-full"
+                      onError={() => setImgError(true)}
+                    />
+                  ) : (
+                    avatarInitial
+                  )}
+                </button>
+              </div>
+
+              {menuOpen && (
+                <div
+                  role="menu"
+                  className="absolute right-0 mt-2 w-60 bg-white border border-slate-100 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.08)] overflow-hidden z-50 origin-top-right"
+                >
+                  {/* Identity header */}
+                  <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/60">
+                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                      Signed in as
+                    </div>
+                    <div className="text-xs font-bold text-slate-800 truncate">
+                      {user?.full_name || user?.email}
+                    </div>
+                    {user?.full_name && (
+                      <div className="text-[10px] font-medium text-slate-400 truncate">
+                        {user?.email}
+                      </div>
+                    )}
+                  </div>
+
+                  <button
+                    role="menuitem"
+                    onClick={handleProfile}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase tracking-widest text-slate-700 hover:bg-slate-50 hover:text-red-600 transition-colors"
+                  >
+                    <UserIcon size={14} />
+                    Profile
+                  </button>
+                  <button
+                    role="menuitem"
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-4 py-3 text-xs font-bold uppercase tracking-widest text-slate-700 hover:bg-slate-50 hover:text-red-600 transition-colors border-t border-slate-100"
+                  >
+                    <LogOut size={14} />
+                    Logout
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

@@ -43,6 +43,57 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
     };
   });
 
+  const isDrafted = (dm) => {
+    const s = (dm.status || dm.state || "").toUpperCase();
+    return s.includes("DRAFTED");
+  };
+  
+  const isSent = (dm) => {
+    const s = (dm.status || dm.state || "").toUpperCase();
+    return (
+      s.includes("SENT") || 
+      s.includes("WAITING") || 
+      s.includes("DISCOVERY") || 
+      s.includes("BOOKED") || 
+      s.includes("TERMINATED") || 
+      s.includes("HOLD") || 
+      s.includes("FOLLOWUP")
+    );
+  };
+
+  const isEngaged = (dm) => {
+    const s = (dm.status || dm.state || "").toUpperCase();
+    const intent = (dm.reply_intent || dm.intent || "").toUpperCase();
+    return (
+      intent === "POSITIVE" || 
+      intent === "BOOKING" || 
+      s.includes("DISCOVERY") || 
+      s.includes("BOOKED")
+    );
+  };
+
+  const isNegative = (dm) => {
+    const s = (dm.status || dm.state || "").toUpperCase();
+    const intent = (dm.reply_intent || dm.intent || "").toUpperCase();
+    return intent === "NEGATIVE" || s.includes("TERMINATED");
+  };
+
+  const isNeutral = (dm) => {
+    return !isEngaged(dm) && !isNegative(dm);
+  };
+
+  const isActiveMission = (dm) => {
+    const s = (dm.status || dm.state || "").toUpperCase();
+    return (
+      s.includes("SENT") || 
+      s.includes("WAITING") || 
+      s.includes("DISCOVERY") || 
+      s.includes("BOOKED") || 
+      s.includes("HOLD") || 
+      s.includes("FOLLOWUP")
+    ) && !s.includes("TERMINATED");
+  };
+
   const totalDashboardPages = Math.ceil(companies.length / itemsPerPage) || 1;
   const paginatedCompanies = companies.slice((dashboardPage - 1) * itemsPerPage, dashboardPage * itemsPerPage);
 
@@ -177,7 +228,7 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
 
     if (s.includes("DRAFTED")) colors = "bg-amber-50 text-amber-600 border-amber-100";
     if (s.includes("SENT")) colors = "bg-indigo-50 text-indigo-600 border-indigo-100";
-    if (s.includes("BOOKED")) colors = "bg-emerald-50 text-emerald-600 border-emerald-100";
+    if (s.includes("BOOKED") || s.includes("DISCOVERY")) colors = "bg-emerald-50 text-emerald-600 border-emerald-100";
     if (s.includes("TERMINATED")) colors = "bg-rose-50 text-rose-500 border-rose-100";
     if (s.includes("SYNCED") || s === "NEW") colors = "bg-slate-100 text-slate-600 border-slate-200";
 
@@ -211,7 +262,7 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
 
   const totalOrgs = rawCompanies.length;
   const totalDMs = contacts.length;
-  const activeMissions = contacts.filter(dm => dm.status && (dm.status.includes("SENT") || dm.status.includes("BOOKED"))).length;
+  const activeMissions = contacts.filter(isActiveMission).length;
 
   return (
     <div className="flex h-full w-full bg-surgical-bg overflow-hidden">
@@ -620,13 +671,13 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
             const totalSynergy = rawCompanies.reduce((acc, c) => acc + (c.relevance_score || c.similarity_score || 0), 0);
             const avgSynergy = rawCompanies.length ? Math.round(totalSynergy / rawCompanies.length) : 0;
 
-            const draftedDMs = contacts.filter(dm => dm.status && dm.status.includes("DRAFTED")).length;
-            const sentDMs = contacts.filter(dm => dm.status && (dm.status.includes("SENT") || dm.status.includes("BOOKED"))).length;
-            const positiveReplies = contacts.filter(dm => dm.reply_intent === "POSITIVE").length;
+            const draftedDMs = contacts.filter(isDrafted).length;
+            const sentDMs = contacts.filter(isSent).length;
+            const positiveReplies = contacts.filter(isEngaged).length;
 
             const finalPos = positiveReplies;
-            const finalNeu = draftedDMs + (totalDMsAnalysed - draftedDMs - sentDMs - positiveReplies);
-            const finalNeg = sentDMs - positiveReplies; // Simplified for visual breakdown
+            const finalNeu = contacts.filter(isNeutral).length;
+            const finalNeg = contacts.filter(isNegative).length;
             const sumForIntent = totalDMsAnalysed || 1;
 
             return (
