@@ -9,7 +9,7 @@ import {
   Monitor, PhoneCall, FileBarChart,
   X, Edit3, Send, Trash, Maximize2, Clock, Calendar, Link2,
   TrendingUp, PieChart, Target, ShieldCheck, LayoutDashboard,
-  Activity, BarChart3, Zap
+  Activity, BarChart3, Zap, Filter, ChevronDown
 } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "../config";
@@ -17,10 +17,31 @@ import LeadLedger from "./LeadLedger";
 import ResearchTabs from "./ResearchTabs";
 import MissionSidebar from "../components/campaign-workspace/MissionSidebar";
 import DraftEditorModal from "../components/campaign-workspace/DraftEditorModal";
+import DraftPreviewModal from "../components/campaign-workspace/DraftPreviewModal";
+
+// Helper to force uniform UTC parsing on both timezone-naive and timezone-aware ISO strings
+const parseUtcDate = (dateStr) => {
+  if (!dateStr) return null;
+  if (dateStr instanceof Date) return dateStr;
+  
+  let formatted = String(dateStr);
+  // If it's a naive ISO timestamp, append 'Z' so JavaScript interprets it uniformly as UTC
+  if (
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(formatted) &&
+    !formatted.endsWith("Z") &&
+    !/[+-]\d{2}:?\d{2}$/.test(formatted)
+  ) {
+    formatted += "Z";
+  }
+  
+  const parsed = new Date(formatted);
+  return isNaN(parsed.getTime()) ? null : parsed;
+};
 
 const formatTimeAgo = (timestamp) => {
   if (!timestamp) return "Never";
-  const date = new Date(timestamp);
+  const date = parseUtcDate(timestamp);
+  if (!date) return "Never";
   const now = new Date();
   const diff = Math.floor((now - date) / 1000);
   
@@ -179,13 +200,28 @@ const CampaignWorkspace = () => {
   const [researchTab, setResearchTab] = useState("mission_briefing");
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [selectedDraft, setSelectedDraft] = useState(null);
+  const [previewDraft, setPreviewDraft] = useState(null);
   const [draftEditData, setDraftEditData] = useState({ subject: "", body: "", email: "" });
   const [sendingId, setSendingId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [dispatchingId, setDispatchingId] = useState(null);
+  const [isDispatchingAll, setIsDispatchingAll] = useState(false);
+  const [draftFilter, setDraftFilter] = useState(null);   // null = show all
+  const [showDraftFilter, setShowDraftFilter] = useState(false);
   const [expandedReportCompany, setExpandedReportCompany] = useState(null);
   const [showHistoryDM, setShowHistoryDM] = useState(null);
   const [highlightedDraftId, setHighlightedDraftId] = useState(null);
   const [expandedNodes, setExpandedNodes] = useState([]);
+
+  // Close the draft filter dropdown on any outside click
+  useEffect(() => {
+    if (!showDraftFilter) return;
+    const handler = (e) => {
+      if (!e.target.closest("[data-draft-filter]")) setShowDraftFilter(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showDraftFilter]);
 
   const toggleNodeExpansion = (nodeId) => {
     setExpandedNodes(prev => 
@@ -226,11 +262,14 @@ const CampaignWorkspace = () => {
     if (!dm) return [];
     const events = [];
 
-    // 1. Prospect Identified Event
-    if (dm.created_at || campaign?.created_at) {
+    const dmCreatedDate = parseUtcDate(dm.created_at || campaign?.created_at);
+    const dmCreatedTime = dmCreatedDate?.getTime() || 0;
+
+    // 1. Prospect Identified Event (Milestone 1)
+    if (dmCreatedDate) {
       events.push({
         type: "PROSPECT_IDENTIFIED",
-        timestamp: dm.created_at || campaign.created_at,
+        timestamp: dmCreatedDate,
         title: "Prospect Qualified",
         label: "Stage 5: Stakeholder Profiling",
         icon: Target,
@@ -242,13 +281,15 @@ const CampaignWorkspace = () => {
       });
     }
 
-    // 2. Draft Events
+    // 2. Draft Events (Only pending/unsent drafts to prevent duplicate representations)
     const dmDrafts = campaign?.drafts?.filter(d => String(d.decision_maker_id) === String(dm.id)) || [];
     dmDrafts.forEach(draft => {
-      if (draft.created_at) {
+      const draftDate = parseUtcDate(draft.created_at);
+      // Exclude drafts already dispatched (status === "SENT") to prevent duplicates with sent logs
+      if (draftDate && draft.status !== "SENT") {
         events.push({
           type: "EMAIL_DRAFTED",
-          timestamp: draft.created_at,
+          timestamp: draftDate,
           title: `Outreach Protocol Drafted (${draft.draft_type || "INITIAL"})`,
           label: "Stage 6: Ghostwriting Pipeline",
           icon: Bot,
@@ -268,11 +309,18 @@ const CampaignWorkspace = () => {
     const dmLogs = dm.logs || [];
     dmLogs.forEach(log => {
       const timestamp = log.received_at || log.created_at;
-      if (timestamp) {
+      const logDate = parseUtcDate(timestamp);
+      if (logDate) {
+        const logTime = logDate.getTime();
+        // Filter out historical background logs that occurred before this prospect was qualified
+        if (dmCreatedTime && logTime < dmCreatedTime - 60000) {
+          return;
+        }
+
         if (log.direction === "SENT") {
           events.push({
             type: "EMAIL_SENT",
-            timestamp: timestamp,
+            timestamp: logDate,
             title: "Outbound Dispatch Complete",
             label: "Mission Dispatch",
             icon: Send,
@@ -286,7 +334,7 @@ const CampaignWorkspace = () => {
         } else {
           events.push({
             type: "EMAIL_RECEIVED",
-            timestamp: timestamp,
+            timestamp: logDate,
             title: "Signal Captured (Reply)",
             label: "Inbound Signal",
             icon: MessageSquare,
@@ -301,8 +349,8 @@ const CampaignWorkspace = () => {
       }
     });
 
-    // Sort chronologically (oldest first)
-    return events.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+    // Sort chronologically ascending (oldest first at the top, newest at the bottom)
+    return events.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
   };
   const handleBatchDispatch = async () => {
     // Strategic Batch Deployment Protocol
@@ -329,11 +377,15 @@ const CampaignWorkspace = () => {
   const handleSendMessage = async (draftId, name) => {
     setSendingId(draftId);
     try {
-        // Operational Gate: Explicitly authorize the draft for deployment
-        await axios.post(`${API_BASE_URL}/drafts/${draftId}/approve`);
-        // Deploy the mission
-        await axios.post(`${API_BASE_URL}/drafts/${draftId}/send`);
-        alert(`Mission Accomplished: Engagement protocol targeting ${name} has been deployed successfully.`);
+        const res = await axios.post(`${API_BASE_URL}/drafts/${draftId}/send`);
+        const data = res.data;
+        if (data.message === "already_scheduled") {
+            alert(`Already scheduled: Email to ${name} is queued for ${data.display}.`);
+        } else if (data.scheduled_at) {
+            alert(`Scheduled: Email to ${name} will be sent on ${data.display} (${data.timezone}).`);
+        } else {
+            alert(`Engagement protocol targeting ${name} has been deployed.`);
+        }
         await fetchCampaignDetails();
     } catch (error) {
         console.error("Tactical Deployment Failure:", error);
@@ -342,6 +394,55 @@ const CampaignWorkspace = () => {
     } finally {
         setSendingId(null);
     }
+  };
+
+  const handleDispatchNudge = async (dmId, name) => {
+    setDispatchingId(dmId);
+    try {
+      const res = await axios.post(`${API_BASE_URL}/prospects/${dmId}/dispatch`);
+      const data = res.data;
+      if (data.message === "already_scheduled") {
+        alert(`Already queued: Reminder to ${name} is scheduled for ${data.display}.`);
+      } else {
+        alert(`Dispatch scheduled: Reminder to ${name} will be sent on ${data.display} (${data.timezone}).`);
+      }
+      await fetchCampaignDetails();
+    } catch (error) {
+      const detail = error.response?.data?.detail || "Dispatch failed.";
+      alert(`ERROR: ${detail}`);
+    } finally {
+      setDispatchingId(null);
+    }
+  };
+
+  const handleDispatchAll = async () => {
+    if (!campaign?.id) return;
+    setIsDispatchingAll(true);
+    try {
+      const res = await axios.post(`${API_BASE_URL}/campaigns/${campaign.id}/drafts/dispatch-all`);
+      const { scheduled_count, skipped_count, error_count } = res.data;
+      let msg = `Dispatch All complete.\n✅ Scheduled: ${scheduled_count}`;
+      if (skipped_count > 0) msg += `\n⏭ Skipped: ${skipped_count} (already queued or sent)`;
+      if (error_count > 0) msg += `\n⚠️ Errors: ${error_count}`;
+      alert(msg);
+      await fetchCampaignDetails();
+    } catch (error) {
+      const detail = error.response?.data?.detail || "Batch dispatch failed.";
+      alert(`ERROR: ${detail}`);
+    } finally {
+      setIsDispatchingAll(false);
+    }
+  };
+
+  // States that support manual nudge dispatch
+  const isDispatchable = (dm) => {
+    const s = (dm.state || dm.status || "").toUpperCase();
+    return (
+      s === "INITIAL_SENT" ||
+      s === "REMINDER_1_SENT" ||
+      s === "FOLLOWUP_ACTIVE" ||
+      s === "WAITING_FOR_REPLY"
+    );
   };
 
   const handleUpdatePrompt = async (newPrompt) => {
@@ -528,6 +629,7 @@ const CampaignWorkspace = () => {
                   setSelectedDraft={setSelectedDraft}
                   setDraftEditData={setDraftEditData}
                   setActiveTab={setActiveTab}
+                  onPreviewDraft={setPreviewDraft}
                 />
               </motion.div>
             )}
@@ -587,7 +689,7 @@ const CampaignWorkspace = () => {
                             <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Stakeholder Protocol</th>
                             <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Organization</th>
                             <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Live Status</th>
-                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Engagement Link</th>
+                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -604,11 +706,41 @@ const CampaignWorkspace = () => {
                             (campaign.dms || []).filter(dm => !["NEW", "SYNCED"].includes(dm.state || dm.status)).map(dm => {
                               const co = campaign.target_companies.find(c => c.id === dm.target_company_id);
                               const dmStatus = dm.state || dm.status || "NEW";
+
+                              // Check if this DM has a pending scheduled draft
+                              const scheduledDraft = (campaign.drafts || []).find(
+                                d => d.decision_maker_id === dm.id &&
+                                     d.status === "DRAFTED" &&
+                                     d.dispatch_state === "QUEUED" &&
+                                     d.scheduled_at
+                              );
+                              const hasScheduledDispatch = !!scheduledDraft;
+
+                              // Format the scheduled slot for tooltip / secondary label
+                              const scheduledLabel = (() => {
+                                if (!scheduledDraft?.scheduled_at) return null;
+                                const raw = String(scheduledDraft.scheduled_at).endsWith("Z")
+                                  ? scheduledDraft.scheduled_at
+                                  : scheduledDraft.scheduled_at + "Z";
+                                const d = new Date(raw);
+                                if (isNaN(d.getTime())) return null;
+                                return d.toLocaleString("en-US", {
+                                  weekday: "short", month: "short", day: "numeric",
+                                  hour: "numeric", minute: "2-digit",
+                                  timeZoneName: "short",
+                                  timeZone: dm.display_timezone || undefined,
+                                });
+                              })();
+
                               return (
                                 <tr key={dm.id} className="hover:bg-slate-50/50 transition-colors group">
                                   <td className="px-8 py-6">
                                     <div className="flex items-center gap-4">
-                                      <div className="w-10 h-10 rounded-xl bg-surgical-navy/5 text-surgical-navy flex items-center justify-center font-black text-xs border border-surgical-navy/10">
+                                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs border ${
+                                        hasScheduledDispatch
+                                          ? "bg-blue-50 text-blue-600 border-blue-100"
+                                          : "bg-surgical-navy/5 text-surgical-navy border-surgical-navy/10"
+                                      }`}>
                                         {(dm.name || "P").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
                                       </div>
                                       <div>
@@ -619,21 +751,50 @@ const CampaignWorkspace = () => {
                                   </td>
                                   <td className="px-8 py-6 text-sm font-bold text-slate-500 uppercase">{co?.name}</td>
                                   <td className="px-8 py-6 text-center">
-                                    <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter ${
-                                      dmStatus.includes("SENT") ? "bg-surgical-navy text-white" :
-                                      dmStatus.includes("REPLIED") ? "bg-emerald-500 text-white" :
-                                      "bg-slate-100 text-slate-500"
-                                    }`}>
-                                      {dmStatus.replace(/_/g, " ")}
-                                    </span>
+                                    {hasScheduledDispatch ? (
+                                      <div className="flex flex-col items-center gap-1">
+                                        <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter bg-blue-50 text-blue-600 border border-blue-200">
+                                          Dispatch Scheduled
+                                        </span>
+                                        {scheduledLabel && (
+                                          <span className="text-[9px] font-bold text-slate-400 tracking-tight">
+                                            {scheduledLabel}
+                                          </span>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter ${
+                                        dmStatus.includes("SENT")   ? "bg-surgical-navy text-white" :
+                                        dmStatus.includes("REPLIED") ? "bg-emerald-500 text-white" :
+                                        dmStatus.includes("DRAFTED") ? "bg-amber-50 text-amber-600 border border-amber-200" :
+                                        "bg-slate-100 text-slate-500"
+                                      }`}>
+                                        {dmStatus.replace(/_/g, " ")}
+                                      </span>
+                                    )}
                                   </td>
-                                  <td className="px-8 py-6 text-right">
-                                    <button 
-                                      onClick={() => setShowHistoryDM(dm)}
-                                      className="px-4 py-2 bg-slate-50 hover:bg-surgical-navy hover:text-white text-slate-400 border border-slate-100 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
-                                    >
-                                      View Chain
-                                    </button>
+                                  <td className="px-8 py-6">
+                                    <div className="flex items-center justify-end gap-2">
+                                      {/* Hide Dispatch button when a send is already scheduled */}
+                                      {isDispatchable(dm) && !hasScheduledDispatch && (
+                                        <button
+                                          onClick={() => handleDispatchNudge(dm.id, dm.name)}
+                                          disabled={dispatchingId === dm.id}
+                                          className="flex items-center gap-1.5 px-3 py-2 bg-surgical-navy hover:bg-slate-800 text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm shadow-surgical-navy/20 disabled:opacity-50"
+                                        >
+                                          {dispatchingId === dm.id
+                                            ? <Loader2 size={11} className="animate-spin" />
+                                            : <Send size={11} />}
+                                          Dispatch
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => setShowHistoryDM(dm)}
+                                        className="px-4 py-2 bg-slate-50 hover:bg-surgical-navy hover:text-white text-slate-400 border border-slate-100 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
+                                      >
+                                        View Chain
+                                      </button>
+                                    </div>
                                   </td>
                                 </tr>
                               );
@@ -644,78 +805,278 @@ const CampaignWorkspace = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {(() => {
-                      const standardDrafts = (campaign.drafts || []).filter(d => d.status === "DRAFTED" && d.draft_type !== "DISCOVERY");
-                      if (standardDrafts.length === 0) {
-                        return (
-                          <div className="col-span-full bg-white rounded-[32px] border border-surgical-border p-20 text-center flex flex-col items-center gap-4">
-                            <Mail size={48} className="text-slate-200" strokeWidth={1} />
-                            <p className="text-sm font-black text-slate-400 uppercase tracking-widest italic">No pending outreach protocols drafted.</p>
-                          </div>
-                        );
-                      }
-                      return standardDrafts.map((draft) => {
-                        const dm = campaign.dms?.find(d => d.id === draft.decision_maker_id);
-                        const co = campaign.target_companies?.find(c => c.id === dm?.target_company_id);
-                        return (
-                          <motion.div
-                            key={draft.id}
-                            layout
-                            initial={{ opacity: 0, scale: 0.95 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="bg-white rounded-[28px] border border-surgical-border p-6 shadow-sm hover:shadow-xl hover:shadow-surgical-navy/5 transition-all flex flex-col justify-between"
-                          >
-                            <div className="space-y-4">
-                              <div className="flex items-start justify-between">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 rounded-xl bg-red-50 text-red-600 flex items-center justify-center font-black text-xs border border-red-100">
-                                    {(dm?.name || "P").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
-                                  </div>
-                                  <div>
-                                    <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{dm?.name}</p>
-                                    <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{co?.name}</p>
-                                  </div>
-                                </div>
-                                <div className="px-2 py-1 bg-slate-50 border border-slate-100 rounded-lg text-[8px] font-black text-slate-400 uppercase tracking-widest">
-                                  Draft
-                                </div>
-                              </div>
-                              
-                              <div className="space-y-2">
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-1">Subject</p>
-                                <p className="text-xs font-bold text-slate-800 line-clamp-1 italic">{draft.subject}</p>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-1 mt-3">Message Snippet</p>
-                                <p className="text-[11px] font-medium text-slate-500 line-clamp-3 leading-relaxed">
-                                  {draft.body.replace(/<[^>]*>/g, '').slice(0, 150)}...
-                                </p>
-                              </div>
+                  (() => {
+                    // All non-discovery pending drafts (includes already-scheduled ones so they stay visible)
+                    const standardDrafts = (campaign.drafts || []).filter(
+                      d => d.status === "DRAFTED" && d.draft_type !== "DISCOVERY"
+                    );
+
+                    // Helper: is this draft locked (already queued for scheduled send)?
+                    const isDraftScheduled = (d) => d.dispatch_state === "QUEUED" && !!d.scheduled_at;
+
+                    // Derive unique prospect states present in this draft set
+                    // Scheduled drafts show their own "DISPATCH_SCHEDULED" synthetic state
+                    const uniqueStates = [...new Set(
+                      standardDrafts.map(d => {
+                        if (isDraftScheduled(d)) return "DISPATCH_SCHEDULED";
+                        const dm = campaign.dms?.find(m => m.id === d.decision_maker_id);
+                        return (dm?.state || dm?.status || "DRAFTED").toUpperCase();
+                      })
+                    )].sort();
+
+                    // Apply active filter (use synthetic state for scheduled drafts)
+                    const visibleDrafts = draftFilter
+                      ? standardDrafts.filter(d => {
+                          if (isDraftScheduled(d)) return draftFilter === "DISPATCH_SCHEDULED";
+                          const dm = campaign.dms?.find(m => m.id === d.decision_maker_id);
+                          return (dm?.state || dm?.status || "DRAFTED").toUpperCase() === draftFilter;
+                        })
+                      : standardDrafts;
+
+                    // Status badge colour map (also used for filter dropdown chips)
+                    const statusBadge = (state) => {
+                      const s = (state || "DRAFTED").toUpperCase();
+                      const label = s.replace(/_/g, " ");
+                      let cls = "bg-slate-50 text-slate-500 border-slate-200";
+                      if (s === "DISPATCH_SCHEDULED") cls = "bg-blue-50 text-blue-600 border-blue-200";
+                      else if (s === "DRAFTED")        cls = "bg-amber-50 text-amber-600 border-amber-200";
+                      else if (s === "INITIAL_SENT")   cls = "bg-indigo-50 text-indigo-600 border-indigo-200";
+                      else if (s === "REMINDER_1_SENT" || s === "REMINDER_2_SENT")
+                                                       cls = "bg-purple-50 text-purple-600 border-purple-200";
+                      else if (s === "FOLLOWUP_ACTIVE") cls = "bg-teal-50 text-teal-600 border-teal-200";
+                      else if (s === "NEUTRAL")        cls = "bg-slate-100 text-slate-600 border-slate-300";
+                      return (
+                        <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border ${cls}`}>
+                          {label}
+                        </span>
+                      );
+                    };
+
+                    return (
+                      <div className="space-y-5">
+
+                        {/* ── Header row: count + Filter + Dispatch All ── */}
+                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                            {visibleDrafts.length}
+                            {draftFilter ? ` of ${standardDrafts.length}` : ""} pending draft{visibleDrafts.length !== 1 ? "s" : ""}
+                            {draftFilter && (
+                              <span className="ml-2 text-indigo-500">
+                                — {draftFilter.replace(/_/g, " ")}
+                              </span>
+                            )}
+                          </p>
+
+                          <div className="flex items-center gap-2 relative">
+                            {/* Filter button */}
+                            <div className="relative" data-draft-filter>
+                              <button
+                                onClick={() => setShowDraftFilter(prev => !prev)}
+                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm ${
+                                  draftFilter
+                                    ? "bg-indigo-50 text-indigo-600 border-indigo-200"
+                                    : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+                                }`}
+                              >
+                                <Filter size={12} />
+                                {draftFilter ? draftFilter.replace(/_/g, " ") : "Filter"}
+                                <ChevronDown size={11} className={`transition-transform ${showDraftFilter ? "rotate-180" : ""}`} />
+                              </button>
+
+                              {/* Dropdown */}
+                              <AnimatePresence>
+                                {showDraftFilter && (
+                                  <motion.div
+                                    initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                                    exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="absolute right-0 top-full mt-2 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl shadow-slate-900/10 p-2 min-w-[200px]"
+                                  >
+                                    {/* All option */}
+                                    <button
+                                      onClick={() => { setDraftFilter(null); setShowDraftFilter(false); }}
+                                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                        !draftFilter
+                                          ? "bg-surgical-navy text-white"
+                                          : "text-slate-500 hover:bg-slate-50"
+                                      }`}
+                                    >
+                                      All Statuses
+                                      <span className="ml-auto text-[9px] font-bold opacity-60">{standardDrafts.length}</span>
+                                    </button>
+
+                                    {/* One chip per unique status */}
+                                    {uniqueStates.map(state => {
+                                      const count = standardDrafts.filter(d => {
+                                        if (isDraftScheduled(d)) return state === "DISPATCH_SCHEDULED";
+                                        const m = campaign.dms?.find(x => x.id === d.decision_maker_id);
+                                        return (m?.state || m?.status || "DRAFTED").toUpperCase() === state;
+                                      }).length;
+                                      return (
+                                        <button
+                                          key={state}
+                                          onClick={() => { setDraftFilter(state); setShowDraftFilter(false); }}
+                                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                            draftFilter === state
+                                              ? "bg-surgical-navy text-white"
+                                              : "text-slate-500 hover:bg-slate-50"
+                                          }`}
+                                        >
+                                          {state.replace(/_/g, " ")}
+                                          <span className="ml-auto text-[9px] font-bold opacity-60">{count}</span>
+                                        </button>
+                                      );
+                                    })}
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
                             </div>
 
-                            <div className="flex items-center gap-3 mt-8">
-                              <button
-                                onClick={() => {
-                                  setDraftEditData({ subject: draft.subject, body: draft.body, email: dm?.email || "" });
-                                  setSelectedDraft(draft);
-                                }}
-                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-slate-100"
-                              >
-                                <Edit3 size={14} /> Refine
-                              </button>
-                              <button
-                                onClick={() => handleSendMessage(draft.id, dm?.name)}
-                                disabled={sendingId === draft.id}
-                                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-surgical-navy hover:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md shadow-surgical-navy/20 disabled:opacity-50"
-                              >
-                                {sendingId === draft.id ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                                Deploy
-                              </button>
+                            {/* Dispatch All */}
+                            <button
+                              onClick={handleDispatchAll}
+                              disabled={isDispatchingAll}
+                              className="flex items-center gap-2 px-5 py-2.5 bg-surgical-navy hover:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md shadow-surgical-navy/20 disabled:opacity-50 active:scale-95"
+                            >
+                              {isDispatchingAll ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                              Dispatch All
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* ── Draft card grid ── */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {visibleDrafts.length === 0 ? (
+                            <div className="col-span-full bg-white rounded-[32px] border border-surgical-border p-20 text-center flex flex-col items-center gap-4">
+                              <Mail size={48} className="text-slate-200" strokeWidth={1} />
+                              <p className="text-sm font-black text-slate-400 uppercase tracking-widest italic">
+                                {draftFilter
+                                  ? `No drafts with status "${draftFilter.replace(/_/g, " ")}".`
+                                  : "No pending outreach protocols drafted."}
+                              </p>
+                              {draftFilter && (
+                                <button
+                                  onClick={() => setDraftFilter(null)}
+                                  className="text-[10px] font-black text-indigo-500 underline uppercase tracking-widest"
+                                >
+                                  Clear filter
+                                </button>
+                              )}
                             </div>
-                          </motion.div>
-                        );
-                      });
-                    })()}
-                  </div>
+                          ) : (
+                            visibleDrafts.map((draft) => {
+                              const dm = campaign.dms?.find(d => d.id === draft.decision_maker_id);
+                              const co = campaign.target_companies?.find(c => c.id === dm?.target_company_id);
+                              const dmState = dm?.state || dm?.status || "DRAFTED";
+
+                              // A draft is "locked" once it has been queued for scheduled dispatch
+                              const isScheduled = draft.dispatch_state === "QUEUED" && !!draft.scheduled_at;
+
+                              // Format the scheduled time for display on the card
+                              const scheduledDisplay = (() => {
+                                if (!draft.scheduled_at) return null;
+                                const raw = String(draft.scheduled_at).endsWith("Z")
+                                  ? draft.scheduled_at
+                                  : draft.scheduled_at + "Z";
+                                const d = new Date(raw);
+                                if (isNaN(d.getTime())) return null;
+                                return d.toLocaleString("en-US", {
+                                  weekday: "short", month: "short", day: "numeric",
+                                  hour: "numeric", minute: "2-digit",
+                                  timeZoneName: "short",
+                                  timeZone: dm?.display_timezone || undefined,
+                                });
+                              })();
+
+                              return (
+                                <motion.div
+                                  key={draft.id}
+                                  layout
+                                  initial={{ opacity: 0, scale: 0.95 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  className={`bg-white rounded-[28px] border p-6 shadow-sm transition-all flex flex-col justify-between ${
+                                    isScheduled
+                                      ? "border-blue-100 bg-blue-50/20"
+                                      : "border-surgical-border hover:shadow-xl hover:shadow-surgical-navy/5"
+                                  }`}
+                                >
+                                  <div className="space-y-4">
+                                    {/* Card header: avatar + name + STATUS BADGE */}
+                                    <div className="flex items-start justify-between gap-3">
+                                      <div className="flex items-center gap-3 min-w-0">
+                                        <div className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center font-black text-xs border ${
+                                          isScheduled
+                                            ? "bg-blue-50 text-blue-600 border-blue-100"
+                                            : "bg-red-50 text-red-600 border-red-100"
+                                        }`}>
+                                          {(dm?.name || "P").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                                        </div>
+                                        <div className="min-w-0">
+                                          <p className="text-xs font-black text-slate-900 uppercase tracking-tight truncate">{dm?.name}</p>
+                                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">{co?.name}</p>
+                                        </div>
+                                      </div>
+
+                                      {/* Status badge — "DISPATCH SCHEDULED" overrides prospect state */}
+                                      {isScheduled ? (
+                                        <span className="shrink-0 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border bg-blue-50 text-blue-600 border-blue-200 whitespace-nowrap">
+                                          Dispatch Scheduled
+                                        </span>
+                                      ) : (
+                                        statusBadge(dmState)
+                                      )}
+                                    </div>
+
+                                    {/* Scheduled time line */}
+                                    {isScheduled && scheduledDisplay && (
+                                      <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-xl">
+                                        <Clock size={11} className="text-blue-400 shrink-0" />
+                                        <p className="text-[10px] font-bold text-blue-600 truncate">
+                                          {scheduledDisplay}
+                                        </p>
+                                      </div>
+                                    )}
+
+                                    <div className="space-y-2">
+                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-1">Subject</p>
+                                      <p className="text-xs font-bold text-slate-800 line-clamp-1 italic">{draft.subject}</p>
+                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-1 mt-3">Message Snippet</p>
+                                      <p className="text-[11px] font-medium text-slate-500 line-clamp-3 leading-relaxed">
+                                        {draft.body.replace(/<[^>]*>/g, '').slice(0, 150)}...
+                                      </p>
+                                    </div>
+                                  </div>
+
+                                  <div className="flex items-center gap-3 mt-8">
+                                    <button
+                                      onClick={() => {
+                                        if (isScheduled) return;
+                                        setDraftEditData({ subject: draft.subject, body: draft.body, email: dm?.email || "" });
+                                        setSelectedDraft(draft);
+                                      }}
+                                      disabled={isScheduled}
+                                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                      <Edit3 size={14} /> Refine
+                                    </button>
+                                    <button
+                                      onClick={() => { if (!isScheduled) handleSendMessage(draft.id, dm?.name); }}
+                                      disabled={isScheduled || sendingId === draft.id}
+                                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-surgical-navy hover:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md shadow-surgical-navy/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                                    >
+                                      {sendingId === draft.id ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                                      {isScheduled ? "Queued" : "Deploy"}
+                                    </button>
+                                  </div>
+                                </motion.div>
+                              );
+                            })
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()
                 )}
               </motion.div>
             )}
@@ -1146,6 +1507,13 @@ const CampaignWorkspace = () => {
         onClose={() => setSelectedDraft(null)}
         onSave={handleSaveDraft}
         isSaving={isSaving}
+      />
+
+      {/* Draft Preview Modal (Read Only) */}
+      <DraftPreviewModal
+        selectedDraft={previewDraft}
+        campaign={campaign}
+        onClose={() => setPreviewDraft(null)}
       />
 
       {/* Interaction History Drawer */}

@@ -18,7 +18,8 @@ const ResearchTabs = ({
   setSelectedCompany,
   setSelectedDraft,
   setDraftEditData,
-  setActiveTab
+  setActiveTab,
+  onPreviewDraft
 }) => {
   const handleExport = (type, filenameExt) => {
     const token = localStorage.getItem("token");
@@ -467,10 +468,14 @@ const ResearchTabs = ({
                     <div
                       key={draft.id}
                       onClick={() => {
-                        setActiveTab("monitor");
-                        const email = dm?.email || `${dm?.name.toLowerCase().replace(/ /g, ".")}@${company?.website?.replace(/(https?:\/\/|www\.|\/)/g, "")}`;
-                        setDraftEditData({ subject: draft.subject, body: draft.body, email: email });
-                        setSelectedDraft(draft);
+                        if (onPreviewDraft) {
+                          onPreviewDraft(draft);
+                        } else {
+                          setActiveTab("monitor");
+                          const email = dm?.email || `${dm?.name.toLowerCase().replace(/ /g, ".")}@${company?.website?.replace(/(https?:\/\/|www\.|\/)/g, "")}`;
+                          setDraftEditData({ subject: draft.subject, body: draft.body, email: email });
+                          setSelectedDraft(draft);
+                        }
                       }}
                       className="bg-white rounded-[24px] border border-slate-200 p-6 cursor-pointer hover:shadow-xl hover:shadow-slate-100 transition-all flex flex-col justify-between min-h-[300px] h-full"
                     >

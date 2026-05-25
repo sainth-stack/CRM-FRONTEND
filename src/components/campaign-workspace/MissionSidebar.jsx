@@ -13,7 +13,6 @@ const MissionSidebar = ({ activeTab, setActiveTab, campaignName }) => {
     { id: "research", label: "Campaign", icon: Globe },
     { id: "monitor", label: "Outreach", icon: Mail },
     { id: "history", label: "Discovery", icon: PhoneCall },
-    { id: "report", label: "Analytics", icon: FileBarChart },
   ];
 
   return (

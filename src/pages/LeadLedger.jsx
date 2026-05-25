@@ -1,9 +1,11 @@
 import React, { useState } from "react";
-import { 
-  LayoutDashboard, Layers, BarChart2, LogOut, 
-  Search, Users, Download, ArrowLeft, ArrowUpRight, 
-  Building2, Plus, ArrowRight, Filter, ChevronDown, 
-  Globe, Linkedin, Mail, CheckCircle2, MoreHorizontal
+import {
+  LayoutDashboard, Layers, BarChart2, LogOut,
+  Search, Users, Download, ArrowLeft, ArrowUpRight,
+  Building2, Plus, ArrowRight, Filter, ChevronDown,
+  Globe, Linkedin, Mail, CheckCircle2, MoreHorizontal,
+  TrendingUp, Activity, MapPin, Target, Cpu, Sparkles, X,
+  Loader2, Send
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as XLSX from "xlsx";
@@ -17,6 +19,7 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
   const [activeView, setActiveView] = useState("DASHBOARD"); // DASHBOARD, PIPELINE, ANALYSIS
   const [dashboardPage, setDashboardPage] = useState(1);
   const [pipelinePage, setPipelinePage] = useState(1);
+  const [selectedSentimentFilter, setSelectedSentimentFilter] = useState(null); // null, "POSITIVE", "NEUTRAL", "NEGATIVE"
   const itemsPerPage = 10;
 
   const { showToast } = useToast();
@@ -25,6 +28,8 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
   const [draftEditData, setDraftEditData] = useState({ subject: "", body: "", email: "" });
   const [isSaving, setIsSaving] = useState(false);
   const [isSending, setIsSending] = useState(null);
+  const [isDispatching, setIsDispatching] = useState(null);
+  const [isDispatchingAll, setIsDispatchingAll] = useState(false);
   const rawCompanies = campaign?.target_companies || [];
   
   // Tactical Sorting Protocol: Approved targets first, Rejected last
@@ -212,13 +217,80 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
   const handleSendMessage = async (draftId, name) => {
     setIsSending(draftId);
     try {
-        await axios.post(`${API_BASE_URL}/drafts/${draftId}/send`);
-        showToast({ tone: "success", title: "Mission Accomplished", description: `Engagement targeting ${name} deployed.` });
+        const res = await axios.post(`${API_BASE_URL}/drafts/${draftId}/send`);
+        const data = res.data;
+        if (data.message === "already_scheduled") {
+            showToast({ tone: "success", title: "Already Scheduled", description: `Email to ${name} is queued for ${data.display}.` });
+        } else if (data.scheduled_at) {
+            showToast({ tone: "success", title: "Scheduled", description: `Email to ${name} will be sent on ${data.display} (${data.timezone}).` });
+        } else {
+            showToast({ tone: "success", title: "Deployed", description: `Engagement targeting ${name} deployed.` });
+        }
     } catch (error) {
         console.error("Tactical Deployment Failure:", error);
         showToast({ tone: "error", title: "Deployment Failed", description: "Strategic protocol failure." });
     } finally {
         setIsSending(null);
+    }
+  };
+
+  // States that support manual nudge dispatch
+  const isDispatchable = (dm) => {
+    const s = (dm.state || dm.status || "").toUpperCase();
+    return (
+      s === "INITIAL_SENT" ||
+      s === "REMINDER_1_SENT" ||
+      s === "FOLLOWUP_ACTIVE" ||
+      s === "WAITING_FOR_REPLY"
+    );
+  };
+
+  const handleDispatch = async (dmId, name) => {
+    setIsDispatching(dmId);
+    try {
+      const res = await axios.post(`${API_BASE_URL}/prospects/${dmId}/dispatch`);
+      const data = res.data;
+      if (data.message === "already_scheduled") {
+        showToast({
+          tone: "info",
+          title: "Already Queued",
+          description: `Reminder to ${name} is already scheduled for ${data.display}.`,
+        });
+      } else {
+        showToast({
+          tone: "success",
+          title: "Dispatch Scheduled",
+          description: `Reminder to ${name} will be sent on ${data.display} (${data.timezone}).`,
+        });
+      }
+    } catch (error) {
+      const detail = error.response?.data?.detail || "Dispatch failed.";
+      showToast({ tone: "error", title: "Dispatch Failed", description: detail });
+    } finally {
+      setIsDispatching(null);
+    }
+  };
+
+  const handleDispatchAll = async () => {
+    if (!campaign?.id) return;
+    setIsDispatchingAll(true);
+    try {
+      const res = await axios.post(`${API_BASE_URL}/campaigns/${campaign.id}/dispatch-all`);
+      const { scheduled_count, skipped_count, error_count } = res.data;
+      if (scheduled_count === 0 && skipped_count === 0) {
+        showToast({ tone: "info", title: "Nothing to Dispatch", description: "No eligible prospects found." });
+      } else {
+        showToast({
+          tone: "success",
+          title: `${scheduled_count} Dispatch${scheduled_count !== 1 ? "es" : ""} Queued`,
+          description: `${scheduled_count} scheduled${skipped_count > 0 ? `, ${skipped_count} skipped` : ""}${error_count > 0 ? `, ${error_count} failed` : ""}.`,
+        });
+      }
+    } catch (error) {
+      const detail = error.response?.data?.detail || "Batch dispatch failed.";
+      showToast({ tone: "error", title: "Dispatch All Failed", description: detail });
+    } finally {
+      setIsDispatchingAll(false);
     }
   };
 
@@ -541,12 +613,24 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
                   <p className="text-slate-400 text-xs font-bold tracking-wider uppercase mt-1">Direct Contacts & Prospects</p>
                 </div>
 
-                <button
-                  onClick={handleExport}
-                  className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-red-500/20 active:scale-95"
-                >
-                  <ArrowLeft className="rotate-180" size={14} /> Export
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleDispatchAll}
+                    disabled={isDispatchingAll}
+                    className="flex items-center gap-2 bg-surgical-navy hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-surgical-navy/20 active:scale-95 disabled:opacity-50"
+                  >
+                    {isDispatchingAll
+                      ? <Loader2 size={13} className="animate-spin" />
+                      : <Send size={13} />}
+                    Dispatch All
+                  </button>
+                  <button
+                    onClick={handleExport}
+                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-red-500/20 active:scale-95"
+                  >
+                    <ArrowLeft className="rotate-180" size={14} /> Export
+                  </button>
+                </div>
               </div>
 
               {/* Data Table section - No Rank Column */}
@@ -559,13 +643,14 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
                         <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100">Organization</th>
                         <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100">LinkedIn</th>
                         <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100">Verified Email</th>
-                        <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Active Status</th>
+                        <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100">Active Status</th>
+                        <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Actions</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-50">
                       {paginatedContacts.length === 0 ? (
                         <tr>
-                          <td colSpan="5" className="px-4 py-8 text-center text-slate-400 font-bold text-xs">
+                          <td colSpan="6" className="px-4 py-8 text-center text-slate-400 font-bold text-xs">
                             No active prospect contacts found.
                           </td>
                         </tr>
@@ -613,8 +698,24 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
                                 </span>
                               </div>
                             </td>
-                            <td className="px-4 py-4">
+                            <td className="px-4 py-4 border-r border-slate-100">
                               {getStatusBadge(item.status)}
+                            </td>
+                            <td className="px-4 py-4" onClick={e => e.stopPropagation()}>
+                              {isDispatchable(item) ? (
+                                <button
+                                  onClick={() => handleDispatch(item.id, item.name)}
+                                  disabled={isDispatching === item.id}
+                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-surgical-navy hover:bg-slate-800 text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm shadow-surgical-navy/20 disabled:opacity-50 whitespace-nowrap"
+                                >
+                                  {isDispatching === item.id
+                                    ? <Loader2 size={11} className="animate-spin" />
+                                    : <Send size={11} />}
+                                  Dispatch
+                                </button>
+                              ) : (
+                                <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">—</span>
+                              )}
                             </td>
                           </motion.tr>
                         ))
@@ -668,7 +769,10 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
             const totalDMsAnalysed = contacts.length;
             const totalCompaniesCount = rawCompanies.length || 1;
 
-            const totalSynergy = rawCompanies.reduce((acc, c) => acc + (c.relevance_score || c.similarity_score || 0), 0);
+            const totalSynergy = rawCompanies.reduce((acc, c) => {
+              const scoreVal = c.relevance_score || (c.similarity_score && typeof c.similarity_score === 'object' ? c.similarity_score.score : c.similarity_score) || 0;
+              return acc + Number(scoreVal);
+            }, 0);
             const avgSynergy = rawCompanies.length ? Math.round(totalSynergy / rawCompanies.length) : 0;
 
             const draftedDMs = contacts.filter(isDrafted).length;
@@ -680,6 +784,72 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
             const finalNeg = contacts.filter(isNegative).length;
             const sumForIntent = totalDMsAnalysed || 1;
 
+            // 1. Industry / Vertical Leaderboard
+            const industryMap = {};
+            rawCompanies.forEach(c => {
+              const ind = c.industry || c.company_type || "Technology & Services";
+              const scoreVal = c.relevance_score || (c.similarity_score && typeof c.similarity_score === 'object' ? c.similarity_score.score : c.similarity_score) || 0;
+              if (!industryMap[ind]) {
+                industryMap[ind] = { count: 0, totalScore: 0 };
+              }
+              industryMap[ind].count += 1;
+              industryMap[ind].totalScore += Number(scoreVal);
+            });
+            const industries = Object.entries(industryMap).map(([name, data]) => ({
+              name,
+              count: data.count,
+              avgScore: Math.round(data.totalScore / data.count)
+            })).sort((a, b) => b.count - a.count || b.avgScore - a.avgScore).slice(0, 5);
+
+            // 2. Executive Persona Distribution
+            let execCount = 0;
+            let vpCount = 0;
+            let mgrCount = 0;
+            let otherCount = 0;
+
+            contacts.forEach(dm => {
+              const pos = (dm.position || "").toUpperCase();
+              if (pos.includes("CEO") || pos.includes("FOUNDER") || pos.includes("CHIEF") || pos.includes("CXO") || pos.includes("PRESIDENT") || pos.includes("C-LEVEL")) {
+                execCount++;
+              } else if (pos.includes("VP") || pos.includes("VICE") || pos.includes("DIRECTOR") || pos.includes("HEAD")) {
+                vpCount++;
+              } else if (pos.includes("MANAGER") || pos.includes("LEAD") || pos.includes("PRINCIPAL")) {
+                mgrCount++;
+              } else {
+                otherCount++;
+              }
+            });
+            const totalDMsCount = totalDMsAnalysed || 1;
+            const execPercent = Math.round((execCount / totalDMsCount) * 100);
+            const vpPercent = Math.round((vpCount / totalDMsCount) * 100);
+            const mgrPercent = Math.round((mgrCount / totalDMsCount) * 100);
+            const otherPercent = Math.round((otherCount / totalDMsCount) * 100);
+
+            // 3. Location Regional Cluster Map
+            const locationMap = {};
+            rawCompanies.forEach(c => {
+              const loc = c.location || "North America";
+              if (!locationMap[loc]) {
+                locationMap[loc] = 0;
+              }
+              locationMap[loc] += 1;
+            });
+            const locations = Object.entries(locationMap).map(([name, count]) => ({
+              name,
+              count,
+              percentage: Math.round((count / totalCompaniesCount) * 100)
+            })).sort((a, b) => b.count - a.count).slice(0, 5);
+
+            // 4. Tactical Efficiency Metrics
+            const draftEfficiency = totalDMsAnalysed ? Math.round(((draftedDMs + sentDMs) / totalDMsAnalysed) * 100) : 0;
+            const inboundYield = sentDMs ? Math.round((positiveReplies / sentDMs) * 100) : 0;
+            
+            const meetingBookedCount = contacts.filter(dm => {
+              const s = (dm.status || dm.state || "").toUpperCase();
+              return s.includes("BOOKED") || s.includes("MEETING");
+            }).length;
+            const conversionEfficiency = positiveReplies ? Math.round((meetingBookedCount / positiveReplies) * 100) : 0;
+
             return (
               <motion.div
                 key="analysis"
@@ -687,68 +857,73 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.2 }}
-                className="space-y-6 select-none"
+                className="space-y-8 select-none"
               >
                 {/* Header Section */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-                      Campaign Intelligence & Analytics
-                    </h1>
-                    <p className="text-slate-400 text-xs font-bold tracking-wider uppercase mt-1">Real-time engagement breakdown</p>
+                <div className="flex items-center justify-between border-b border-[#FAF1EE] pb-5">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-red-50 text-red-600 border border-red-100 rounded-2xl flex items-center justify-center shadow-sm">
+                      <TrendingUp size={24} strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">
+                        Campaign Intelligence & Analytics
+                      </h1>
+                      <p className="text-slate-400 text-xs font-bold tracking-wider uppercase mt-2">Real-time engagement breakdown & advanced intelligence diagnostics</p>
+                    </div>
                   </div>
 
                   <button
                     onClick={handleExport}
-                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-red-500/20 active:scale-95"
+                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-red-500/20 active:scale-95"
                   >
-                    <ArrowLeft className="rotate-180" size={14} /> Export Report
+                    <ArrowLeft className="rotate-180" size={14} /> Export Strategic Report
                   </button>
                 </div>
 
                 {/* 1. Stat Grid Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-white border border-slate-100 p-5 rounded-[24px] shadow-sm flex flex-col justify-between h-[120px]">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div className="bg-white border border-[#FAF1EE] p-6 rounded-[28px] shadow-sm flex flex-col justify-between h-[130px] hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Profiled Contacts</span>
-                      <Users size={16} className="text-slate-400" />
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Profiled Contacts</span>
+                      <div className="w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center text-red-500"><Users size={16} /></div>
                     </div>
                     <div>
-                      <h3 className="text-2xl font-black text-slate-800 tracking-tight">{totalDMsAnalysed}</h3>
-                      <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider mt-0.5">Identified decision makers</p>
+                      <h3 className="text-3xl font-black text-slate-900 tracking-tight">{totalDMsAnalysed}</h3>
+                      <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider mt-1">Identified decision makers</p>
                     </div>
                   </div>
 
-                  <div className="bg-white border border-slate-100 p-5 rounded-[24px] shadow-sm flex flex-col justify-between h-[120px]">
+                  <div className="bg-white border border-[#FAF1EE] p-6 rounded-[28px] shadow-sm flex flex-col justify-between h-[130px] hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Validated Companies</span>
-                      <Building2 size={16} className="text-slate-400" />
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Validated Companies</span>
+                      <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500"><Building2 size={16} /></div>
                     </div>
                     <div>
-                      <h3 className="text-2xl font-black text-slate-800 tracking-tight">{approvedCos}</h3>
-                      <p className="text-[9px] font-bold text-indigo-600 uppercase tracking-wider mt-0.5">Approved targets out of {rawCompanies.length}</p>
+                      <h3 className="text-3xl font-black text-slate-900 tracking-tight">{approvedCos}</h3>
+                      <p className="text-[9px] font-bold text-indigo-600 uppercase tracking-wider mt-1">Approved targets out of {rawCompanies.length}</p>
                     </div>
                   </div>
 
-                  <div className="bg-white border border-slate-100 p-5 rounded-[24px] shadow-sm flex flex-col justify-between h-[120px]">
+                  <div className="bg-white border border-[#FAF1EE] p-6 rounded-[28px] shadow-sm flex flex-col justify-between h-[130px] hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Average Synergy</span>
-                      <BarChart2 size={16} className="text-slate-400" />
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Average Synergy</span>
+                      <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500"><BarChart2 size={16} /></div>
                     </div>
                     <div>
-                      <h3 className="text-2xl font-black text-slate-800 tracking-tight">{avgSynergy}%</h3>
-                      <p className="text-[9px] font-bold text-amber-600 uppercase tracking-wider mt-0.5">Alignment matching average</p>
+                      <h3 className="text-3xl font-black text-slate-900 tracking-tight">{avgSynergy}%</h3>
+                      <p className="text-[9px] font-bold text-amber-600 uppercase tracking-wider mt-1">Alignment matching average</p>
                     </div>
                   </div>
 
-                  <div className="bg-white border border-slate-100 p-5 rounded-[24px] shadow-sm flex flex-col justify-between h-[120px]">
+                  <div className="bg-white border border-[#FAF1EE] p-6 rounded-[28px] shadow-sm flex flex-col justify-between h-[130px] hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">Sent & Queued</span>
-                      <Mail size={16} className="text-slate-400" />
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sent & Queued</span>
+                      <div className="w-8 h-8 rounded-xl bg-rose-50 flex items-center justify-center text-rose-500"><Mail size={16} /></div>
                     </div>
                     <div>
-                      <h3 className="text-2xl font-black text-slate-800 tracking-tight">{sentDMs + draftedDMs}</h3>
-                      <p className="text-[9px] font-bold text-red-600 uppercase tracking-wider mt-0.5">Outreach pipelines ready</p>
+                      <h3 className="text-3xl font-black text-slate-900 tracking-tight">{sentDMs + draftedDMs}</h3>
+                      <p className="text-[9px] font-bold text-red-600 uppercase tracking-wider mt-1">Outreach pipelines ready</p>
                     </div>
                   </div>
                 </div>
@@ -756,44 +931,44 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
                 {/* 2. Graphical Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Graph A: Lead Approval & Quality Donut / Multi-Ring */}
-                  <div className="bg-white border border-slate-100 p-6 rounded-[24px] shadow-sm flex flex-col justify-between h-[360px] overflow-hidden">
+                  <div className="bg-white border border-[#FAF1EE] p-6 rounded-[28px] shadow-sm flex flex-col justify-between h-[380px] overflow-hidden hover:shadow-md transition-all">
                     <div>
-                      <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2 mb-1">
+                      <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2 mb-1">
                         Qualification Audit
                       </h3>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Ratio of valid target identities</p>
 
-                      <div className="flex flex-col gap-5 mt-2">
+                      <div className="flex flex-col gap-6 mt-4">
                         {/* Custom visual progress bars for clear representation */}
-                        <div className="space-y-1.5">
-                          <div className="flex justify-between text-xs font-bold text-slate-700">
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-xs font-extrabold text-slate-800">
                             <span className="flex items-center gap-1.5 uppercase text-[10px] tracking-wider text-emerald-600">
                               <span className="w-2.5 h-2.5 rounded bg-emerald-500 block shrink-0" />
                               Approved Companies
                             </span>
-                            <span>{approvedCos} / {rawCompanies.length}</span>
+                            <span className="tabular-nums">{approvedCos} / {rawCompanies.length}</span>
                           </div>
-                          <div className="w-full h-2.5 bg-slate-50 border border-slate-100 rounded-full overflow-hidden flex">
+                          <div className="w-full h-3 bg-slate-50 border border-slate-100 rounded-full overflow-hidden flex">
                             <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${Math.round((approvedCos / totalCompaniesCount) * 100)}%` }} />
                           </div>
                         </div>
 
-                        <div className="space-y-1.5">
-                          <div className="flex justify-between text-xs font-bold text-slate-700">
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-xs font-extrabold text-slate-800">
                             <span className="flex items-center gap-1.5 uppercase text-[10px] tracking-wider text-rose-500">
                               <span className="w-2.5 h-2.5 rounded bg-rose-500 block shrink-0" />
                               Rejected Companies
                             </span>
-                            <span>{rejectedCos} / {rawCompanies.length}</span>
+                            <span className="tabular-nums">{rejectedCos} / {rawCompanies.length}</span>
                           </div>
-                          <div className="w-full h-2.5 bg-slate-50 border border-slate-100 rounded-full overflow-hidden flex">
+                          <div className="w-full h-3 bg-slate-50 border border-slate-100 rounded-full overflow-hidden flex">
                             <div className="h-full bg-rose-500 rounded-full transition-all duration-500" style={{ width: `${Math.round((rejectedCos / totalCompaniesCount) * 100)}%` }} />
                           </div>
                         </div>
 
-                        <div className="border-t border-slate-50 pt-4 mt-2 flex flex-col gap-1 text-center">
+                        <div className="border-t border-[#FAF1EE] pt-5 mt-3 flex flex-col gap-1 text-center bg-gradient-to-r from-emerald-50/20 to-transparent p-3 rounded-2xl">
                           <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Campaign Identity Success Rate</span>
-                          <span className="text-xl font-black text-slate-800 tabular-nums">
+                          <span className="text-2xl font-black text-slate-800 tabular-nums">
                             {Math.round((approvedCos / totalCompaniesCount) * 100)}%
                           </span>
                         </div>
@@ -802,16 +977,16 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
                   </div>
 
                   {/* Graph B: Conversion Funnel Stages */}
-                  <div className="bg-white border border-slate-100 p-6 rounded-[24px] shadow-sm flex flex-col justify-between h-[360px] overflow-hidden">
+                  <div className="bg-white border border-[#FAF1EE] p-6 rounded-[28px] shadow-sm flex flex-col justify-between h-[380px] overflow-hidden hover:shadow-md transition-all">
                     <div>
-                      <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2 mb-1">
+                      <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2 mb-1">
                         Pipeline Conversion Funnel
                       </h3>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Stage lifecycle of direct contacts</p>
 
-                      <div className="flex flex-col gap-3.5">
+                      <div className="flex flex-col gap-4 mt-2">
                         {/* Interactive stepped funnel layout */}
-                        <div className="p-3 bg-slate-50/70 border border-slate-100/60 rounded-2xl flex items-center justify-between">
+                        <div className="p-3 bg-slate-50/70 border border-slate-100/60 rounded-2xl flex items-center justify-between hover:bg-slate-100/50 transition-colors">
                           <div className="flex items-center gap-3">
                             <div className="w-7 h-7 bg-red-100 flex items-center justify-center rounded-xl text-red-600 font-bold text-xs shrink-0">1</div>
                             <div className="flex flex-col">
@@ -822,7 +997,7 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
                           <span className="text-sm font-black text-slate-800 tabular-nums">{totalDMsAnalysed}</span>
                         </div>
 
-                        <div className="p-3 bg-slate-50/70 border border-slate-100/60 rounded-2xl flex items-center justify-between">
+                        <div className="p-3 bg-slate-50/70 border border-slate-100/60 rounded-2xl flex items-center justify-between hover:bg-slate-100/50 transition-colors">
                           <div className="flex items-center gap-3">
                             <div className="w-7 h-7 bg-amber-100 flex items-center justify-center rounded-xl text-amber-600 font-bold text-xs shrink-0">2</div>
                             <div className="flex flex-col">
@@ -833,7 +1008,7 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
                           <span className="text-sm font-black text-slate-800 tabular-nums">{draftedDMs + sentDMs}</span>
                         </div>
 
-                        <div className="p-3 bg-slate-50/70 border border-slate-100/60 rounded-2xl flex items-center justify-between">
+                        <div className="p-3 bg-slate-50/70 border border-slate-100/60 rounded-2xl flex items-center justify-between hover:bg-slate-100/50 transition-colors">
                           <div className="flex items-center gap-3">
                             <div className="w-7 h-7 bg-emerald-100 flex items-center justify-center rounded-xl text-emerald-600 font-bold text-xs shrink-0">3</div>
                             <div className="flex flex-col">
@@ -848,49 +1023,82 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
                   </div>
 
                   {/* Graph C: Sentiment & Reply Intent Analysis */}
-                  <div className="bg-white border border-slate-100 p-6 rounded-[24px] shadow-sm flex flex-col justify-between h-[360px] overflow-hidden">
+                  <div className="bg-white border border-[#FAF1EE] p-6 rounded-[28px] shadow-sm flex flex-col justify-between h-[380px] overflow-hidden hover:shadow-md transition-all">
                     <div>
-                      <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2 mb-1">
+                      <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2 mb-1">
                         Sentiment Analysis
                       </h3>
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Breakdown of reply intent signals</p>
 
-                      <div className="flex flex-col gap-4 mt-2">
+                      <div className="flex flex-col gap-5 mt-3">
                         {/* Horizontal Stacked Bar */}
-                        <div className="w-full h-6 bg-slate-100 rounded-xl overflow-hidden flex border border-slate-200/40">
-                          <div className="h-full bg-emerald-500 transition-all" style={{ width: `${Math.round((finalPos / sumForIntent) * 100)}%` }} title="Positive Response" />
-                          <div className="h-full bg-amber-400 transition-all" style={{ width: `${Math.round((finalNeu / sumForIntent) * 100)}%` }} title="Neutral Response" />
-                          <div className="h-full bg-rose-500 transition-all" style={{ width: `${Math.round((finalNeg / sumForIntent) * 100)}%` }} title="Negative Response" />
+                        <div className="w-full h-7 bg-slate-100 rounded-xl overflow-hidden flex border border-slate-200/40 p-0.5 select-none">
+                          {finalPos > 0 && (
+                            <div 
+                              onClick={() => setSelectedSentimentFilter("POSITIVE")}
+                              className="h-full bg-emerald-500 cursor-pointer hover:brightness-95 transition-all rounded-l-lg" 
+                              style={{ width: `${Math.round((finalPos / sumForIntent) * 100)}%` }} 
+                              title="Click to view positive response prospects" 
+                            />
+                          )}
+                          {finalNeu > 0 && (
+                            <div 
+                              onClick={() => setSelectedSentimentFilter("NEUTRAL")}
+                              className="h-full bg-amber-400 cursor-pointer hover:brightness-95 transition-all" 
+                              style={{ width: `${Math.round((finalNeu / sumForIntent) * 100)}%` }} 
+                              title="Click to view neutral response prospects" 
+                            />
+                          )}
+                          {finalNeg > 0 && (
+                            <div 
+                              onClick={() => setSelectedSentimentFilter("NEGATIVE")}
+                              className="h-full bg-rose-500 cursor-pointer hover:brightness-95 transition-all rounded-r-lg" 
+                              style={{ width: `${Math.round((finalNeg / sumForIntent) * 100)}%` }} 
+                              title="Click to view negative response prospects" 
+                            />
+                          )}
                         </div>
 
                         {/* Stacked Legend */}
-                        <div className="flex flex-col gap-3 mt-1">
-                          <div className="flex items-center justify-between">
+                        <div className="flex flex-col gap-3 mt-2 select-none">
+                          <div 
+                            onClick={() => setSelectedSentimentFilter("POSITIVE")}
+                            className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-all border border-transparent hover:border-[#FAF1EE] w-full"
+                            title="Click to view positive response prospects"
+                          >
                             <span className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                              <span className="w-3 h-3 rounded-full bg-emerald-500 shrink-0 block" />
-                              Positive
+                              <span className="w-3.5 h-3.5 rounded-lg bg-emerald-500 shrink-0 block" />
+                              Positive Intent
                             </span>
-                            <span className="text-xs font-bold text-slate-800 tabular-nums">
+                            <span className="text-xs font-black text-slate-800 tabular-nums">
                               {Math.round((finalPos / sumForIntent) * 100)}%
                             </span>
                           </div>
 
-                          <div className="flex items-center justify-between">
+                          <div 
+                            onClick={() => setSelectedSentimentFilter("NEUTRAL")}
+                            className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-all border border-transparent hover:border-[#FAF1EE] w-full"
+                            title="Click to view neutral response prospects"
+                          >
                             <span className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                              <span className="w-3 h-3 rounded-full bg-amber-400 shrink-0 block" />
-                              Neutral / Awaiting
+                              <span className="w-3.5 h-3.5 rounded-lg bg-amber-400 shrink-0 block" />
+                              Neutral / Waiting
                             </span>
-                            <span className="text-xs font-bold text-slate-800 tabular-nums">
+                            <span className="text-xs font-black text-slate-800 tabular-nums">
                               {Math.round((finalNeu / sumForIntent) * 100)}%
                             </span>
                           </div>
 
-                          <div className="flex items-center justify-between">
+                          <div 
+                            onClick={() => setSelectedSentimentFilter("NEGATIVE")}
+                            className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-all border border-transparent hover:border-[#FAF1EE] w-full"
+                            title="Click to view negative response prospects"
+                          >
                             <span className="flex items-center gap-2 text-xs font-bold text-slate-600">
-                              <span className="w-3 h-3 rounded-full bg-rose-500 shrink-0 block" />
-                              Negative
+                              <span className="w-3.5 h-3.5 rounded-lg bg-rose-500 shrink-0 block" />
+                              Negative Intent
                             </span>
-                            <span className="text-xs font-bold text-slate-800 tabular-nums">
+                            <span className="text-xs font-black text-slate-800 tabular-nums">
                               {Math.round((finalNeg / sumForIntent) * 100)}%
                             </span>
                           </div>
@@ -898,6 +1106,144 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* 3. NEW SECTION: Advanced Strategic Market & Persona Mapping */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  
+                  {/* Left Column: Target Vertical Alignment Leaderboard */}
+                  <div className="bg-white border border-[#FAF1EE] p-6 rounded-[28px] shadow-sm flex flex-col justify-between min-h-[380px] hover:shadow-md transition-all">
+                    <div>
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                            <Sparkles size={16} className="text-[#FE1919]" />
+                            Target Vertical Alignment Leaderboard
+                          </h3>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Top targeted sectors sorted by volume and synergy</p>
+                        </div>
+                        <span className="px-2 py-0.5 bg-[#FFF0EF] text-[#FE1919] border border-[#FFDEDC] rounded-lg text-[8px] font-black uppercase tracking-widest">
+                          Market Penetration
+                        </span>
+                      </div>
+
+                      <div className="space-y-4 mt-6">
+                        {industries.length === 0 ? (
+                          <p className="text-xs text-slate-400 font-bold italic py-10 text-center">No vertical clusters mapped.</p>
+                        ) : (
+                          industries.map((ind, i) => (
+                            <div key={i} className="flex flex-col gap-1.5 p-3 rounded-2xl hover:bg-slate-50 transition-colors">
+                              <div className="flex items-center justify-between text-xs font-extrabold text-slate-800">
+                                <span className="flex items-center gap-2 truncate pr-4">
+                                  <span className="w-5 h-5 rounded-lg bg-slate-900 text-white flex items-center justify-center text-[9px] font-black">{i + 1}</span>
+                                  {ind.name}
+                                </span>
+                                <span className="flex items-center gap-1.5 shrink-0">
+                                  <span className="px-2 py-0.5 bg-slate-50 border border-slate-100 rounded text-[9px] font-black text-slate-400 uppercase">{ind.count} {ind.count === 1 ? 'Org' : 'Orgs'}</span>
+                                  <span className="text-[#FE1919] font-black">{ind.avgScore}% Match</span>
+                                </span>
+                              </div>
+                              <div className="w-full h-2 bg-slate-50 border border-slate-100 rounded-full overflow-hidden flex">
+                                <div 
+                                  className="h-full bg-slate-900 rounded-full transition-all" 
+                                  style={{ width: `${ind.avgScore}%` }} 
+                                />
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Strategic Executive Persona Distribution */}
+                  <div className="bg-white border border-[#FAF1EE] p-6 rounded-[28px] shadow-sm flex flex-col justify-between min-h-[380px] hover:shadow-md transition-all">
+                    <div>
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
+                            <Cpu size={16} className="text-indigo-500" />
+                            Strategic Persona Seniority Mapping
+                          </h3>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Target stakeholder distribution based on organizational hierarchy</p>
+                        </div>
+                        <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-lg text-[8px] font-black uppercase tracking-widest">
+                          Persona Metrics
+                        </span>
+                      </div>
+
+                      <div className="space-y-4 mt-6">
+                        {/* Executive Leadership (C-Level) */}
+                        <div className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center font-bold text-xs shrink-0">CXO</div>
+                            <div className="flex flex-col">
+                              <span className="text-xs font-black text-slate-800 uppercase tracking-wider leading-none">Executive Leadership</span>
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{execCount} Decision Makers targeted</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span className="text-xs font-black text-slate-900">{execPercent}%</span>
+                            <div className="w-16 h-2 bg-slate-50 border border-slate-100 rounded-full overflow-hidden shrink-0">
+                              <div className="h-full bg-rose-500 rounded-full" style={{ width: `${execPercent}%` }} />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Middle Management (VP / Directors) */}
+                        <div className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-500 flex items-center justify-center font-bold text-xs shrink-0">DIR</div>
+                            <div className="flex flex-col">
+                              <span className="text-xs font-black text-slate-800 uppercase tracking-wider leading-none">Middle Management</span>
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{vpCount} Decision Makers targeted</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span className="text-xs font-black text-slate-900">{vpPercent}%</span>
+                            <div className="w-16 h-2 bg-slate-50 border border-slate-100 rounded-full overflow-hidden shrink-0">
+                              <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${vpPercent}%` }} />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Operational Managers / Leads */}
+                        <div className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center font-bold text-xs shrink-0">MGR</div>
+                            <div className="flex flex-col">
+                              <span className="text-xs font-black text-slate-800 uppercase tracking-wider leading-none">Operational Leadership</span>
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{mgrCount} Decision Makers targeted</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span className="text-xs font-black text-slate-900">{mgrPercent}%</span>
+                            <div className="w-16 h-2 bg-slate-50 border border-slate-100 rounded-full overflow-hidden shrink-0">
+                              <div className="h-full bg-amber-500 rounded-full" style={{ width: `${mgrPercent}%` }} />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Other Personnel */}
+                        <div className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-xl bg-slate-50 text-slate-500 flex items-center justify-center font-bold text-xs shrink-0">STF</div>
+                            <div className="flex flex-col">
+                              <span className="text-xs font-black text-slate-800 uppercase tracking-wider leading-none">Other Strategic Contacts</span>
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{otherCount} Decision Makers targeted</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-4">
+                            <span className="text-xs font-black text-slate-900">{otherPercent}%</span>
+                            <div className="w-16 h-2 bg-slate-50 border border-slate-100 rounded-full overflow-hidden shrink-0">
+                              <div className="h-full bg-slate-400 rounded-full" style={{ width: `${otherPercent}%` }} />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
               </motion.div>
             );
@@ -920,7 +1266,249 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
         onSave={handleSaveDraft}
         isSaving={isSaving}
       />
+
+      <SentimentBreakdownModal
+        isOpen={!!selectedSentimentFilter}
+        sentiment={selectedSentimentFilter}
+        contacts={contacts}
+        campaign={campaign}
+        onClose={() => setSelectedSentimentFilter(null)}
+        isEngaged={isEngaged}
+        isNeutral={isNeutral}
+        isNegative={isNegative}
+        getFallbackContactLinkedin={getFallbackContactLinkedin}
+        getStatusBadge={getStatusBadge}
+        setSelectedDraft={setSelectedDraft}
+        setDraftEditData={setDraftEditData}
+      />
     </div>
+  );
+};
+
+// Inline premium modal component for breakdown and direct draft refine actions
+const SentimentBreakdownModal = ({
+  isOpen,
+  sentiment,
+  contacts,
+  campaign,
+  onClose,
+  isEngaged,
+  isNeutral,
+  isNegative,
+  getFallbackContactLinkedin,
+  getStatusBadge,
+  setSelectedDraft,
+  setDraftEditData,
+}) => {
+  if (!isOpen) return null;
+
+  let title = "Prospect Intelligence Breakdown";
+  let badgeColor = "bg-slate-100 text-slate-600 border-slate-200";
+  let filteredList = [];
+
+  if (sentiment === "POSITIVE") {
+    title = "Positive Intent Prospects";
+    badgeColor = "bg-emerald-50 text-emerald-600 border-emerald-200";
+    filteredList = contacts.filter(isEngaged);
+  } else if (sentiment === "NEUTRAL") {
+    title = "Neutral & Awaiting Prospects";
+    badgeColor = "bg-amber-50 text-amber-600 border-amber-200";
+    filteredList = contacts.filter(isNeutral);
+  } else if (sentiment === "NEGATIVE") {
+    title = "Negative / Terminated Prospects";
+    badgeColor = "bg-rose-50 text-rose-600 border-rose-200";
+    filteredList = contacts.filter(isNegative);
+  }
+
+  // Slight curved status badge custom renderer
+  const getCurvedStatusBadge = (status) => {
+    const s = (status || "NEW").toUpperCase().replace(/_/g, " ");
+    let colors = "bg-slate-50 text-slate-400 border-slate-100";
+
+    if (s.includes("DRAFTED")) colors = "bg-amber-50 text-amber-600 border-amber-100";
+    if (s.includes("SENT")) colors = "bg-indigo-50 text-indigo-600 border-indigo-100";
+    if (s.includes("BOOKED") || s.includes("DISCOVERY")) colors = "bg-emerald-50 text-emerald-600 border-emerald-100";
+    if (s.includes("TERMINATED")) colors = "bg-rose-50 text-rose-500 border-rose-100";
+    if (s.includes("SYNCED") || s === "NEW") colors = "bg-slate-100 text-slate-600 border-slate-200";
+
+    return (
+      <span 
+        className={`px-2 py-1 text-[9px] font-black rounded-md border uppercase tracking-tighter whitespace-nowrap ${colors}`}
+        style={{ borderRadius: "6px" }}
+      >
+        {s}
+      </span>
+    );
+  };
+
+  return (
+    <AnimatePresence>
+      <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 md:p-6 lg:p-12 overflow-y-auto select-none">
+        {/* Glass blur backdrop */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          onClick={onClose}
+          className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+        />
+
+        {/* Modal Panel Container */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.98, y: 15 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.98, y: 15 }}
+          className="relative w-full max-w-4xl bg-gradient-to-br from-[#FAF5F4] to-[#FFFDFC] rounded-2xl shadow-2xl overflow-hidden flex flex-col z-10 border border-[#FAF1EE] text-slate-800 font-sans"
+          style={{ borderRadius: "16px" }}
+        >
+          {/* Header */}
+          <div className="px-6 py-5 md:px-8 md:py-6 flex items-center justify-between border-b border-[#FAF1EE] bg-white/70 backdrop-blur-sm sticky top-0 z-20 shrink-0">
+            <div className="flex items-center gap-4">
+              <div 
+                className="w-11 h-11 bg-slate-900 text-white rounded-xl flex items-center justify-center font-bold shadow-md shadow-slate-950/10"
+                style={{ borderRadius: "10px" }}
+              >
+                <Users size={18} />
+              </div>
+              <div>
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h3 className="text-lg md:text-xl font-black text-slate-900 tracking-tight leading-none uppercase italic">
+                    {title}
+                  </h3>
+                  <span 
+                    className={`px-2 py-0.5 border rounded-md text-[9px] font-black uppercase tracking-widest ${badgeColor}`}
+                    style={{ borderRadius: "6px" }}
+                  >
+                    {filteredList.length} {filteredList.length === 1 ? "Prospect" : "Prospects"}
+                  </span>
+                </div>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1.5">
+                  Tactical intent classification breakdown
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={onClose}
+              className="w-10 h-10 hover:bg-[#FFF0EF] hover:text-[#FE1919] border border-[#FAF1EE] rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 transition-all bg-white shadow-sm cursor-pointer"
+              style={{ borderRadius: "10px" }}
+            >
+              <X size={18} strokeWidth={2.5} />
+            </button>
+          </div>
+
+          {/* List Content */}
+          <div className="p-6 md:p-8 overflow-y-auto max-h-[60vh] custom-scrollbar flex flex-col gap-4 select-text bg-white/40">
+            {filteredList.length === 0 ? (
+              <div 
+                className="py-20 text-center flex flex-col items-center justify-center gap-4 border border-dashed border-slate-200 rounded-xl bg-white/50 select-none"
+                style={{ borderRadius: "12px" }}
+              >
+                <Sparkles className="w-12 h-12 text-slate-300 animate-pulse" />
+                <div>
+                  <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider leading-none">No prospects found</h4>
+                  <p className="text-[11px] font-semibold text-slate-400 leading-normal mt-2 max-w-xs mx-auto">
+                    No decision-makers fit this intent classification in the current operational pipeline.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div 
+                className="bg-white border border-[#FAF1EE] rounded-xl shadow-sm divide-y divide-[#FAF1EE] overflow-hidden"
+                style={{ borderRadius: "12px" }}
+              >
+                {filteredList.map((dm) => {
+                  const lastInboundLog = (dm.logs || []).find((l) => l.direction === "RECEIVED");
+
+                  return (
+                    <div
+                      key={dm.id}
+                      className="p-5 hover:bg-slate-50/50 transition-all grid grid-cols-1 md:grid-cols-12 gap-4 items-center"
+                    >
+                      {/* Monogram avatar + title */}
+                      <div className="col-span-12 md:col-span-4 flex items-center gap-3">
+                        <div 
+                          className="w-10 h-10 bg-slate-900 text-white rounded-lg flex items-center justify-center font-extrabold text-sm shrink-0 shadow-sm select-none"
+                          style={{ borderRadius: "8px" }}
+                        >
+                          {(dm.name || "P").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-sm font-black text-slate-900 uppercase tracking-tighter block leading-none">
+                              {dm.name}
+                            </span>
+                            <a
+                              href={getFallbackContactLinkedin(dm)}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-slate-400 hover:text-blue-500 transition-colors shrink-0"
+                            >
+                              <Linkedin size={11} />
+                            </a>
+                          </div>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate mt-1">
+                            {dm.position || "Decision Maker"}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Company info + Email */}
+                      <div className="col-span-12 md:col-span-4 flex flex-col min-w-0 gap-1.5">
+                        <span 
+                          className="text-[9px] font-black text-slate-600 uppercase tracking-tight italic bg-slate-50 border border-slate-100 px-2 py-0.5 rounded-md self-start truncate max-w-full"
+                          style={{ borderRadius: "6px" }}
+                        >
+                          {dm.companyName}
+                        </span>
+                        <span className="text-[10px] font-semibold text-[#8192B4] tabular-nums truncate">
+                          {dm.email || "N/A"}
+                        </span>
+                      </div>
+
+                      {/* Action trigger button */}
+                      <div className="col-span-12 md:col-span-4 flex items-center md:justify-end gap-2.5 shrink-0">
+                        <button
+                          onClick={() => {
+                            const draft = (campaign.drafts || []).find((d) => d.decision_maker_id === dm.id);
+                            if (draft) {
+                              setDraftEditData({ subject: draft.subject, body: draft.body, email: dm.email });
+                              setSelectedDraft(draft);
+                              onClose();
+                            }
+                          }}
+                          className="px-4 py-2 bg-slate-900 border border-slate-950 hover:bg-slate-850 text-white rounded-lg text-[9px] font-black uppercase tracking-widest transition-colors shadow-sm cursor-pointer whitespace-nowrap"
+                          style={{ borderRadius: "8px" }}
+                        >
+                          Edit Draft
+                        </button>
+                        <div 
+                          className="shrink-0 inline-flex shadow-sm rounded-md overflow-hidden"
+                          style={{ borderRadius: "6px" }}
+                        >
+                          {getCurvedStatusBadge(dm.status)}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="px-6 py-5 md:px-8 border-t border-[#FAF1EE] bg-white/70 backdrop-blur-sm flex items-center justify-end shrink-0 select-none">
+            <button
+              onClick={onClose}
+              className="px-6 py-3.5 bg-slate-900 hover:bg-slate-850 text-white rounded-xl font-black text-[9px] uppercase tracking-widest shadow-lg shadow-slate-900/10 hover:shadow-xl active:scale-[0.99] transition-all cursor-pointer"
+              style={{ borderRadius: "10px" }}
+            >
+              Close Breakdown
+            </button>
+          </div>
+        </motion.div>
+      </div>
+    </AnimatePresence>
   );
 };
 

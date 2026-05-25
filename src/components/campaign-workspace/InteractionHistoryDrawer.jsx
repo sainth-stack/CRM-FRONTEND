@@ -3,8 +3,33 @@ import { Bot, Clock, Mail, MessageSquare, Target, X } from "lucide-react";
 
 import { cleanEmailReply, formatTimeAgo } from "../../pages/campaignWorkspace/workspaceUtils";
 
+// Helper to force uniform UTC parsing on both timezone-naive and timezone-aware ISO strings
+const parseUtcDate = (dateStr) => {
+  if (!dateStr) return null;
+  if (dateStr instanceof Date) return dateStr;
+  
+  let formatted = String(dateStr);
+  // If it's a naive ISO timestamp, append 'Z' so JavaScript interprets it uniformly as UTC.
+  if (
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(formatted) &&
+    !formatted.endsWith("Z") &&
+    !/[+-]\d{2}:?\d{2}$/.test(formatted)
+  ) {
+    formatted += "Z";
+  }
+  
+  const parsed = new Date(formatted);
+  return isNaN(parsed.getTime()) ? null : parsed;
+};
+
 const InteractionHistoryDrawer = ({ showHistoryDM, campaign, expandedNodes, onToggleNode, onClose }) => {
   const companyName = campaign?.target_companies.find((company) => company.id === showHistoryDM?.target_company_id)?.name;
+
+  const sortedLogs = [...(showHistoryDM?.logs || [])].sort((a, b) => {
+    const dateA = parseUtcDate(a.received_at || a.created_at);
+    const dateB = parseUtcDate(b.received_at || b.created_at);
+    return (dateA?.getTime() || 0) - (dateB?.getTime() || 0);
+  });
 
   return (
     <AnimatePresence>
@@ -75,8 +100,8 @@ const InteractionHistoryDrawer = ({ showHistoryDM, campaign, expandedNodes, onTo
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Awaiting Live Engagement Response...</p>
                   </div>
                 </div>
-              ) : (
-                [...showHistoryDM.logs].reverse().map((log, index) => {
+               ) : (
+                sortedLogs.map((log, index) => {
                   const isFirstLog = index === 0;
                   return (
                     <div key={index} className="relative flex gap-8">
