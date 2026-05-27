@@ -8,4 +8,7 @@ export default defineConfig({
   resolve: {
     dedupe: ['react', 'react-dom'],
   },
+  server: {
+    allowedHosts: ['marketing.datapx1.com'],
+  },
 })
