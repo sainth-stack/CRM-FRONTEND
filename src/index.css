@@ -225,4 +225,200 @@ h1.auth-logo-title, .min-h-screen h1.auth-logo-title {
   display: block !important;
 }
 
+/* =============================================================================
+   FocalReach AI — Global Cyberpunk Dark Theme Portal Overrides
+   Specifically targets all non-campaign operational areas wrapped in RootLayout.
+   ============================================================================= */
+
+.dark-portal-theme {
+  background-color: #030712 !important;
+  color: #ffffff !important;
+  position: relative;
+  z-index: 1;
+}
+
+.dark-portal-theme::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: radial-gradient(circle, #ffffff 1px, transparent 1px);
+  background-size: 24px 24px;
+  z-index: -1;
+}
+
+/* Glassmorphic Cyber Cards */
+.dark-portal-theme .bg-white,
+.dark-portal-theme [class*="bg-white/"] {
+  background-color: rgba(8, 12, 24, 0.65) !important;
+  backdrop-filter: blur(16px) !important;
+  border: 1px solid rgba(63, 63, 70, 0.45) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark-portal-theme .bg-zinc-50,
+.dark-portal-theme .bg-slate-50,
+.dark-portal-theme [class*="bg-slate-50/"] {
+  background-color: rgba(6, 10, 20, 0.7) !important;
+  border-color: rgba(63, 63, 70, 0.45) !important;
+}
+
+/* Typography Overrides */
+.dark-portal-theme h1,
+.dark-portal-theme h2,
+.dark-portal-theme h3,
+.dark-portal-theme h4,
+.dark-portal-theme h5,
+.dark-portal-theme .text-slate-900,
+.dark-portal-theme .text-slate-800,
+.dark-portal-theme .text-zinc-800,
+.dark-portal-theme .text-zinc-900,
+.dark-portal-theme .text-slate-700,
+.dark-portal-theme .text-\[\#1e293b\] {
+  color: #ffffff !important;
+}
+
+.dark-portal-theme p,
+.dark-portal-theme span:not(.text-red-600):not(.text-\[\#00f0ff\]):not(.bg-red-600),
+.dark-portal-theme .text-slate-500,
+.dark-portal-theme .text-slate-600,
+.dark-portal-theme .text-zinc-500,
+.dark-portal-theme .text-zinc-600,
+.dark-portal-theme .text-slate-400,
+.dark-portal-theme .text-zinc-400 {
+  color: #a1a1aa !important;
+}
+
+/* Borders */
+.dark-portal-theme .border,
+.dark-portal-theme .border-slate-100,
+.dark-portal-theme .border-slate-200,
+.dark-portal-theme .border-zinc-200,
+.dark-portal-theme .border-zinc-100,
+.dark-portal-theme .border-slate-200\/80,
+.dark-portal-theme .border-r {
+  border-color: rgba(63, 63, 70, 0.45) !important;
+}
+
+/* Forms & Interactive Components */
+.dark-portal-theme input,
+.dark-portal-theme textarea,
+.dark-portal-theme select {
+  background-color: rgba(6, 10, 20, 0.75) !important;
+  color: #ffffff !important;
+  border-color: rgba(63, 63, 70, 0.6) !important;
+  border-radius: 12px !important;
+}
+
+.dark-portal-theme input::placeholder,
+.dark-portal-theme textarea::placeholder {
+  color: rgba(161, 161, 170, 0.4) !important;
+}
+
+.dark-portal-theme input:focus,
+.dark-portal-theme textarea:focus,
+.dark-portal-theme select:focus {
+  border-color: #00f0ff !important;
+  box-shadow: 0 0 12px rgba(0, 240, 255, 0.25) !important;
+}
+
+/* Electric Cyan Brand Buttons */
+.dark-portal-theme .bg-red-600,
+.dark-portal-theme .hover\:bg-red-700:hover,
+.dark-portal-theme button[class*="bg-brand-primary"],
+.dark-portal-theme button[class*="bg-red-"],
+.dark-portal-theme [class*="bg-red-600"] {
+  background-color: #00f0ff !important;
+  color: #030712 !important;
+  font-weight: 700 !important;
+  border: none !important;
+  box-shadow: 0 0 20px rgba(0, 240, 255, 0.22) !important;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.dark-portal-theme .bg-red-600:hover,
+.dark-portal-theme button[class*="bg-brand-primary"]:hover,
+.dark-portal-theme button[class*="bg-red-"]:hover,
+.dark-portal-theme [class*="bg-red-600"]:hover {
+  background-color: #26f3ff !important;
+  box-shadow: 0 0 25px rgba(0, 240, 255, 0.35) !important;
+  transform: translateY(-0.5px) !important;
+}
+
+/* Electric Cyan Links & Text Accents */
+.dark-portal-theme .text-red-600,
+.dark-portal-theme .text-brand-primary,
+.dark-portal-theme a[class*="text-red-"],
+.dark-portal-theme a[class*="text-brand-"] {
+  color: #00f0ff !important;
+}
+
+/* Icon Recolor */
+.dark-portal-theme svg.text-red-600,
+.dark-portal-theme svg.text-brand-primary,
+.dark-portal-theme [class*="text-red-"] svg {
+  color: #00f0ff !important;
+  stroke: #00f0ff !important;
+}
+
+/* Sidebar & Header Background Elements */
+.dark-portal-theme header,
+.dark-portal-theme header bg-white,
+.dark-portal-theme .bg-white.border-r {
+  background-color: #030712 !important;
+  border-color: rgba(63, 63, 70, 0.45) !important;
+}
+
+/* Navigation Selection Highlights */
+.dark-portal-theme .bg-red-50,
+.dark-portal-theme [class*="bg-red-50/"] {
+  background-color: rgba(0, 240, 255, 0.08) !important;
+  color: #00f0ff !important;
+  border-color: rgba(0, 240, 255, 0.2) !important;
+}
+
+/* Badge Status Highlights */
+.dark-portal-theme .bg-emerald-50,
+.dark-portal-theme .bg-emerald-500\/10 {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+  color: #34d399 !important;
+  border: 1px solid rgba(16, 185, 129, 0.25) !important;
+}
+
+.dark-portal-theme .bg-amber-50,
+.dark-portal-theme .bg-amber-500\/10 {
+  background-color: rgba(245, 158, 11, 0.12) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(245, 158, 11, 0.25) !important;
+}
+
+.dark-portal-theme .bg-red-50,
+.dark-portal-theme .bg-red-500\/10 {
+  background-color: rgba(239, 68, 68, 0.12) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(239, 68, 68, 0.25) !important;
+}
+
+.dark-portal-theme .bg-blue-50,
+.dark-portal-theme .bg-blue-500\/10 {
+  background-color: rgba(0, 240, 255, 0.12) !important;
+  color: #00f0ff !important;
+  border: 1px solid rgba(0, 240, 255, 0.25) !important;
+}
+
+/* Telemetry Tables */
+.dark-portal-theme table th {
+  color: rgba(161, 161, 170, 0.6) !important;
+  border-bottom: 1px solid rgba(63, 63, 70, 0.45) !important;
+}
+
+.dark-portal-theme table tr {
+  border-bottom: 1px solid rgba(63, 63, 70, 0.2) !important;
+}
+
+.dark-portal-theme table tr:hover {
+  background-color: rgba(0, 240, 255, 0.02) !important;
+}
+
 

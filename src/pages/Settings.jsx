@@ -3,7 +3,6 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { 
     Calendar, 
-    Lock, 
     RefreshCcw, 
     CheckCircle2, 
     XCircle, 
@@ -17,7 +16,7 @@ import axios from 'axios';
 import API_BASE_URL from '../config';
 
 const Settings = () => {
-    const { getCalAuthorizationUrl, user } = useAuth();
+    const { getCalAuthorizationUrl } = useAuth();
     const navigate = useNavigate();
 
     // Cal.com states
@@ -129,123 +128,165 @@ const Settings = () => {
 
     if (loadingCal) {
         return (
-            <div className="min-h-screen bg-gradient-to-br from-[#FFF5F5] via-white to-[#FFF9F9] flex items-center justify-center font-outfit">
-                <RefreshCcw className="w-8 h-8 animate-spin text-[#FE1919]" />
+            <div className="min-h-screen bg-[#030712] flex items-center justify-center font-outfit">
+                <RefreshCcw className="w-8 h-8 animate-spin text-[#00f0ff]" />
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen lg:h-screen pt-[74px] lg:overflow-hidden bg-gradient-to-br from-[#FFF5F5] via-white to-[#FFF9F9] px-6 md:px-12 flex items-center justify-center font-outfit relative overflow-hidden">
-            {/* Ambient luxury glow effects */}
-            <div className="absolute top-[10%] -left-[10%] w-[500px] h-[500px] bg-red-200/20 rounded-full blur-[120px] pointer-events-none" />
-            <div className="absolute bottom-[10%] -right-[10%] w-[500px] h-[500px] bg-rose-200/10 rounded-full blur-[120px] pointer-events-none" />
+        <div className="min-h-screen bg-[#030712] flex items-center justify-center font-outfit select-none text-white relative py-12 lg:py-0">
+            
+            {/* Glow Effects */}
+            <div className="absolute top-[10%] left-1/4 w-[400px] h-[400px] bg-[#00f0ff]/5 blur-[120px] rounded-full pointer-events-none z-0" />
+            <div className="absolute bottom-[10%] right-1/4 w-[500px] h-[500px] bg-[#00d2ff]/4 blur-[130px] rounded-full pointer-events-none z-0" />
 
-            <div className="max-w-6xl w-full lg:h-full grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center relative z-10 py-8 lg:py-0">
+            {/* Grid Pattern Overlay */}
+            <div 
+                className="absolute inset-0 pointer-events-none opacity-[0.03] z-0" 
+                style={{
+                    backgroundImage: "radial-gradient(circle, #ffffff 1px, transparent 1px)",
+                    backgroundSize: "24px 24px"
+                }}
+            />
+
+            <div className="max-w-6xl w-full px-6 md:px-12 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16 items-center relative z-10">
                 
                 {/* Left Side: Branding / Info Column (Centered Vertically & Non-Scrollable) */}
-                <div className="text-left space-y-6 max-w-xl lg:h-full flex flex-col justify-center lg:overflow-hidden">
-                    {/* Badge */}
-                    <div className="inline-flex items-center gap-2 bg-[#FE1919]/5 border border-[#FE1919]/10 px-3 py-1.5 rounded-full self-start">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#FE1919] animate-pulse" />
-                        <span className="text-[10px] font-black text-[#FE1919] uppercase tracking-[0.2em]">
-                            Smart Calendaring
+                <div className="hidden lg:flex lg:col-span-7 flex-col justify-between py-6 min-h-[520px] relative z-10 select-none">
+                    
+                    {/* Top Logo */}
+                    <div className="flex items-center gap-3 w-fit">
+                        <div className="w-[34px] h-[34px] flex items-center justify-center shrink-0">
+                            <svg className="w-8 h-8 text-[#00f0ff] drop-shadow-[0_0_8px_rgba(0,240,255,0.45)]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <circle cx="12" cy="12" r="7.5" stroke="currentColor" strokeWidth="1.5" />
+                                <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+                                <circle cx="12" cy="12" r="1.8" fill="currentColor" />
+                                <line x1="12" y1="1" x2="12" y2="3.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                                <line x1="12" y1="20.8" x2="12" y2="23" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                                <line x1="1" y1="12" x2="3.2" y2="12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                                <line x1="20.8" y1="12" x2="23" y2="12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.2" strokeDasharray="1.2 2.2" strokeLinecap="round" />
+                            </svg>
+                        </div>
+                        <span className="font-black tracking-tight text-white" style={{ fontSize: "17.5px" }}>
+                            Focal<span className="text-[#00f0ff] font-black">Reach</span> <span className="text-zinc-500 font-semibold tracking-wider ml-1" style={{ fontSize: "11px" }}>AI</span>
                         </span>
                     </div>
 
-                    {/* Main Title */}
-                    <h1 className="text-4xl lg:text-5xl font-black text-zinc-900 tracking-tight leading-[1.1]">
-                        Optimize your <span className="text-[#FE1919]">availability.</span>
-                    </h1>
-
-                    {/* Subcopy */}
-                    <p className="text-zinc-500 font-medium text-sm leading-relaxed">
-                        Configure your calendar event type and primary timezone. AI-PRIORI schedules meetings autonomously, respecting your booking parameters.
-                    </p>
-
-                    {/* Features List */}
-                    <div className="space-y-6 pt-6">
-                        {/* Bullet 1 */}
-                        <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-full bg-[#FE1919] text-white flex items-center justify-center shrink-0 shadow-lg shadow-[#FE1919]/10">
-                                <Sliders className="w-5 h-5" />
-                            </div>
-                            <div>
-                                <h3 className="text-xs font-bold text-zinc-800 uppercase tracking-wider mb-0.5">
-                                    Availability Sync
-                                </h3>
-                                <p className="text-xs text-zinc-400 font-medium leading-normal">
-                                    Coordinate slots based on your designated event details.
-                                </p>
-                            </div>
+                    {/* Middle Feature Content */}
+                    <div className="space-y-8 max-w-xl my-auto py-8">
+                        {/* Badge */}
+                        <div className="inline-flex items-center gap-2 bg-[#00f0ff]/5 border border-[#00f0ff]/10 px-3 py-1.5 rounded-full self-start">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#00f0ff] animate-pulse" />
+                            <span className="text-[10px] font-black text-[#00f0ff] uppercase tracking-[0.2em]">
+                                Smart Calendaring
+                            </span>
                         </div>
 
-                        {/* Bullet 2 */}
-                        <div className="flex items-start gap-4">
-                            <div className="w-10 h-10 rounded-full bg-white border border-zinc-200 text-[#FE1919] flex items-center justify-center shrink-0">
-                                <Clock className="w-5 h-5" />
+                        {/* Main Title */}
+                        <h2 className="text-4xl font-extrabold tracking-tight leading-tight text-white uppercase">
+                            Optimize your <span className="text-[#00f0ff]" style={{ textShadow: "0 0 30px rgba(0, 240, 255, 0.25)" }}>availability.</span>
+                        </h2>
+
+                        {/* Subcopy */}
+                        <p className="text-[14.5px] text-zinc-300 leading-relaxed font-normal">
+                            Configure your calendar event type and primary timezone. FocalReach AI schedules meetings autonomously, respecting your booking parameters.
+                        </p>
+
+                        {/* Features List */}
+                        <div className="space-y-6 pt-2">
+                            {/* Bullet 1 */}
+                            <div className="flex items-start gap-4">
+                               <div className="w-11 h-11 rounded-xl bg-zinc-900/60 border border-zinc-800/80 flex items-center justify-center text-lg shrink-0 shadow-md">
+                                    <Sliders className="w-5 h-5 text-[#00f0ff]" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-0.5">
+                                        Availability Sync
+                                    </h3>
+                                    <p className="text-[12.5px] text-zinc-400 leading-relaxed font-medium">
+                                        Coordinate slots based on your designated event details.
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="text-xs font-bold text-zinc-800 uppercase tracking-wider mb-0.5">
-                                    Timezone Sync
-                                </h3>
-                                <p className="text-xs text-zinc-400 font-medium leading-normal">
-                                    Automatically adjust discovery call times to your primary timezone.
-                                </p>
+
+                            {/* Bullet 2 */}
+                            <div className="flex items-start gap-4">
+                               <div className="w-11 h-11 rounded-xl bg-zinc-900/60 border border-zinc-800/80 flex items-center justify-center text-lg shrink-0 shadow-md">
+                                    <Clock className="w-5 h-5 text-[#00f0ff]" />
+                                </div>
+                                <div>
+                                    <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-0.5">
+                                        Timezone Sync
+                                    </h3>
+                                    <p className="text-[12.5px] text-zinc-400 leading-relaxed font-medium">
+                                        Automatically adjust discovery call times to your local timezone.
+                                    </p>
+                                </div>
                             </div>
                         </div>
+                    </div>
+
+                    {/* Bottom Stats */}
+                    <div className="flex items-center gap-4 text-[10px] font-extrabold uppercase tracking-wider text-zinc-500 border-t border-zinc-900/60 pt-6">
+                        <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Secure session</span>
+                        <span className="text-zinc-800">•</span>
+                        <span className="flex items-center gap-1.5"><span className="w-1.5 h-1.5 rounded-full bg-[#00f0ff] animate-pulse" /> AES-256 encrypted</span>
                     </div>
                 </div>
 
                 {/* Right Side: Form Card (Scrollable) */}
-                <div className="lg:h-full lg:overflow-y-auto w-full flex items-center justify-center lg:py-8 pr-1 scrollbar-thin">
-                    <div className="bg-white p-8 md:p-12 rounded-[40px] shadow-[0_30px_70px_rgba(0,0,0,0.03)] border border-slate-100/80 w-full max-w-[540px] mx-auto my-auto">
+                <div className="lg:col-span-5 flex items-center justify-center py-6 relative z-10 w-full">
+                    
+                    {/* Mobile Header Logo */}
+                    <div className="absolute -top-6 left-4 lg:hidden">
+                        <div className="flex items-center gap-3">
+                            <div className="w-[30px] h-[30px] flex items-center justify-center shrink-0">
+                                <svg className="w-7 h-7 text-[#00f0ff]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2050/svg">
+                                    <circle cx="12" cy="12" r="7.5" stroke="currentColor" strokeWidth="1.5" />
+                                    <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+                                    <circle cx="12" cy="12" r="1.8" fill="currentColor" />
+                                    <line x1="12" y1="1" x2="12" y2="3.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                                    <line x1="12" y1="20.8" x2="12" y2="23" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                                    <line x1="1" y1="12" x2="3.2" y2="12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                                    <line x1="20.8" y1="12" x2="23" y2="12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.2" strokeDasharray="1.2 2.2" strokeLinecap="round" />
+                                </svg>
+                            </div>
+                            <span className="font-black tracking-tight text-white text-base">
+                                Focal<span className="text-[#00f0ff] font-black">Reach</span> <span className="text-zinc-500 font-semibold tracking-wider ml-1" style={{ fontSize: "10px" }}>AI</span>
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="w-full max-w-[520px] bg-zinc-900/10 border border-zinc-800/40 rounded-3xl p-8 md:p-10 shadow-[0_20px_50px_rgba(0,0,0,0.3)] backdrop-blur-md relative z-10 text-left">
                         
                         <header className="mb-6">
-                            <h2 className="text-2xl lg:text-3xl font-black text-slate-900 tracking-tight mb-1">
+                            <h2 className="text-2xl font-extrabold text-white tracking-tight mb-2">
                                 Calendar Settings
                             </h2>
-                            <p className="text-zinc-400 text-[10px] font-black uppercase tracking-widest">
-                                Calibrate meeting coordination parameters.
+                            <p className="text-xs text-zinc-400 font-medium leading-relaxed">
+                                Calibrate your scheduling preferences.
                             </p>
                         </header>
 
-                        {/* Pink Alert notice banner */}
-                        <div className="bg-[#FFF5F5] border border-[#FFE3E3] rounded-2xl p-4 flex gap-3 items-start mb-8">
-                            <AlertCircle className="w-5 h-5 text-[#FE1919] shrink-0 mt-0.5" />
-                            <p className="text-[11px] leading-relaxed font-bold text-[#8C1F1F]">
-                                Your event type and timezone determine when prospects book discovery slots.
+                        {/* Dark Cyan Alert notice banner */}
+                        <div className="bg-[#00f0ff]/5 border border-[#00f0ff]/10 rounded-xl p-4 flex gap-3 items-start mb-8">
+                            <AlertCircle className="w-5 h-5 text-[#00f0ff] shrink-0 mt-0.5" />
+                            <p className="text-[11px] leading-relaxed font-bold text-zinc-300">
+                                Your event type and timezone control when prospects can book discovery calls.
                             </p>
                         </div>
 
                         <div className="space-y-6">
-                            {/* Registered Email */}
-                            <div>
-                                <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                                    Registered Email
-                                </label>
-                                <div className="relative">
-                                    <input
-                                        type="email"
-                                        value={user?.email || ''}
-                                        readOnly
-                                        disabled
-                                        className="w-full px-4 py-3.5 pr-12 rounded-xl border border-slate-100 bg-[#FFFBFB] text-slate-500 font-semibold text-sm cursor-not-allowed border-dashed"
-                                    />
-                                    <Lock className="w-4 h-4 text-slate-300 absolute right-4 top-1/2 -translate-y-1/2" />
-                                </div>
-                                <span className="block text-[8px] font-bold text-slate-400 mt-1.5 uppercase tracking-widest">
-                                    Derived from your authenticated session
-                                </span>
-                            </div>
-
                             {calReauthRequired ? (
                                 <div className="space-y-4">
-                                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
+                                    <div className="p-4 bg-amber-950/20 border border-amber-900/30 rounded-2xl flex items-start gap-3">
                                         <XCircle className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
                                         <div>
-                                            <h4 className="font-bold text-amber-800 text-sm">Re-authorization Required</h4>
-                                            <p className="text-[11px] text-amber-700 mt-0.5 leading-relaxed font-medium">
+                                            <h4 className="font-bold text-amber-400 text-xs uppercase tracking-wider">Re-authorization Required</h4>
+                                            <p className="text-[10px] text-amber-350 mt-1 leading-relaxed font-medium">
                                                 Your Cal.com session has expired. Please reconnect to restore automatic meeting booking.
                                             </p>
                                         </div>
@@ -253,7 +294,7 @@ const Settings = () => {
                                     <button
                                         onClick={startCalAuthorization}
                                         disabled={connectingCal}
-                                        className="w-full flex items-center justify-center gap-3 px-8 py-4.5 bg-[#FE1919] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#E01414] transition-all shadow-xl shadow-[#FE1919]/15 active:scale-[0.98] disabled:opacity-50"
+                                        className="w-full flex items-center justify-center gap-3 px-8 py-3.5 bg-[#00f0ff] text-zinc-950 hover:bg-[#26f3ff] rounded-xl font-extrabold text-xs uppercase tracking-widest transition-all active:scale-[0.98] disabled:opacity-50"
                                     >
                                         {connectingCal ? (
                                             <><RefreshCcw className="w-4 h-4 animate-spin" />Redirecting to Cal.com...</>
@@ -264,19 +305,19 @@ const Settings = () => {
                                 </div>
                             ) : !calConnected ? (
                                 <div className="space-y-4">
-                                    <div className="p-4 bg-rose-50/50 border border-rose-100 rounded-2xl flex items-start gap-3">
-                                        <AlertCircle className="w-5 h-5 text-[#FE1919] mt-0.5 shrink-0" />
+                                    <div className="p-4 bg-red-950/20 border border-red-900/30 rounded-2xl flex items-start gap-3">
+                                        <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 shrink-0" />
                                         <div>
-                                            <h4 className="font-bold text-rose-900 text-sm">Calendar Disconnected</h4>
-                                            <p className="text-[11px] text-rose-700 mt-0.5 leading-relaxed font-medium">
-                                                Please authorize your Cal.com scheduling coordinate to launch your outreach campaigns.
+                                            <h4 className="font-bold text-red-400 text-xs uppercase tracking-wider">Calendar Disconnected</h4>
+                                            <p className="text-[10px] text-red-350 mt-1 leading-relaxed font-medium">
+                                                Please connect your Cal.com calendar to enable automatic meeting scheduling.
                                             </p>
                                         </div>
                                     </div>
                                     <button
                                         onClick={startCalAuthorization}
                                         disabled={connectingCal}
-                                        className="w-full flex items-center justify-center gap-3 px-8 py-4.5 bg-[#FE1919] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-[#E01414] transition-all shadow-xl shadow-[#FE1919]/15 active:scale-[0.98] disabled:opacity-50"
+                                        className="w-full flex items-center justify-center gap-3 px-8 py-3.5 bg-[#00f0ff] text-zinc-950 hover:bg-[#26f3ff] rounded-xl font-extrabold text-xs uppercase tracking-widest transition-all active:scale-[0.98] disabled:opacity-50"
                                     >
                                         {connectingCal ? (
                                             <>
@@ -293,33 +334,33 @@ const Settings = () => {
                                 </div>
                             ) : (
                                 <div className="space-y-6">
-                                    <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3">
-                                        <CheckCircle2 className="w-6 h-6 text-emerald-500 shrink-0" />
+                                    <div className="p-4 bg-emerald-950/20 border border-emerald-900/30 rounded-2xl flex items-center gap-3">
+                                        <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
                                         <div>
-                                            <h4 className="font-bold text-emerald-800 text-sm">Cal.com Bridge Active</h4>
-                                            <p className="text-[11px] text-emerald-600 font-semibold">Your calendar is authorized and connected via secure OAuth 2.0.</p>
+                                            <h4 className="font-bold text-emerald-400 text-xs uppercase tracking-wider">Calendar Connected</h4>
+                                            <p className="text-[10px] text-emerald-300 font-semibold mt-0.5">Your Cal.com calendar is authorized and synced via OAuth 2.0.</p>
                                         </div>
                                     </div>
 
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                                         <div>
-                                            <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                                                Event Type
+                                            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-2">
+                                                Meeting Event Type
                                             </label>
                                             {loadingEventTypes ? (
-                                                <div className="w-full px-4 py-3.5 rounded-xl border border-slate-200 flex items-center gap-2 text-slate-400 text-sm bg-slate-50">
-                                                    <RefreshCcw className="w-4 h-4 animate-spin" />
+                                                <div className="w-full px-4 py-3.5 rounded-xl border border-zinc-800/60 flex items-center gap-2 text-zinc-400 text-xs bg-zinc-900/30">
+                                                    <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
                                                     Loading event types...
                                                 </div>
                                             ) : calEventTypes.length > 0 ? (
                                                 <select
                                                     value={calEventTypeId}
                                                     onChange={(e) => setCalEventTypeId(e.target.value)}
-                                                    className="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#FE1919]/10 focus:border-[#FE1919] font-bold text-slate-800 text-sm"
+                                                    className="w-full px-4 py-3.5 rounded-xl border border-zinc-800/60 bg-zinc-900/40 text-white focus:outline-none focus:border-[#00f0ff] focus:ring-1 focus:ring-[#00f0ff]/25 font-bold text-xs"
                                                 >
-                                                    <option value="">-- Select an event type --</option>
+                                                    <option value="" className="bg-zinc-950">-- Select an event type --</option>
                                                     {calEventTypes.map((et) => (
-                                                        <option key={et.id} value={String(et.id)}>
+                                                        <option key={et.id} value={String(et.id)} className="bg-zinc-950 text-white">
                                                             {et.title} ({et.duration} min)
                                                         </option>
                                                     ))}
@@ -330,40 +371,40 @@ const Settings = () => {
                                                     value={calEventTypeId}
                                                     onChange={(e) => setCalEventTypeId(e.target.value)}
                                                     placeholder="e.g. 5137238"
-                                                    className="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#FE1919]/10 focus:border-[#FE1919] font-bold text-slate-800 text-sm placeholder-slate-300 transition-all"
+                                                    className="w-full px-4 py-3.5 rounded-xl border border-zinc-800/60 bg-zinc-900/40 text-white focus:outline-none focus:border-[#00f0ff] focus:ring-1 focus:ring-[#00f0ff]/25 font-bold text-xs placeholder-zinc-650 transition-all"
                                                 />
                                             )}
                                         </div>
                                         <div>
-                                            <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">
-                                                Scheduling Timezone
+                                            <label className="block text-[9px] font-black text-zinc-400 uppercase tracking-widest mb-2">
+                                                Booking Timezone
                                             </label>
                                             <select 
                                                 value={calTimezone}
                                                 onChange={(e) => setCalTimezone(e.target.value)}
-                                                className="w-full px-4 py-3.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-[#FE1919]/10 focus:border-[#FE1919] font-bold text-slate-800 text-sm"
+                                                className="w-full px-4 py-3.5 rounded-xl border border-zinc-800/60 bg-zinc-900/40 text-white focus:outline-none focus:border-[#00f0ff] focus:ring-1 focus:ring-[#00f0ff]/25 font-bold text-xs"
                                             >
-                                                <option value="UTC">UTC</option>
-                                                <option value="US/Eastern">US/Eastern</option>
-                                                <option value="US/Central">US/Central</option>
-                                                <option value="US/Pacific">US/Pacific</option>
-                                                <option value="Europe/London">Europe/London</option>
-                                                <option value="Asia/Kolkata">Asia/Kolkata</option>
+                                                <option value="UTC" className="bg-zinc-950">UTC</option>
+                                                <option value="US/Eastern" className="bg-zinc-950">US/Eastern</option>
+                                                <option value="US/Central" className="bg-zinc-950">US/Central</option>
+                                                <option value="US/Pacific" className="bg-zinc-950">US/Pacific</option>
+                                                <option value="Europe/London" className="bg-zinc-950">Europe/London</option>
+                                                <option value="Asia/Kolkata" className="bg-zinc-950">Asia/Kolkata</option>
                                             </select>
                                         </div>
                                     </div>
 
                                     {/* Status Banners */}
                                     {error && (
-                                        <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-start gap-3 animate-headshake">
-                                            <AlertCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />
-                                            <p className="text-xs text-rose-700 font-bold leading-normal">{error}</p>
+                                        <div className="p-4 bg-red-950/20 border border-red-900/30 rounded-xl flex items-start gap-3 animate-headshake">
+                                            <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                                            <p className="text-[11px] text-red-350 font-bold leading-normal">{error}</p>
                                         </div>
                                     )}
                                     {success && (
-                                        <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center gap-3">
-                                            <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />
-                                            <p className="text-xs text-emerald-700 font-bold">Settings synchronized successfully.</p>
+                                        <div className="p-4 bg-emerald-950/20 border border-emerald-900/30 rounded-xl flex items-center gap-3">
+                                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                            <p className="text-[11px] text-emerald-300 font-bold">Calendar settings saved successfully.</p>
                                         </div>
                                     )}
 
@@ -371,17 +412,10 @@ const Settings = () => {
                                         <button
                                             onClick={saveCalSettings}
                                             disabled={savingCal}
-                                            className="flex-grow py-4.5 bg-[#FE1919] hover:bg-[#E01414] text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:shadow-lg hover:shadow-[#FE1919]/25 transition-all flex items-center justify-center gap-2 group active:scale-[0.98] disabled:opacity-50"
+                                            className="flex-grow py-3.5 bg-[#00f0ff] hover:bg-[#26f3ff] text-zinc-950 rounded-xl font-extrabold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 group active:scale-[0.98] disabled:opacity-50 shadow-md shadow-[#00f0ff]/10"
                                         >
-                                            {savingCal ? "Saving Coordinates..." : "Save & Confirm"}
+                                            {savingCal ? "Saving..." : "Save"}
                                             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
-                                        </button>
-                                        <button
-                                            onClick={disconnectCal}
-                                            disabled={disconnectingCal}
-                                            className="px-6 py-4.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-rose-100 hover:text-rose-700 transition-all active:scale-[0.98] disabled:opacity-50 shrink-0"
-                                        >
-                                            {disconnectingCal ? "Disconnecting..." : "Disconnect Calendar"}
                                         </button>
                                     </div>
                                 </div>

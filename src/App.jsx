@@ -20,6 +20,7 @@ import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Settings from "./pages/Settings";
 import BusinessProfile from "./pages/BusinessProfile";
+import ChangePassword from "./pages/ChangePassword";
 import { useAuth } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
 import { Navigate } from "react-router-dom";
@@ -71,7 +72,7 @@ function AppContents() {
   }
 
   const isConnectionPage = location.pathname === "/connect-mailbox" || location.pathname === "/auth/google/callback" || location.pathname === "/connect-calendar";
-  const isProfilePage = location.pathname === "/profile";
+  const isProfilePage = location.pathname === "/profile" || location.pathname === "/change-password";
   const isAdministrative = user?.role?.toUpperCase() === "ADMIN" || user?.role?.toUpperCase() === "SUPER_ADMIN";
   
   const showMailboxBarrier = isLoggedIn && !hasMailbox && !isConnectionPage;
@@ -122,6 +123,7 @@ function AppContents() {
             <Route path="connect-calendar" element={<ProtectedRoute><ConnectCalendar /></ProtectedRoute>} />
             <Route path="settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="profile" element={<ProtectedRoute><BusinessProfile /></ProtectedRoute>} />
+            <Route path="change-password" element={<ProtectedRoute><ChangePassword /></ProtectedRoute>} />
             
             {/* Protected & Capability-Enforced Routes */}
             <Route path="create" element={<CapabilityRoute><CreateCampaign /></CapabilityRoute>} />
