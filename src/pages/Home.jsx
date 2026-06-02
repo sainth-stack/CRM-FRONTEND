@@ -50,13 +50,20 @@ const Home = () => {
       />
 
       {/* Hero Section */}
-      <section className="relative z-10 pt-28 pb-16 px-6 max-w-7xl mx-auto w-full min-h-[90vh] flex flex-col items-center justify-center select-none">
+      <section 
+        className="relative z-10 pt-28 pb-16 px-6 max-w-7xl mx-auto w-full min-h-[90vh] flex flex-col items-center justify-center select-none"
+        style={{ perspective: 1200 }}
+      >
         
         {/* Futuristic Card Mockup representing the service */}
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+          initial={{ opacity: 0, y: 40, rotateY: 0 }}
+          animate={{ opacity: 1, y: 0, rotateY: [-10, 10, -10] }}
+          transition={{ 
+            opacity: { duration: 0.8, ease: [0.16, 1, 0.3, 1] },
+            y: { duration: 0.8, ease: [0.16, 1, 0.3, 1] },
+            rotateY: { duration: 10, repeat: Infinity, ease: "easeInOut" }
+          }}
           className="w-full max-w-[1000px] bg-[#090d1a]/55 border border-zinc-800/80 rounded-3xl overflow-hidden shadow-[0_0_60px_rgba(0,240,255,0.04)] backdrop-blur-xl relative group"
         >
           
