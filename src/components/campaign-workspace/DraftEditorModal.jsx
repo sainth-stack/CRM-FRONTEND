@@ -46,7 +46,7 @@ const formatTimeAgo = (dateStr) => {
     }
 
     return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-  } catch (e) {
+  } catch {
     return "";
   }
 };

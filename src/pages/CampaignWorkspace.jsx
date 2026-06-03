@@ -84,7 +84,7 @@ const formatMeetingDate = (utcDateString, displayTimezone) => {
       year: "numeric",
       timeZone: tz,
     });
-  } catch (e) {
+  } catch {
     return date.toLocaleDateString("en-US", {
       weekday: "short",
       month: "short",
@@ -209,9 +209,7 @@ const CampaignWorkspace = () => {
   const [isDispatchingAll, setIsDispatchingAll] = useState(false);
   const [draftFilter, setDraftFilter] = useState(null);   // null = show all
   const [showDraftFilter, setShowDraftFilter] = useState(false);
-  const [expandedReportCompany, setExpandedReportCompany] = useState(null);
   const [showHistoryDM, setShowHistoryDM] = useState(null);
-  const [highlightedDraftId, setHighlightedDraftId] = useState(null);
   const [expandedNodes, setExpandedNodes] = useState([]);
 
   // Close the draft filter dropdown on any outside click
@@ -241,8 +239,7 @@ const CampaignWorkspace = () => {
     
     if (targetDraft) {
       const draftId = String(targetDraft.id);
-      setHighlightedDraftId(draftId);
-      
+
       // Delay scroll slightly to allow React state to propagate to DOM
       setTimeout(() => {
         const element = document.getElementById(`draft-card-${draftId}`);
@@ -250,11 +247,6 @@ const CampaignWorkspace = () => {
           element.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
       }, 100);
-      
-      // Auto-clear highlight after 5 seconds for better visibility
-      setTimeout(() => {
-        setHighlightedDraftId(null);
-      }, 5000);
     }
   };
 
@@ -353,11 +345,6 @@ const CampaignWorkspace = () => {
     // Sort chronologically ascending (oldest first at the top, newest at the bottom)
     return events.sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
   };
-  const handleBatchDispatch = async () => {
-    // Strategic Batch Deployment Protocol
-    alert("Initiating Synchronized Batch Dispatch for all validated modules.");
-  };
-
   const fetchCampaignDetails = useCallback(async () => {
     try {
       const response = await axios.get(`${API_BASE_URL}/campaigns/${id}`);
@@ -534,8 +521,6 @@ const CampaignWorkspace = () => {
       default: return campaign.status || "NEW";
     }
   };
-
-  const hasDrafts = campaign.drafts_count > 0;
 
   return (
     <div className="flex h-[calc(100vh-74px)] overflow-hidden bg-surgical-bg font-sans select-none">
@@ -1377,8 +1362,7 @@ const CampaignWorkspace = () => {
       <AnimatePresence>
         {selectedCompany && (() => {
           const score = selectedCompany.relevance_score || selectedCompany.similarity_score?.score || 0;
-          const reason = selectedCompany.relevance_explanation || selectedCompany.similarity_score?.reason || "High match synergy detected";
-          
+
           return (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12">
               <motion.div 

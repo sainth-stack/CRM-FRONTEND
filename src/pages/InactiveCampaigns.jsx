@@ -228,7 +228,7 @@ const InactiveCampaigns = () => {
              </div>
           </div>
         ) : (
-          filteredCampaigns.map((campaign, index) => {
+          filteredCampaigns.map((campaign) => {
             const initials = (campaign.name || "C")
               .split(" ")
               .filter(Boolean)

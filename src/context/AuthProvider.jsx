@@ -223,7 +223,7 @@ export const AuthProvider = ({ children }) => {
                             Authorization: `Bearer ${refreshedToken}`,
                         };
                         return axios(originalRequest);
-                    } catch (refreshError) {
+                    } catch {
                         logout();
                     }
                 }

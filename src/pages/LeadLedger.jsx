@@ -27,7 +27,6 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
   const [selectedDraft, setSelectedDraft] = useState(null);
   const [draftEditData, setDraftEditData] = useState({ subject: "", body: "", email: "" });
   const [isSaving, setIsSaving] = useState(false);
-  const [isSending, setIsSending] = useState(null);
   const [isDispatching, setIsDispatching] = useState(null);
   const [isDispatchingAll, setIsDispatchingAll] = useState(false);
   const rawCompanies = campaign?.target_companies || [];
@@ -143,7 +142,7 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
     let fileName = `Mission_${activeView}_${new Date().toISOString().split('T')[0]}.xlsx`;
 
     if (activeView === "DASHBOARD") {
-      exportData = companies.map((c, i) => ({
+      exportData = companies.map((c) => ({
         "Company Name": c.name || "N/A",
         "Website": c.website || "N/A",
         "LinkedIn": getFallbackLinkedin(c),
@@ -153,7 +152,7 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
         "Status": (c.status || "NEW").toUpperCase()
       }));
     } else if (activeView === "PIPELINE") {
-      exportData = contacts.map((dm, i) => ({
+      exportData = contacts.map((dm) => ({
         "Prospect Name": dm.name || "N/A",
         "Position": dm.position || "N/A",
         "Organization": dm.companyName || "N/A",
@@ -211,26 +210,6 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
       showToast({ tone: "error", title: "Save Failed", description: "Failed to synchronize refinement." });
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const handleSendMessage = async (draftId, name) => {
-    setIsSending(draftId);
-    try {
-        const res = await axios.post(`${API_BASE_URL}/drafts/${draftId}/send`);
-        const data = res.data;
-        if (data.message === "already_scheduled") {
-            showToast({ tone: "success", title: "Already Scheduled", description: `Email to ${name} is queued for ${data.display}.` });
-        } else if (data.scheduled_at) {
-            showToast({ tone: "success", title: "Scheduled", description: `Email to ${name} will be sent on ${data.display} (${data.timezone}).` });
-        } else {
-            showToast({ tone: "success", title: "Deployed", description: `Engagement targeting ${name} deployed.` });
-        }
-    } catch (error) {
-        console.error("Tactical Deployment Failure:", error);
-        showToast({ tone: "error", title: "Deployment Failed", description: "Strategic protocol failure." });
-    } finally {
-        setIsSending(null);
     }
   };
 
@@ -825,31 +804,6 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
             const mgrPercent = Math.round((mgrCount / totalDMsCount) * 100);
             const otherPercent = Math.round((otherCount / totalDMsCount) * 100);
 
-            // 3. Location Regional Cluster Map
-            const locationMap = {};
-            rawCompanies.forEach(c => {
-              const loc = c.location || "North America";
-              if (!locationMap[loc]) {
-                locationMap[loc] = 0;
-              }
-              locationMap[loc] += 1;
-            });
-            const locations = Object.entries(locationMap).map(([name, count]) => ({
-              name,
-              count,
-              percentage: Math.round((count / totalCompaniesCount) * 100)
-            })).sort((a, b) => b.count - a.count).slice(0, 5);
-
-            // 4. Tactical Efficiency Metrics
-            const draftEfficiency = totalDMsAnalysed ? Math.round(((draftedDMs + sentDMs) / totalDMsAnalysed) * 100) : 0;
-            const inboundYield = sentDMs ? Math.round((positiveReplies / sentDMs) * 100) : 0;
-            
-            const meetingBookedCount = contacts.filter(dm => {
-              const s = (dm.status || dm.state || "").toUpperCase();
-              return s.includes("BOOKED") || s.includes("MEETING");
-            }).length;
-            const conversionEfficiency = positiveReplies ? Math.round((meetingBookedCount / positiveReplies) * 100) : 0;
-
             return (
               <motion.div
                 key="analysis"
@@ -1277,7 +1231,6 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
         isNeutral={isNeutral}
         isNegative={isNegative}
         getFallbackContactLinkedin={getFallbackContactLinkedin}
-        getStatusBadge={getStatusBadge}
         setSelectedDraft={setSelectedDraft}
         setDraftEditData={setDraftEditData}
       />
@@ -1296,7 +1249,6 @@ const SentimentBreakdownModal = ({
   isNeutral,
   isNegative,
   getFallbackContactLinkedin,
-  getStatusBadge,
   setSelectedDraft,
   setDraftEditData,
 }) => {
@@ -1418,8 +1370,6 @@ const SentimentBreakdownModal = ({
                 style={{ borderRadius: "12px" }}
               >
                 {filteredList.map((dm) => {
-                  const lastInboundLog = (dm.logs || []).find((l) => l.direction === "RECEIVED");
-
                   return (
                     <div
                       key={dm.id}

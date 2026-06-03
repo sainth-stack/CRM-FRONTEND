@@ -26,7 +26,6 @@ const Settings = () => {
     const [calTimezone, setCalTimezone] = useState('UTC');
     const [loadingCal, setLoadingCal] = useState(true);
     const [savingCal, setSavingCal] = useState(false);
-    const [disconnectingCal, setDisconnectingCal] = useState(false);
     const [connectingCal, setConnectingCal] = useState(false);
     const [calEventTypes, setCalEventTypes] = useState([]);
     const [loadingEventTypes, setLoadingEventTypes] = useState(false);
@@ -103,26 +102,6 @@ const Settings = () => {
             setError("Failed to save calendar settings.");
         } finally {
             setSavingCal(false);
-        }
-    };
-
-    const disconnectCal = async () => {
-        if (!window.confirm("Are you sure you want to disconnect your Cal.com calendar?")) return;
-        setDisconnectingCal(true);
-        setError(null);
-        setSuccess(false);
-        try {
-            await axios.delete(`${API_BASE_URL}/connect/cal`);
-            setCalConnected(false);
-            setCalEventTypeId('');
-            setCalTimezone('UTC');
-            setCalEventTypes([]);
-            setSuccess(true);
-        } catch (error) {
-            console.error("Failed to disconnect Cal.com calendar:", error);
-            setError("Failed to disconnect calendar.");
-        } finally {
-            setDisconnectingCal(false);
         }
     };
 

@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 import { Eye, EyeOff, Lock, ArrowRight, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
 import axios from 'axios';
 import API_BASE_URL from '../config';
 
 const ChangePassword = () => {
-  const { user } = useAuth();
   const navigate = useNavigate();
 
   const [currentPassword, setCurrentPassword] = useState('');
