@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
-  Bot,
+  Activity,
   FileBarChart,
   LayoutDashboard,
   Monitor,
@@ -90,7 +90,7 @@ const WorkspaceHeader = ({ campaignName, activeTab, onTabChange, hasDrafts, disp
           </span>
         </div>
         <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-          <Bot size={20} />
+          <Activity size={20} />
         </div>
       </div>
     </header>

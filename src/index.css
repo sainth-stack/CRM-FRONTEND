@@ -87,11 +87,27 @@
   @apply py-20 px-6 max-w-7xl mx-auto;
 }
 
+/* Global canvas: the app is a dark-themed SaaS, so the root canvas behind every
+   surface is kept dark. This guarantees that any over-scroll / rubber-band gap or
+   incidental overflow reveals the dark backdrop instead of a jarring white strip,
+   on screens of every size. Light surfaces (e.g. the campaign workspace) paint
+   their own full-height wrapper on top of this canvas. */
+html {
+  background-color: #030712;
+  /* Prevent horizontal rubber-banding from exposing the canvas edge. */
+  overscroll-behavior-x: none;
+}
+
+html, body, #root {
+  min-height: 100%;
+}
+
 body {
-  @apply bg-[#F8FAFC] text-brand-dark selection:bg-brand-primary/20;
-  background-image: 
-    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.02) 0px, transparent 50%),
-    radial-gradient(at 100% 100%, rgba(168, 85, 247, 0.02) 0px, transparent 50%);
+  @apply text-brand-dark selection:bg-brand-primary/20;
+  /* Clip (not hidden) avoids creating a scroll container, so position:sticky
+     descendants keep working while horizontal overflow can never push the layout
+     wider than the viewport. */
+  overflow-x: clip;
 }
 
 /* Premium Custom Scrollbars */

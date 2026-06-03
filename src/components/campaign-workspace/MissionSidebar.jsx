@@ -16,7 +16,7 @@ const MissionSidebar = ({ activeTab, setActiveTab, campaignName }) => {
   ];
 
   return (
-    <aside className="w-64 bg-surgical-navy flex flex-col h-screen shrink-0 border-r border-white/5 select-none overflow-hidden">
+    <aside className="w-64 bg-surgical-navy flex flex-col h-full shrink-0 border-r border-white/5 select-none overflow-hidden">
       {/* Sidebar Header: Mission Context */}
       <div className="p-8 border-b border-white/5 bg-white/5">
         <div className="flex items-center gap-3 mb-1">

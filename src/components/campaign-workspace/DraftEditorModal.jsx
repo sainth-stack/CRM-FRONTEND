@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle2, Loader2, Mail, X, RotateCcw, Clock, AlertCircle, MessageSquare, Bot } from "lucide-react";
+import { CheckCircle2, Loader2, Mail, X, RotateCcw, Clock, AlertCircle, MessageSquare } from "lucide-react";
 
 // Helper to force uniform UTC parsing on both timezone-naive and timezone-aware ISO strings
 const parseUtcDate = (dateStr) => {

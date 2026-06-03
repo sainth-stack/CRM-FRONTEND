@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Megaphone, ArrowRight, AlertCircle, ShieldAlert, Mail } from "lucide-react";
+import { Target, ArrowRight, AlertCircle, ShieldAlert, Mail } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 const CreateCampaign = () => {
@@ -67,7 +67,7 @@ const CreateCampaign = () => {
           <>
             {/* Icon Banner */}
             <div className="w-14 h-14 bg-red-50 border border-red-100/60 rounded-xl flex items-center justify-center mb-8 shrink-0">
-              <Megaphone className="w-6 h-6 text-red-600" />
+              <Target className="w-6 h-6 text-red-600" />
             </div>
 
             <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 mb-3 tracking-tight uppercase italic leading-tight select-none">

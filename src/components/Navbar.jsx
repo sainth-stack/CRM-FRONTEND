@@ -1,15 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LayoutGrid, Settings as SettingsIcon, ShieldCheck, User as UserIcon, LogOut, Lock } from "lucide-react";
+import { Menu, Settings as SettingsIcon, User as UserIcon, LogOut, Lock } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
-const Navbar = () => {
+const Navbar = ({ showMenuButton = false, onMenuClick }) => {
   const { isLoggedIn, logout, user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const isActive = (path) => location.pathname === path;
-  const isHome = location.pathname === "/";
-  const isDarkPage = ["/", "/connect-mailbox", "/connect-calendar", "/profile", "/settings", "/change-password"].includes(location.pathname);
+  // Force global Navbar to always be dark to maintain consistency across all pages
+  const isDarkPage = true;
 
   // Avatar dropdown state
   const [menuOpen, setMenuOpen] = useState(false);
@@ -46,16 +46,6 @@ const Navbar = () => {
   };
 
   const role = user?.role?.toUpperCase();
-  const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
-  
-  const navLinks = role === "USER" ? [
-    { name: "New Campaign", path: "/create" },
-    { name: "Active", path: "/active" },
-    { name: "Inactive", path: "/inactive" },
-  ] : isAdmin ? [
-    { name: "Admin Deck", path: role === "SUPER_ADMIN" ? "/sovereign" : "/management" },
-    { name: "Analysis", path: "/analysis" },
-  ] : [];
 
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 select-none transition-all duration-300 ${
@@ -75,8 +65,20 @@ const Navbar = () => {
       }`} />
       
       <div className="w-full px-4 md:px-6 h-[70px] flex items-center justify-between">
-        {/* Logo Branding */}
-        <Link to="/" className="flex items-center gap-3 group hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 pl-[2px]">
+        {/* Left cluster: mobile menu toggle + logo */}
+        <div className="flex items-center gap-2">
+          {showMenuButton && (
+            <button
+              type="button"
+              onClick={onMenuClick}
+              aria-label="Open navigation"
+              className="md:hidden p-2 -ml-1 rounded-xl text-zinc-300 hover:text-white hover:bg-zinc-800/50 transition-colors active:scale-95"
+            >
+              <Menu size={20} />
+            </button>
+          )}
+          {/* Logo Branding */}
+          <Link to="/" className="flex items-center gap-3 group hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 pl-[2px]">
           <div className="w-[34px] h-[34px] flex items-center justify-center shrink-0">
             <svg className="w-8 h-8 text-[#00f0ff] drop-shadow-[0_0_8px_rgba(0,240,255,0.45)]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <circle cx="12" cy="12" r="7.5" stroke="currentColor" strokeWidth="1.5" />
@@ -92,32 +94,8 @@ const Navbar = () => {
           <span className={`font-black tracking-tight ${isDarkPage ? "text-white" : "text-slate-900"}`} style={{ fontSize: "calc(0.92rem + 5px)" }}>
             Focal<span className="text-[#00f0ff] font-black">Reach</span> <span className="text-zinc-500 font-semibold tracking-wider ml-1" style={{ fontSize: "11px" }}>AI</span>
           </span>
-        </Link>
-
-        {/* Navigation Links — only shown when logged in */}
-        {isLoggedIn && navLinks.length > 0 ? (
-          <nav className="hidden md:flex items-center gap-1 flex-grow justify-center">
-            {navLinks.map((link) => (
-              <Link
-                key={link.path}
-                to={link.path}
-                className={`text-[11px] font-bold uppercase tracking-widest px-4 py-2 rounded-xl transition-all duration-200 ${
-                  isActive(link.path)
-                    ? isDarkPage
-                      ? "text-[#00f0ff] bg-[#00f0ff]/5"
-                      : "text-red-600 bg-red-50"
-                    : isDarkPage
-                      ? "text-zinc-400 hover:text-white hover:bg-zinc-800/40"
-                      : "text-slate-500 hover:text-slate-900 hover:bg-slate-50"
-                }`}
-              >
-                {link.name}
-              </Link>
-            ))}
-          </nav>
-        ) : (
-          <div className="hidden md:block flex-grow" />
-        )}
+          </Link>
+        </div>
 
         {/* Action Blocks & Logout */}
         <div className="flex items-center gap-3">

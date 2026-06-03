@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Bot, Clock, Mail, MessageSquare, Target, X } from "lucide-react";
+import { Send, Clock, Mail, MessageSquare, Target, X } from "lucide-react";
 
 import { cleanEmailReply, formatTimeAgo } from "../../pages/campaignWorkspace/workspaceUtils";
 
@@ -113,7 +113,7 @@ const InteractionHistoryDrawer = ({ showHistoryDM, campaign, expandedNodes, onTo
                         }`}
                       >
                         {log.direction === "SENT" ? (
-                          isFirstLog ? <Bot size={18} strokeWidth={3} /> : <Mail size={18} strokeWidth={3} />
+                          isFirstLog ? <Send size={18} strokeWidth={3} /> : <Mail size={18} strokeWidth={3} />
                         ) : (
                           <MessageSquare size={18} strokeWidth={3} />
                         )}

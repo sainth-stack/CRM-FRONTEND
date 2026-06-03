@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { 
   ArrowLeft, MessageSquare, Linkedin, Mail, 
   MapPin, Clock, ShieldCheck, ExternalLink,
-  Loader2, Bot, Calendar, Sparkles
+  Loader2, Calendar, Inbox
 } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "../config";
@@ -43,22 +43,19 @@ const ProspectHistory = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#f8fafc]">
-        <Loader2 className="w-12 h-12 text-brand-primary animate-spin" strokeWidth={3} />
-        <p className="text-zinc-400 font-black uppercase text-xs tracking-widest">Retrieving Interaction Logs...</p>
+      <div className="min-h-[calc(100vh-74px)] flex flex-col items-center justify-center gap-4 bg-[#f8fafc]">
+        <Loader2 className="w-12 h-12 text-blue-600 animate-spin" strokeWidth={3} />
+        <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">Reconstructing Communications Protocol...</p>
       </div>
     );
   }
 
   if (!prospect) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-[#f8fafc] p-10 text-center">
-        <Bot className="w-16 h-16 text-slate-300" />
-        <h1 className="text-3xl font-black text-slate-900 uppercase italic">Stakeholder Not Located</h1>
-        <button 
-          onClick={() => navigate(-1)} 
-          className="text-brand-primary font-black uppercase text-xs tracking-widest flex items-center gap-2"
-        >
+      <div className="min-h-[calc(100vh-74px)] flex flex-col items-center justify-center gap-6 bg-[#f8fafc] p-10 text-center">
+        <AlertCircle className="w-16 h-16 text-red-500" />
+        <h1 className="text-3xl font-black text-slate-800">Target Not Found</h1>
+        <button onClick={() => navigate(-1)} className="text-blue-600 font-bold uppercase text-xs tracking-widest flex items-center gap-2 hover:text-blue-700">
           <ArrowLeft size={16} /> Return to Mission Control
         </button>
       </div>
@@ -66,9 +63,9 @@ const ProspectHistory = () => {
   }
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] pb-20">
+    <div className="min-h-[calc(100vh-74px)] bg-[#f8fafc] pb-20 relative">
       {/* Tactical Header */}
-      <header className="fixed top-0 left-0 right-0 h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 z-50 px-10 flex items-center justify-between">
+      <header className="sticky top-0 left-0 right-0 h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 z-40 px-10 flex items-center justify-between">
         <div className="flex items-center gap-6">
           <button 
             onClick={() => navigate(-1)} 
@@ -149,7 +146,7 @@ const ProspectHistory = () => {
             <div className="space-y-8 relative before:absolute before:left-8 before:top-4 before:bottom-4 before:w-[2px] before:bg-slate-200">
               {prospect.logs.length === 0 ? (
                 <div className="bg-white rounded-[40px] p-20 border border-slate-200 border-dashed text-center">
-                  <Sparkles size={40} className="mx-auto text-slate-200 mb-4" />
+                  <Inbox size={40} className="mx-auto text-slate-200 mb-4" />
                   <p className="text-slate-400 font-bold uppercase text-xs tracking-widest">No active deployments found in registry.</p>
                 </div>
               ) : (

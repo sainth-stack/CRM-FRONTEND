@@ -4,7 +4,7 @@ import {
   Search, Users, Download, ArrowLeft, ArrowUpRight,
   Building2, Plus, ArrowRight, Filter, ChevronDown,
   Globe, Linkedin, Mail, CheckCircle2, MoreHorizontal,
-  TrendingUp, Activity, MapPin, Target, Cpu, Sparkles, X,
+  TrendingUp, Activity, MapPin, Target, Cpu, Inbox, X,
   Loader2, Send
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1117,7 +1117,7 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
                       <div className="flex justify-between items-start mb-2">
                         <div>
                           <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                            <Sparkles size={16} className="text-[#FE1919]" />
+                            <BarChart2 size={16} className="text-[#FE1919]" />
                             Target Vertical Alignment Leaderboard
                           </h3>
                           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Top targeted sectors sorted by volume and synergy</p>
@@ -1404,7 +1404,7 @@ const SentimentBreakdownModal = ({
                 className="py-20 text-center flex flex-col items-center justify-center gap-4 border border-dashed border-slate-200 rounded-xl bg-white/50 select-none"
                 style={{ borderRadius: "12px" }}
               >
-                <Sparkles className="w-12 h-12 text-slate-300 animate-pulse" />
+                <Inbox className="w-12 h-12 text-slate-300" />
                 <div>
                   <h4 className="text-sm font-black text-slate-800 uppercase tracking-wider leading-none">No prospects found</h4>
                   <p className="text-[11px] font-semibold text-slate-400 leading-normal mt-2 max-w-xs mx-auto">

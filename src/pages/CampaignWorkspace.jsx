@@ -2,14 +2,15 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Bot, Search, Users, Mail, 
+  Search, Users, Mail,
   CheckCircle2, Loader2, AlertCircle,
   ArrowLeft, ExternalLink, Globe,
   Linkedin, MessageSquare, ChevronRight,
   Monitor, PhoneCall, FileBarChart,
   X, Edit3, Send, Trash, Maximize2, Clock, Calendar, Link2,
   TrendingUp, PieChart, Target, ShieldCheck, LayoutDashboard,
-  Activity, BarChart3, Zap, Filter, ChevronDown
+  Activity, BarChart3, Filter, ChevronDown,
+  PenLine, Inbox, HelpCircle, RefreshCw
 } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "../config";
@@ -292,7 +293,7 @@ const CampaignWorkspace = () => {
           timestamp: draftDate,
           title: `Outreach Protocol Drafted (${draft.draft_type || "INITIAL"})`,
           label: "Stage 6: Ghostwriting Pipeline",
-          icon: Bot,
+          icon: PenLine,
           color: "text-amber-500 bg-amber-50 border-amber-100",
           content: {
             subject: draft.subject,
@@ -537,7 +538,7 @@ const CampaignWorkspace = () => {
   const hasDrafts = campaign.drafts_count > 0;
 
   return (
-    <div className="flex h-screen overflow-hidden bg-surgical-bg font-sans select-none">
+    <div className="flex h-[calc(100vh-74px)] overflow-hidden bg-surgical-bg font-sans select-none">
       <MissionSidebar 
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
@@ -565,7 +566,7 @@ const CampaignWorkspace = () => {
                <span className="text-[11px] font-black text-slate-900 border-b-2 border-surgical-navy tracking-tighter uppercase">{getDisplayStatus()}</span>
              </div>
              <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-               <Bot size={20} />
+               <Activity size={20} />
              </div>
           </div>
         </header>
@@ -697,7 +698,7 @@ const CampaignWorkspace = () => {
                             <tr>
                               <td colSpan="4" className="px-8 py-20 text-center">
                                 <div className="flex flex-col items-center gap-4 text-slate-300">
-                                  <Bot size={40} strokeWidth={1} className="opacity-20 text-surgical-navy" />
+                                  <Inbox size={40} strokeWidth={1} className="opacity-20 text-surgical-navy" />
                                   <p className="text-xs font-bold uppercase tracking-widest italic">Awaiting initial signal deployment...</p>
                                 </div>
                               </td>
@@ -1322,7 +1323,7 @@ const CampaignWorkspace = () => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                   {[
                     { label: "Target Profiles", value: campaign.target_companies_count, icon: Search, color: "text-surgical-navy", bg: "bg-surgical-navy/5 border border-surgical-navy/10" },
-                    { label: "Pipeline Status", value: campaign.status === "COMPLETED" ? "FINISHED" : "ACTIVE", icon: Zap, color: "text-surgical-navy", bg: "bg-surgical-navy/5 border border-surgical-navy/10" },
+                    { label: "Pipeline Status", value: campaign.status === "COMPLETED" ? "FINISHED" : "ACTIVE", icon: Activity, color: "text-surgical-navy", bg: "bg-surgical-navy/5 border border-surgical-navy/10" },
                     { label: "Mission Impact", value: `${Math.round((campaign.dms || []).filter(d => d.status === 'MEETING_BOOKED').length / (campaign.target_companies_count || 1) * 100)}%`, icon: Target, color: "text-surgical-navy", bg: "bg-surgical-navy/5 border border-surgical-navy/10" }
                   ].map((stat, i) => (
                     <div key={i} className="bg-white p-8 rounded-[32px] border border-surgical-border shadow-sm flex items-center gap-6">
@@ -1651,7 +1652,7 @@ const CampaignWorkspace = () => {
               <div className="space-y-8">
                 <div className="flex items-center gap-4">
                   <div className="w-14 h-14 bg-amber-50 text-amber-600 rounded-2xl flex items-center justify-center border border-amber-100">
-                    <Bot size={28} strokeWidth={2.5} />
+                    <HelpCircle size={28} strokeWidth={2.5} />
                   </div>
                   <div>
                     <h2 className="text-2xl font-black text-slate-900 uppercase italic tracking-tight">Mission Intelligence Refinement</h2>
@@ -1688,7 +1689,7 @@ const CampaignWorkspace = () => {
                     disabled={isSaving || Object.keys(refineAnswers).length === 0}
                     className="flex-[2] py-4 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-200 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-amber-600/10 flex items-center justify-center gap-2"
                   >
-                    {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Zap size={16} className="fill-white" />}
+                    {isSaving ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
                     Synchronize Refinements
                   </button>
                 </div>

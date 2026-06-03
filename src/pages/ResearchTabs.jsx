@@ -1,6 +1,6 @@
 import React from "react";
 import { 
-  FileBarChart, Target, Users, Send, Trash, ArrowLeft, Globe, Linkedin, PieChart, Bot, Search, CheckCircle2, Loader2, ShieldCheck
+  FileBarChart, Target, Users, Send, Trash, ArrowLeft, Globe, Linkedin, PieChart, Search, CheckCircle2, Loader2, ShieldCheck
 } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "../config";
@@ -124,7 +124,7 @@ const ResearchTabs = ({
               </div>
               <div className="bg-white rounded-[24px] border border-slate-200 p-6 shadow-sm flex items-center gap-4">
                 <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500">
-                  <Bot size={24} />
+                  <Target size={24} />
                 </div>
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Strategic Intent (Prompt)</p>
