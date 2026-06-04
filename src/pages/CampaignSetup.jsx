@@ -19,15 +19,63 @@ import API_BASE_URL from "../config";
 // Matches the backend cap: sanitize_text(prompt, max_length=2000) in campaigns.py
 const PROMPT_MAX = 2000;
 
+const SIZE_BANDS = ["1-10", "11-50", "51-200", "201-500", "501-1000", "1000+"];
+
+const INPUT_CLASS =
+  "w-full bg-[#060a14]/70 border border-zinc-800 rounded-xl px-4 py-3 text-sm font-medium text-white placeholder:text-zinc-600 outline-none transition-all focus:border-[#00f0ff]";
+
+// Module-level so it is NOT redefined on every parent render (which would remount
+// the <input> and drop focus after each keystroke).
+function ChipField({ label, placeholder, list, value, onChange, onKeyDown, onBlur, onRemove }) {
+  return (
+    <div>
+      <label className="block text-[12px] font-semibold uppercase tracking-wider text-zinc-300 mb-2">
+        {label}
+      </label>
+      <div className={`${INPUT_CLASS} flex flex-wrap gap-2 items-center min-h-[46px] py-2`}>
+        {list.map((chip, idx) => (
+          <span
+            key={`${chip}-${idx}`}
+            className="inline-flex items-center gap-1 bg-[#00f0ff]/10 border border-[#00f0ff]/25 text-[#aef6ff] text-xs font-semibold rounded-md px-2 py-1"
+          >
+            {chip}
+            <button
+              type="button"
+              onClick={() => onRemove(idx)}
+              className="text-[#7fdfe8] hover:text-white"
+              aria-label={`Remove ${chip}`}
+            >
+              <X size={12} />
+            </button>
+          </span>
+        ))}
+        <input
+          type="text"
+          value={value}
+          onChange={onChange}
+          onKeyDown={onKeyDown}
+          onBlur={onBlur}
+          placeholder={list.length === 0 ? placeholder : "Add another…"}
+          className="flex-1 min-w-[120px] bg-transparent outline-none text-sm text-white placeholder:text-zinc-600"
+        />
+      </div>
+      <p className="text-[11px] text-zinc-500 mt-2">Type and press Enter or comma to add multiple.</p>
+    </div>
+  );
+}
+
 const CampaignSetup = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const campaignName = location.state?.campaignName || "New Campaign";
 
   const [userUrl, setUserUrl] = useState("");
-  const [targetIndustry, setTargetIndustry] = useState("");
-  const [targetLocation, setTargetLocation] = useState("");
-  const [targetEmployeeCount, setTargetEmployeeCount] = useState("51-200");
+  // Multi-value targeting: one or more industries / locations / size bands.
+  const [industries, setIndustries] = useState([]);
+  const [industryInput, setIndustryInput] = useState("");
+  const [locations, setLocations] = useState([]);
+  const [locationInput, setLocationInput] = useState("");
+  const [sizes, setSizes] = useState(["51-200"]);
   const [prompt, setPrompt] = useState("");
   const [file, setFile] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,7 +91,6 @@ const CampaignSetup = () => {
   const handleUrlChange = (val) => {
     let cleanVal = val.trim();
     if (cleanVal && !cleanVal.startsWith("http://") && !cleanVal.startsWith("https://")) {
-      // Only prefix if it looks like they are starting a domain (e.g. has a dot or enough chars)
       if (cleanVal.includes(".") || cleanVal.length > 5) {
         cleanVal = "https://" + cleanVal;
       }
@@ -57,19 +104,66 @@ const CampaignSetup = () => {
     }
   };
 
+  // --- Chip helpers (industry / location) ---
+  const addChips = (raw, list, setList, setInput) => {
+    const parts = raw
+      .split(",")
+      .map((p) => p.trim())
+      .filter(Boolean);
+    if (parts.length) {
+      const merged = [...list];
+      for (const p of parts) {
+        if (!merged.some((x) => x.toLowerCase() === p.toLowerCase())) merged.push(p);
+      }
+      setList(merged);
+    }
+    setInput("");
+    if (error) setError("");
+  };
+
+  const handleChipKeyDown = (e, value, list, setList, setInput) => {
+    if (e.key === "Enter" || e.key === ",") {
+      e.preventDefault();
+      if (value.trim()) addChips(value, list, setList, setInput);
+    } else if (e.key === "Backspace" && !value && list.length) {
+      setList(list.slice(0, -1));
+    }
+  };
+
+  const removeChip = (idx, list, setList) => setList(list.filter((_, i) => i !== idx));
+
+  const toggleSize = (band) => {
+    setSizes((prev) =>
+      prev.includes(band) ? prev.filter((b) => b !== band) : [...prev, band]
+    );
+    if (error) setError("");
+  };
+
   const handleStart = async (e) => {
     e.preventDefault();
+
+    // Flush any text left in the chip inputs into the lists before validating.
+    const finalIndustries = industryInput.trim()
+      ? [...industries, ...industryInput.split(",").map((s) => s.trim()).filter(Boolean)]
+      : industries;
+    const finalLocations = locationInput.trim()
+      ? [...locations, ...locationInput.split(",").map((s) => s.trim()).filter(Boolean)]
+      : locations;
 
     if (!isVerified) {
       setError("Please enter a valid website URL.");
       return;
     }
-    if (targetIndustry.trim().length < 2) {
-      setError("Please add a target industry.");
+    if (finalIndustries.length === 0) {
+      setError("Please add at least one target industry.");
       return;
     }
-    if (targetLocation.trim().length < 2) {
-      setError("Please add a target location.");
+    if (finalLocations.length === 0) {
+      setError("Please add at least one target location.");
+      return;
+    }
+    if (sizes.length === 0) {
+      setError("Please select at least one company size band.");
       return;
     }
     if (!file) {
@@ -87,17 +181,16 @@ const CampaignSetup = () => {
     const formData = new FormData();
     formData.append("name", campaignName);
     formData.append("user_url", userUrl);
-    formData.append("target_industry", targetIndustry);
-    formData.append("target_location", targetLocation);
-    formData.append("target_employee_count", targetEmployeeCount);
+    // Multi-values are sent comma-joined; the backend treats them as one-or-more.
+    formData.append("target_industry", finalIndustries.join(", "));
+    formData.append("target_location", finalLocations.join(", "));
+    formData.append("target_employee_count", sizes.join(", "));
     formData.append("prompt", prompt);
     formData.append("file", file);
 
     try {
       const response = await axios.post(`${API_BASE_URL}/campaigns`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       if (response.data?.status === "needs_clarification") {
@@ -115,29 +208,24 @@ const CampaignSetup = () => {
     }
   };
 
-  const canDeploy =
-    isVerified &&
-    targetIndustry.trim().length >= 2 &&
-    targetLocation.trim().length >= 2 &&
-    !!file &&
-    !isLoading;
+  const hasIndustry = industries.length > 0 || industryInput.trim().length > 0;
+  const hasLocation = locations.length > 0 || locationInput.trim().length > 0;
+  const canDeploy = isVerified && hasIndustry && hasLocation && sizes.length > 0 && !!file && !isLoading;
 
   const getButtonText = () => {
     if (isLoading) return "Creating campaign…";
     if (!isVerified) return "Enter your website to continue";
-    if (targetIndustry.trim().length < 2) return "Add a target industry";
-    if (targetLocation.trim().length < 2) return "Add a target location";
+    if (!hasIndustry) return "Add a target industry";
+    if (!hasLocation) return "Add a target location";
+    if (sizes.length === 0) return "Select a company size";
     if (!file) return "Upload a prospect list";
     return "Create campaign";
   };
 
-  // Shared input styling (the global dark theme also enforces dark bg + cyan focus).
-  const inputClass =
-    "w-full bg-[#060a14]/70 border border-zinc-800 rounded-xl px-4 py-3 text-sm font-medium text-white placeholder:text-zinc-600 outline-none transition-all focus:border-[#00f0ff]";
+  const inputClass = INPUT_CLASS;
 
   return (
     <div className="relative w-full px-4 sm:px-6 lg:px-10 py-10 md:py-14">
-      {/* Ambient glow */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[640px] h-[640px] bg-[#00f0ff]/[0.06] blur-[150px] rounded-full" />
       </div>
@@ -215,52 +303,54 @@ const CampaignSetup = () => {
               </p>
             </div>
 
-            {/* Industry + Location */}
+            {/* Industry + Location (multi-value chips) */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-              <div>
-                <label className="block text-[12px] font-semibold uppercase tracking-wider text-zinc-300 mb-2">
-                  Target industry
-                </label>
-                <input
-                  type="text"
-                  value={targetIndustry}
-                  onChange={(e) => setTargetIndustry(e.target.value)}
-                  placeholder="e.g. SaaS, Fintech"
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className="block text-[12px] font-semibold uppercase tracking-wider text-zinc-300 mb-2">
-                  Target location
-                </label>
-                <input
-                  type="text"
-                  value={targetLocation}
-                  onChange={(e) => setTargetLocation(e.target.value)}
-                  placeholder="e.g. London, USA"
-                  className={inputClass}
-                />
-              </div>
+              <ChipField
+                label="Target industries"
+                placeholder="e.g. SaaS, Fintech"
+                list={industries}
+                value={industryInput}
+                onChange={(e) => setIndustryInput(e.target.value)}
+                onKeyDown={(e) => handleChipKeyDown(e, industryInput, industries, setIndustries, setIndustryInput)}
+                onBlur={() => industryInput.trim() && addChips(industryInput, industries, setIndustries, setIndustryInput)}
+                onRemove={(idx) => removeChip(idx, industries, setIndustries)}
+              />
+              <ChipField
+                label="Target locations"
+                placeholder="e.g. London, USA"
+                list={locations}
+                value={locationInput}
+                onChange={(e) => setLocationInput(e.target.value)}
+                onKeyDown={(e) => handleChipKeyDown(e, locationInput, locations, setLocations, setLocationInput)}
+                onBlur={() => locationInput.trim() && addChips(locationInput, locations, setLocations, setLocationInput)}
+                onRemove={(idx) => removeChip(idx, locations, setLocations)}
+              />
             </div>
 
-            {/* Company size */}
+            {/* Company size (multi-select) */}
             <div>
               <label className="block text-[12px] font-semibold uppercase tracking-wider text-zinc-300 mb-2">
-                Company size{" "}
-                <span className="text-zinc-500 normal-case font-medium tracking-normal">(optional)</span>
+                Company size <span className="text-zinc-500 normal-case font-medium tracking-normal">(select one or more)</span>
               </label>
-              <select
-                value={targetEmployeeCount}
-                onChange={(e) => setTargetEmployeeCount(e.target.value)}
-                className={`${inputClass} appearance-none cursor-pointer`}
-              >
-                <option>1-10</option>
-                <option>11-50</option>
-                <option>51-200</option>
-                <option>201-500</option>
-                <option>501-1000</option>
-                <option>1000+</option>
-              </select>
+              <div className="flex flex-wrap gap-2">
+                {SIZE_BANDS.map((band) => {
+                  const active = sizes.includes(band);
+                  return (
+                    <button
+                      key={band}
+                      type="button"
+                      onClick={() => toggleSize(band)}
+                      className={`px-3.5 py-2 rounded-xl text-sm font-semibold border transition-all ${
+                        active
+                          ? "bg-[#00f0ff]/15 border-[#00f0ff]/40 text-[#aef6ff]"
+                          : "bg-[#060a14]/70 border-zinc-800 text-zinc-400 hover:border-zinc-600"
+                      }`}
+                    >
+                      {band}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* Campaign context */}
@@ -330,8 +420,7 @@ const CampaignSetup = () => {
                   />
                   <UploadCloud size={26} className="mx-auto text-zinc-500 mb-2.5" />
                   <p className="text-sm font-semibold text-zinc-300">
-                    Drag &amp; drop or{" "}
-                    <span className="text-[#00f0ff]">browse</span> to upload
+                    Drag &amp; drop or <span className="text-[#00f0ff]">browse</span> to upload
                   </p>
                   <p className="text-[11px] text-zinc-500 mt-1">.CSV files only</p>
                 </div>
