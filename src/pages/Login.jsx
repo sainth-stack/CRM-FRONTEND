@@ -214,14 +214,24 @@ const Login = () => {
             </button>
           </form>
 
-          {/* Prompt Sign Up */}
+          {/* Prompt Sign Up — trial entry hidden for now; demo signup logic/routes preserved.
           <div className="mt-8 text-center pt-2 select-none border-t border-zinc-900/60">
             <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">New to the platform?</span>
-            <Link 
-              to="/demo" 
+            <Link
+              to="/demo"
               className="text-[#00f0ff] hover:text-[#26f3ff] transition-colors text-[10px] font-bold uppercase tracking-widest ml-2"
             >
               Start Free Trial
+            </Link>
+          </div>
+          */}
+          <div className="mt-8 text-center pt-2 select-none border-t border-zinc-900/60">
+            <span className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">New to the platform?</span>
+            <Link
+              to="/contact"
+              className="text-[#00f0ff] hover:text-[#26f3ff] transition-colors text-[10px] font-bold uppercase tracking-widest ml-2"
+            >
+              Contact Us
             </Link>
           </div>
 

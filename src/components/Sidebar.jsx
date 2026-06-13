@@ -29,7 +29,7 @@ const Sidebar = ({ open, onClose }) => {
       ]
     : [
         { name: "Dashboard", to: "/", icon: LayoutDashboard, end: true },
-        { name: "New Campaign", to: "/create", icon: PlusCircle },
+        { name: "Launch Campaign", to: "/create", icon: PlusCircle },
         { name: "Active", to: "/active", icon: Radio },
         { name: "Inactive", to: "/inactive", icon: Archive },
       ];

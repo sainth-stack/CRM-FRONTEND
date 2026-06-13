@@ -103,17 +103,25 @@ const Navbar = ({ showMenuButton = false, onMenuClick }) => {
             <>
               {isDarkPage ? (
                 <>
-                  <Link 
+                  <Link
                     to="/login"
                     className="text-xs font-bold uppercase tracking-widest text-zinc-300 hover:text-white transition-all px-4 py-2.5 rounded-xl hover:bg-zinc-800/30"
                   >
                     Log In
                   </Link>
-                  <Link 
+                  {/* Trial entry hidden for now — demo signup logic/routes preserved.
+                  <Link
                     to="/demo"
                     className="text-xs font-extrabold uppercase tracking-widest bg-[#00f0ff] hover:bg-[#26f3ff] text-zinc-950 px-4 py-2.5 rounded-xl transition-all shadow-[0_0_15px_rgba(0,240,255,0.25)] active:scale-95"
                   >
                     Sign In
+                  </Link>
+                  */}
+                  <Link
+                    to="/contact"
+                    className="text-xs font-extrabold uppercase tracking-widest bg-[#00f0ff] hover:bg-[#26f3ff] text-zinc-950 px-4 py-2.5 rounded-xl transition-all shadow-[0_0_15px_rgba(0,240,255,0.25)] active:scale-95"
+                  >
+                    Contact Us
                   </Link>
                 </>
               ) : (
@@ -124,11 +132,19 @@ const Navbar = ({ showMenuButton = false, onMenuClick }) => {
                   >
                     Sign In
                   </Link>
-                  <Link 
+                  {/* Trial entry hidden for now — demo signup logic/routes preserved.
+                  <Link
                     to="/demo"
                     className="text-xs font-extrabold uppercase tracking-widest bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl hover:shadow-md transition-all shadow-md active:scale-95 shadow-red-500/10"
                   >
                     Launch Trial
+                  </Link>
+                  */}
+                  <Link
+                    to="/contact"
+                    className="text-xs font-extrabold uppercase tracking-widest bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl hover:shadow-md transition-all shadow-md active:scale-95 shadow-red-500/10"
+                  >
+                    Contact Us
                   </Link>
                 </>
               )}

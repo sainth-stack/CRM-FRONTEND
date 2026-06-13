@@ -15,6 +15,7 @@ import DemoExpiryBarrier from "./components/DemoExpiryBarrier";
 import ConnectMailbox from "./pages/ConnectMailbox";
 import ConnectCalendar from "./pages/ConnectCalendar";
 import DemoSignUp from "./pages/DemoSignUp";
+import ComingSoon from "./pages/ComingSoon";
 import VerifyDemoOTP from "./pages/VerifyDemoOTP";
 import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -110,6 +111,9 @@ function AppContents() {
             <Route path="forgot-password" element={<ForgotPassword />} />
             <Route path="setup-password" element={<SetupPassword />} />
             
+            {/* Contact Us — placeholder while the trial feature is hidden */}
+            <Route path="contact" element={<ComingSoon />} />
+
             {/* Demo Identity Portal */}
             <Route path="demo" element={<DemoSignUp />} />
             <Route path="demo/verify" element={<VerifyDemoOTP />} />

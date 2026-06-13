@@ -38,47 +38,47 @@ const ResearchTabs = ({
   };
 
   return (
-    <div className="flex bg-[#f8fafc] h-full overflow-hidden">
-      {/* Sidebar section */}
-      <div className="w-64 bg-white border-r border-slate-200 flex flex-col justify-between py-8 shrink-0">
-        <div className="flex flex-col gap-1">
+    <div className="flex flex-col md:flex-row bg-[#f8fafc] h-full overflow-hidden">
+      {/* Sidebar section — vertical on desktop, horizontal scroll bar on mobile */}
+      <div className="w-full md:w-64 bg-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-col justify-between md:py-8 shrink-0">
+        <div className="flex md:flex-col gap-1 overflow-x-auto custom-scrollbar px-2 md:px-0 py-2 md:py-0">
           <button
             onClick={() => setResearchTab("mission_briefing")}
-            className={`relative flex items-center gap-3 px-8 py-3.5 text-sm font-semibold transition-all ${researchTab === "mission_briefing" ? "text-slate-900 bg-slate-50 font-bold" : "text-slate-500 hover:bg-slate-50"}`}
+            className={`relative flex items-center gap-2 md:gap-3 px-4 md:px-8 py-3 md:py-3.5 text-sm font-semibold transition-all whitespace-nowrap shrink-0 ${researchTab === "mission_briefing" ? "text-slate-900 bg-slate-50 font-bold" : "text-slate-500 hover:bg-slate-50"}`}
           >
-            {researchTab === "mission_briefing" && <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-red-500 rounded-r-lg" />}
+            {researchTab === "mission_briefing" && <div className="absolute bottom-0 left-2 right-2 h-1 w-auto md:left-0 md:right-auto md:top-1/4 md:bottom-1/4 md:h-auto md:w-1 bg-red-500 rounded-t-lg md:rounded-t-none md:rounded-r-lg" />}
             <FileBarChart size={18} className={researchTab === "mission_briefing" ? "text-red-500" : "text-slate-400"} />
             Briefing
           </button>
           <button
             onClick={() => setResearchTab("lead_pipeline")}
-            className={`relative flex items-center gap-3 px-8 py-3.5 text-sm font-semibold transition-all ${researchTab === "lead_pipeline" ? "text-slate-900 bg-slate-50 font-bold" : "text-slate-500 hover:bg-slate-50"}`}
+            className={`relative flex items-center gap-2 md:gap-3 px-4 md:px-8 py-3 md:py-3.5 text-sm font-semibold transition-all whitespace-nowrap shrink-0 ${researchTab === "lead_pipeline" ? "text-slate-900 bg-slate-50 font-bold" : "text-slate-500 hover:bg-slate-50"}`}
           >
-            {researchTab === "lead_pipeline" && <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-red-500 rounded-r-lg" />}
+            {researchTab === "lead_pipeline" && <div className="absolute bottom-0 left-2 right-2 h-1 w-auto md:left-0 md:right-auto md:top-1/4 md:bottom-1/4 md:h-auto md:w-1 bg-red-500 rounded-t-lg md:rounded-t-none md:rounded-r-lg" />}
             <Target size={18} className={researchTab === "lead_pipeline" ? "text-red-500" : "text-slate-400"} />
             Targets
           </button>
           <button
             onClick={() => setResearchTab("stakeholder_intel")}
-            className={`relative flex items-center gap-3 px-8 py-3.5 text-sm font-semibold transition-all ${researchTab === "stakeholder_intel" ? "text-slate-900 bg-slate-50 font-bold" : "text-slate-500 hover:bg-slate-50"}`}
+            className={`relative flex items-center gap-2 md:gap-3 px-4 md:px-8 py-3 md:py-3.5 text-sm font-semibold transition-all whitespace-nowrap shrink-0 ${researchTab === "stakeholder_intel" ? "text-slate-900 bg-slate-50 font-bold" : "text-slate-500 hover:bg-slate-50"}`}
           >
-            {researchTab === "stakeholder_intel" && <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-red-500 rounded-r-lg" />}
+            {researchTab === "stakeholder_intel" && <div className="absolute bottom-0 left-2 right-2 h-1 w-auto md:left-0 md:right-auto md:top-1/4 md:bottom-1/4 md:h-auto md:w-1 bg-red-500 rounded-t-lg md:rounded-t-none md:rounded-r-lg" />}
             <Users size={18} className={researchTab === "stakeholder_intel" ? "text-red-500" : "text-slate-400"} />
             Contacts
           </button>
           <button
             onClick={() => setResearchTab("outreach_protocol")}
-            className={`relative flex items-center gap-3 px-8 py-3.5 text-sm font-semibold transition-all ${researchTab === "outreach_protocol" ? "text-slate-900 bg-slate-50 font-bold" : "text-slate-500 hover:bg-slate-50"}`}
+            className={`relative flex items-center gap-2 md:gap-3 px-4 md:px-8 py-3 md:py-3.5 text-sm font-semibold transition-all whitespace-nowrap shrink-0 ${researchTab === "outreach_protocol" ? "text-slate-900 bg-slate-50 font-bold" : "text-slate-500 hover:bg-slate-50"}`}
           >
-            {researchTab === "outreach_protocol" && <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-red-500 rounded-r-lg" />}
+            {researchTab === "outreach_protocol" && <div className="absolute bottom-0 left-2 right-2 h-1 w-auto md:left-0 md:right-auto md:top-1/4 md:bottom-1/4 md:h-auto md:w-1 bg-red-500 rounded-t-lg md:rounded-t-none md:rounded-r-lg" />}
             <Send size={18} className={researchTab === "outreach_protocol" ? "text-red-500" : "text-slate-400"} />
             Drafts
           </button>
           <button
             onClick={() => setResearchTab("rejected_artifacts")}
-            className={`relative flex items-center gap-3 px-8 py-3.5 text-sm font-semibold transition-all ${researchTab === "rejected_artifacts" ? "text-slate-900 bg-slate-50 font-bold" : "text-slate-500 hover:bg-slate-50"}`}
+            className={`relative flex items-center gap-2 md:gap-3 px-4 md:px-8 py-3 md:py-3.5 text-sm font-semibold transition-all whitespace-nowrap shrink-0 ${researchTab === "rejected_artifacts" ? "text-slate-900 bg-slate-50 font-bold" : "text-slate-500 hover:bg-slate-50"}`}
           >
-            {researchTab === "rejected_artifacts" && <div className="absolute left-0 top-1/4 bottom-1/4 w-1 bg-red-500 rounded-r-lg" />}
+            {researchTab === "rejected_artifacts" && <div className="absolute bottom-0 left-2 right-2 h-1 w-auto md:left-0 md:right-auto md:top-1/4 md:bottom-1/4 md:h-auto md:w-1 bg-red-500 rounded-t-lg md:rounded-t-none md:rounded-r-lg" />}
             <Trash size={18} className={researchTab === "rejected_artifacts" ? "text-red-500" : "text-slate-400"} />
             Disqualified
           </button>
@@ -88,12 +88,12 @@ const ResearchTabs = ({
       </div>
 
       {/* Content area */}
-      <div className="flex-grow p-10 overflow-y-auto h-full">
+      <div className="flex-grow p-4 sm:p-6 lg:p-10 overflow-y-auto h-full min-w-0">
         {researchTab === "mission_briefing" && (
-          <div className="flex flex-col gap-8 animate-fadeIn">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex flex-col gap-1">
-                <h2 className="text-3xl font-bold text-slate-900">
+          <div className="flex flex-col gap-6 md:gap-8 animate-fadeIn">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+              <div className="flex flex-col gap-1 min-w-0">
+                <h2 className="text-2xl md:text-3xl font-bold text-slate-900 break-words">
                   {campaign.user_intel?.company_name || "Company Profile"}
                 </h2>
                 <p className="text-sm text-slate-400 font-medium">
@@ -103,34 +103,71 @@ const ResearchTabs = ({
 
               <button
                 onClick={() => handleExport("mission-briefing", "md")}
-                className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md shadow-red-500/10"
+                className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md shadow-red-500/10 shrink-0 self-start sm:self-auto"
               >
                 <ArrowLeft className="rotate-180" size={16} /> Export
               </button>
             </div>
             
-            {/* Mission Context Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="bg-white rounded-[24px] border border-slate-200 p-6 shadow-sm flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-brand-primary/10 flex items-center justify-center text-brand-primary">
-                  <Search size={24} />
+            {/* Validated campaign inputs — sourced from the Stage-1 input-validation
+                agent (corrected industry/location), falling back to raw input only
+                when no validated value exists. Employee size is not processed by the
+                agent, so the campaign value is shown directly. */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+              {[
+                {
+                  label: "Target Industry",
+                  value:
+                    campaign.input_validation_review?.target_industry?.corrected ||
+                    campaign.target_industry ||
+                    "N/A",
+                  Icon: Target,
+                  tint: "text-brand-primary",
+                  bg: "bg-brand-primary/10",
+                },
+                {
+                  label: "Target Location",
+                  value:
+                    campaign.input_validation_review?.target_location?.corrected ||
+                    campaign.target_location ||
+                    "N/A",
+                  Icon: Globe,
+                  tint: "text-blue-500",
+                  bg: "bg-blue-500/10",
+                },
+                {
+                  label: "Employee Size",
+                  value: campaign.target_employee_count || "Any size",
+                  Icon: Users,
+                  tint: "text-emerald-500",
+                  bg: "bg-emerald-500/10",
+                },
+              ].map(({ label, value, Icon, tint, bg }) => (
+                <div
+                  key={label}
+                  className="bg-white rounded-[24px] border border-slate-200 p-6 shadow-sm flex items-center gap-4"
+                >
+                  <div className={`w-12 h-12 rounded-2xl ${bg} flex items-center justify-center ${tint} shrink-0`}>
+                    <Icon size={22} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
+                    <p className="text-sm font-bold text-slate-700 break-words">{value}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Target Criteria</p>
-                  <p className="text-sm font-bold text-slate-700">
-                    {[campaign.target_industry, campaign.target_location].filter(Boolean).join(" • ") || "N/A"}
-                  </p>
-                </div>
+              ))}
+            </div>
+
+            {/* Strategic Intent (Prompt) — full-width card (grows with content up to
+                2000 chars), mirroring the Company Intelligence Summary layout. */}
+            <div className="bg-white rounded-[24px] border border-slate-200 p-8 shadow-sm flex flex-col">
+              <div className="flex items-center gap-2.5 mb-5">
+                <Target className="text-slate-400" size={18} />
+                <h3 className="text-base font-bold text-slate-900">Strategic Intent (Prompt)</h3>
               </div>
-              <div className="bg-white rounded-[24px] border border-slate-200 p-6 shadow-sm flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-red-500/10 flex items-center justify-center text-red-500">
-                  <Target size={24} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Strategic Intent (Prompt)</p>
-                  <p className="text-sm font-bold text-slate-700">{campaign.prompt || "N/A"}</p>
-                </div>
-              </div>
+              <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap font-medium flex-1">
+                {campaign.input_validation_review?.prompt?.enhanced || campaign.prompt || "N/A"}
+              </p>
             </div>
 
             {/* Card 1: Company Summary - Full Width Row */}
@@ -279,9 +316,9 @@ const ResearchTabs = ({
                           {company.name}
                         </h4>
                         <span className={`shrink-0 px-2.5 py-0.5 rounded-full border text-[10px] font-black uppercase tracking-widest whitespace-nowrap ${
-                          company.status === 'RESEARCHED' ? 'bg-surgical-navy text-white border-surgical-navy' : 'bg-blue-50 text-surgical-cobalt border-blue-200'
+                          ['ACCEPTED', 'RESEARCH_COMPLETE', 'STAKEHOLDERS_IDENTIFIED'].includes(company.status) ? 'bg-surgical-navy text-white border-surgical-navy' : 'bg-blue-50 text-surgical-cobalt border-blue-200'
                         }`}>
-                          {company.status === 'RESEARCHED' ? 'Deep Dossier' : 'Accepted'}
+                          {['ACCEPTED', 'RESEARCH_COMPLETE', 'STAKEHOLDERS_IDENTIFIED'].includes(company.status) ? 'Qualified' : 'Under Review'}
                         </span>
                       </div>
 
@@ -556,6 +593,7 @@ const ResearchTabs = ({
                 {campaign.target_companies?.filter(co => co.status === 'REJECTED').map((company) => (
                   <div
                     key={company.id}
+                    onClick={() => setSelectedCompany(company)}
                     className="bg-slate-50/50 rounded-[24px] border border-slate-200 p-6 cursor-pointer hover:shadow-xl hover:shadow-slate-100 transition-all flex flex-col justify-between min-h-[270px] h-full opacity-85 hover:opacity-100 grayscale hover:grayscale-0"
                   >
                     <div className="flex flex-col gap-4">
@@ -574,6 +612,14 @@ const ResearchTabs = ({
                           "{company.relevance_explanation || "Structural mismatch identified during ICP audit."}"
                         </p>
                       </div>
+                      {company.research_summary && (
+                        <div className="p-4 bg-white rounded-xl border border-slate-200">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Deep Intelligence</p>
+                          <p className="text-[10px] font-semibold text-slate-500 line-clamp-3 leading-relaxed">
+                            {company.research_summary}
+                          </p>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex flex-col gap-4 mt-auto pt-4">

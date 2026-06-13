@@ -94,8 +94,9 @@
    their own full-height wrapper on top of this canvas. */
 html {
   background-color: #030712;
-  /* Prevent horizontal rubber-banding from exposing the canvas edge. */
-  overscroll-behavior-x: none;
+  /* Prevent rubber-banding (both axes) from exposing the dark canvas behind
+     light-themed pages like the campaign workspace. */
+  overscroll-behavior: none;
 }
 
 html, body, #root {
@@ -295,25 +296,34 @@ h1.auth-logo-title, .min-h-screen h1.auth-logo-title {
   color: #ffffff !important;
 }
 
-.dark-portal-theme p,
-.dark-portal-theme span:not(.text-red-600):not(.text-\[\#00f0ff\]):not(.bg-red-600),
+/* Muted text — zero-specificity default for bare p/span/li so explicit color
+   utilities (rose, emerald, indigo, cyan…) are NEVER overridden, plus firm
+   remaps for the known light-mode utility classes. */
+.dark-portal-theme :where(p, span, li) {
+  color: #d4d4d8;
+}
+.dark-portal-theme .text-slate-400,
 .dark-portal-theme .text-slate-500,
 .dark-portal-theme .text-slate-600,
 .dark-portal-theme .text-zinc-500,
 .dark-portal-theme .text-zinc-600,
-.dark-portal-theme .text-slate-400,
-.dark-portal-theme .text-zinc-400 {
+.dark-portal-theme .text-zinc-400,
+.dark-portal-theme .text-slate-300 {
   color: #a1a1aa !important;
 }
 
-/* Borders */
-.dark-portal-theme .border,
+/* Borders — zero-specificity default so any explicit colored border wins, plus
+   firm remaps for the known light border utilities. */
+.dark-portal-theme :where(.border, .border-r, .border-l, .border-t, .border-b, .border-x, .border-y) {
+  border-color: rgba(63, 63, 70, 0.45);
+}
+.dark-portal-theme .border-slate-50,
 .dark-portal-theme .border-slate-100,
 .dark-portal-theme .border-slate-200,
 .dark-portal-theme .border-zinc-200,
 .dark-portal-theme .border-zinc-100,
 .dark-portal-theme .border-slate-200\/80,
-.dark-portal-theme .border-r {
+.dark-portal-theme .border-surgical-border {
   border-color: rgba(63, 63, 70, 0.45) !important;
 }
 
@@ -421,6 +431,74 @@ h1.auth-logo-title, .min-h-screen h1.auth-logo-title {
   background-color: rgba(0, 240, 255, 0.12) !important;
   color: #00f0ff !important;
   border: 1px solid rgba(0, 240, 255, 0.25) !important;
+}
+
+.dark-portal-theme .bg-indigo-50,
+.dark-portal-theme .bg-indigo-500\/10 {
+  background-color: rgba(99, 102, 241, 0.14) !important;
+  color: #a5b4fc !important;
+  border: 1px solid rgba(99, 102, 241, 0.25) !important;
+}
+
+.dark-portal-theme .bg-purple-50 {
+  background-color: rgba(168, 85, 247, 0.14) !important;
+  color: #d8b4fe !important;
+  border: 1px solid rgba(168, 85, 247, 0.25) !important;
+}
+
+.dark-portal-theme .bg-teal-50 {
+  background-color: rgba(20, 184, 166, 0.14) !important;
+  color: #5eead4 !important;
+  border: 1px solid rgba(20, 184, 166, 0.25) !important;
+}
+
+.dark-portal-theme .bg-rose-50,
+.dark-portal-theme .bg-rose-500\/10 {
+  background-color: rgba(244, 63, 94, 0.12) !important;
+  color: #fda4af !important;
+  border: 1px solid rgba(244, 63, 94, 0.25) !important;
+}
+
+.dark-portal-theme .bg-slate-100,
+.dark-portal-theme [class*="bg-slate-100/"] {
+  background-color: rgba(63, 63, 70, 0.4) !important;
+}
+
+/* =============================================================================
+   Surgical (decision-intelligence) token remaps — campaign workspace surfaces
+   ============================================================================= */
+.dark-portal-theme .bg-surgical-bg,
+.dark-portal-theme [class*="bg-surgical-bg"] {
+  background-color: transparent !important;
+}
+
+/* Solid navy → electric cyan primary (buttons, active pills) */
+.dark-portal-theme .bg-surgical-navy {
+  background-color: #00f0ff !important;
+  color: #030712 !important;
+  box-shadow: 0 0 18px rgba(0, 240, 255, 0.2) !important;
+}
+.dark-portal-theme .bg-surgical-navy:hover {
+  background-color: #26f3ff !important;
+}
+
+/* Navy tints (/5 /10 /20) → subtle cyan glass for avatar/icon tiles */
+.dark-portal-theme [class*="bg-surgical-navy/"] {
+  background-color: rgba(0, 240, 255, 0.08) !important;
+  border-color: rgba(0, 240, 255, 0.2) !important;
+}
+
+.dark-portal-theme .bg-surgical-cobalt,
+.dark-portal-theme [class*="bg-surgical-cobalt"] {
+  background-color: rgba(0, 240, 255, 0.12) !important;
+  color: #00f0ff !important;
+}
+
+.dark-portal-theme [class*="text-surgical-navy"] {
+  color: #00f0ff !important;
+}
+.dark-portal-theme [class*="border-surgical-navy"] {
+  border-color: rgba(0, 240, 255, 0.2) !important;
 }
 
 /* Telemetry Tables */

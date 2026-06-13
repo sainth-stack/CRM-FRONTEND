@@ -116,11 +116,20 @@ const Home = () => {
                 Sign In
                 <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
               </Link>
+              {/* Launch Trial hidden for now — feature temporarily disabled.
+                  Demo signup logic/routes remain intact; restore this Link to re-enable.
               <Link
                 to="/demo"
                 className="w-full sm:w-auto px-9 py-3.5 bg-white/[0.03] border border-zinc-800 hover:border-[#00f0ff]/50 hover:bg-[#00f0ff]/[0.04] text-white rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
               >
                 Launch Trial
+              </Link>
+              */}
+              <Link
+                to="/contact"
+                className="w-full sm:w-auto px-9 py-3.5 bg-white/[0.03] border border-zinc-800 hover:border-[#00f0ff]/50 hover:bg-[#00f0ff]/[0.04] text-white rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]"
+              >
+                Contact Us
               </Link>
             </>
           ) : (
@@ -129,7 +138,7 @@ const Home = () => {
                 to="/create"
                 className="group w-full sm:w-auto px-9 py-3.5 bg-[#00f0ff] hover:bg-[#26f3ff] text-zinc-950 rounded-xl font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 shadow-[0_0_30px_rgba(0,240,255,0.28)] hover:scale-[1.02] transition-all duration-300 active:scale-[0.98]"
               >
-                New Campaign
+                Launch Campaign
                 <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
               </Link>
               <Link

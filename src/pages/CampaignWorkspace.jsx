@@ -10,7 +10,7 @@ import {
   X, Edit3, Send, Trash, Maximize2, Clock, Calendar, Link2,
   TrendingUp, PieChart, Target, ShieldCheck, LayoutDashboard,
   Activity, BarChart3, Filter, ChevronDown,
-  PenLine, Inbox, HelpCircle, RefreshCw
+  PenLine, Inbox, HelpCircle, RefreshCw, Menu
 } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "../config";
@@ -150,40 +150,36 @@ const ProgressTracker = ({ status }) => {
     { id: "STAGE_6_DRAFTING_COMPLETE", label: "Drafting" },
   ];
 
-  let currentIdx = stages.findIndex(s => s.id === status);
-  if (status === "COMPLETED") {
-    currentIdx = stages.length; // all completed
-  }
-  
-  return (
-    <div className="w-full bg-white border-b border-surgical-border px-10 py-8 select-none">
-      <div className="max-w-[1200px] mx-auto relative">
-        {/* Connection Line */}
-        <div className="absolute top-[18px] left-0 right-0 h-[2px] bg-slate-100 z-0" />
-        
-        <div className="flex items-center justify-between relative z-10">
-          {stages.map((stage, idx) => {
-            const isCompleted = idx < currentIdx || status === "COMPLETED";
-            const isActive = idx === currentIdx;
+  let currentIdx = stages.findIndex((s) => s.id === status);
+  if (status === "COMPLETED") currentIdx = stages.length;
 
-            return (
-              <div key={stage.id} className="flex flex-col items-center gap-3">
-                <div className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-500 font-bold text-sm ${
-                  isCompleted ? "bg-surgical-navy text-white shadow-lg shadow-surgical-navy/20" :
-                  isActive ? "bg-surgical-navy text-white ring-4 ring-blue-50" :
-                  "bg-white border-2 border-slate-100 text-slate-300"
-                }`}>
-                  {isCompleted ? <CheckCircle2 size={18} /> : <span>{idx + 1}</span>}
-                </div>
-                <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors duration-500 ${
-                  isActive ? "text-surgical-navy" : "text-slate-400"
-                }`}>
-                  {stage.label}
-                </span>
+  return (
+    <div className="relative min-w-[520px] max-w-[1200px] mx-auto select-none">
+      {/* Connection line */}
+      <div className="absolute top-[15px] left-0 right-0 h-[2px] bg-slate-100 z-0" />
+
+      <div className="flex items-start justify-between relative z-10">
+        {stages.map((stage, idx) => {
+          const isCompleted = idx < currentIdx || status === "COMPLETED";
+          const isActive = idx === currentIdx;
+
+          return (
+            <div key={stage.id} className="flex flex-col items-center gap-2 px-1">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-500 font-bold text-xs ${
+                isCompleted ? "bg-surgical-navy text-white shadow-lg shadow-surgical-navy/20" :
+                isActive ? "bg-surgical-navy text-white ring-4 ring-blue-50" :
+                "bg-white border-2 border-slate-100 text-slate-300"
+              }`}>
+                {isCompleted ? <CheckCircle2 size={16} /> : <span>{idx + 1}</span>}
               </div>
-            );
-          })}
-        </div>
+              <span className={`text-[9px] font-bold uppercase tracking-widest text-center transition-colors duration-500 whitespace-nowrap ${
+                isActive ? "text-surgical-navy" : "text-slate-400"
+              }`}>
+                {stage.label}
+              </span>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -211,6 +207,7 @@ const CampaignWorkspace = () => {
   const [showDraftFilter, setShowDraftFilter] = useState(false);
   const [showHistoryDM, setShowHistoryDM] = useState(null);
   const [expandedNodes, setExpandedNodes] = useState([]);
+  const [navOpen, setNavOpen] = useState(false); // mobile campaign-nav drawer
 
   // Close the draft filter dropdown on any outside click
   useEffect(() => {
@@ -522,41 +519,108 @@ const CampaignWorkspace = () => {
     }
   };
 
+  const navTabs = [
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "research", label: "Campaign", icon: Globe },
+    { id: "monitor", label: "Outreach", icon: Mail },
+    { id: "history", label: "Discovery", icon: PhoneCall },
+    { id: "report", label: "Report", icon: FileBarChart },
+  ];
+
   return (
-    <div className="flex h-[calc(100vh-74px)] overflow-hidden bg-surgical-bg font-sans select-none">
-      <MissionSidebar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        campaignName={campaign.name} 
-      />
+    <div className="flex h-[calc(100vh-74px)] overflow-hidden select-none">
+      {/* Mobile backdrop for the campaign-nav drawer */}
+      {navOpen && (
+        <div
+          className="fixed inset-x-0 top-[74px] bottom-0 z-30 bg-black/60 backdrop-blur-sm md:hidden"
+          onClick={() => setNavOpen(false)}
+          aria-hidden="true"
+        />
+      )}
 
-      <div className="flex-grow flex flex-col overflow-hidden">
-        <header className="h-20 bg-white border-b border-surgical-border px-10 flex items-center justify-between shrink-0 z-20">
-          <div className="flex items-center gap-6">
-            <Link 
-              to="/active" 
-              className="p-2.5 bg-slate-50 border border-surgical-border text-slate-400 hover:text-surgical-navy rounded-xl transition-all shadow-sm"
-            >
-              <ArrowLeft size={18} />
-            </Link>
-            <div className="h-8 w-px bg-slate-100" />
-            <h1 className="text-xl font-black text-slate-900 tracking-tight uppercase italic leading-none">
-              Mission Control
-            </h1>
+      {/* Campaign workspace sidebar — static on desktop, slide-in drawer on mobile */}
+      <aside
+        className={`fixed md:static top-[74px] md:top-auto bottom-0 md:bottom-auto left-0 z-40 w-64 md:w-60 shrink-0 bg-[#0a0f1c] border-r border-zinc-800/70 flex flex-col h-[calc(100vh-74px)] md:h-full overflow-hidden transition-transform duration-300 md:translate-x-0 ${
+          navOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        {/* Mission context */}
+        <div className="px-5 py-5 border-b border-zinc-800/70">
+          <Link
+            to="/active"
+            className="inline-flex items-center gap-2 text-[10px] font-bold text-zinc-400 hover:text-[#00f0ff] uppercase tracking-widest transition-colors mb-4"
+          >
+            <ArrowLeft size={14} /> All campaigns
+          </Link>
+          <h1 className="text-[13px] font-bold text-white tracking-tight leading-snug line-clamp-3 break-words" title={campaign.name}>
+            {campaign.name || "Tactical Unit"}
+          </h1>
+        </div>
+
+        {/* Primary navigation */}
+        <nav className="flex-grow py-5 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+          {navTabs.map((t) => {
+            const active = activeTab === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => {
+                  setActiveTab(t.id);
+                  setNavOpen(false);
+                }}
+                className={`group relative w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all ${
+                  active
+                    ? "bg-[#00f0ff]/10 text-white"
+                    : "text-zinc-400 hover:text-white hover:bg-zinc-800/40"
+                }`}
+              >
+                <span
+                  className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-[#00f0ff] transition-opacity ${
+                    active ? "opacity-100" : "opacity-0 group-hover:opacity-40"
+                  }`}
+                />
+                <t.icon size={16} className={active ? "text-[#00f0ff]" : "text-zinc-500 group-hover:text-zinc-300"} />
+                {t.label}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Footer: lifecycle status */}
+        <div className="px-5 py-4 border-t border-zinc-800/70">
+          <span className="block text-[9px] font-bold text-zinc-500 uppercase tracking-widest leading-none mb-2">
+            Lifecycle
+          </span>
+          <div className="flex items-center gap-2.5">
+            <span className="w-7 h-7 rounded-lg bg-[#00f0ff]/10 border border-[#00f0ff]/20 flex items-center justify-center text-[#00f0ff] shrink-0">
+              <Activity size={14} />
+            </span>
+            <span className="text-[11px] font-bold text-[#00f0ff] uppercase tracking-tight leading-tight">
+              {getDisplayStatus()}
+            </span>
           </div>
+        </div>
+      </aside>
 
-          <div className="flex items-center gap-6">
-             <div className="flex flex-col items-end">
-               <span className="text-[10px] font-black text-surgical-navy uppercase tracking-widest leading-none">Operation Lifecycle</span>
-               <span className="text-[11px] font-black text-slate-900 border-b-2 border-surgical-navy tracking-tighter uppercase">{getDisplayStatus()}</span>
-             </div>
-             <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
-               <Activity size={20} />
-             </div>
+      {/* Right content column */}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+
+        {/* Pipeline tracker — the single workspace header (designer requirement).
+            On mobile the drawer menu is pinned to the left and the stepper scrolls
+            horizontally. */}
+        <div className="shrink-0 bg-white border-b border-surgical-border flex items-center">
+          <button
+            type="button"
+            onClick={() => setNavOpen(true)}
+            aria-label="Open campaign navigation"
+            className="md:hidden shrink-0 ml-2 p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors active:scale-95"
+          >
+            <Menu size={20} />
+          </button>
+          <div className="flex-1 min-w-0 overflow-x-auto custom-scrollbar px-3 sm:px-6 lg:px-10 py-4 sm:py-6">
+            <ProgressTracker status={campaign.status} />
           </div>
-        </header>
-
-        <ProgressTracker status={campaign.status} />
+        </div>
 
         {campaign.status === "INTERVENTION_NEEDED" && (
           <div className="bg-amber-50 border-y border-amber-200 px-10 py-6 animate-pulse-subtle">
@@ -1338,11 +1402,24 @@ const CampaignWorkspace = () => {
                                  {company.name[0].toUpperCase()}
                               </div>
                               <div>
-                                 <h4 className="font-extrabold text-slate-900 uppercase tracking-tight leading-none mb-1">{company.name}</h4>
+                                 <h4 className="font-extrabold text-slate-900 uppercase tracking-tight leading-none mb-1 flex items-center gap-2">
+                                    {company.name}
+                                    {(() => {
+                                      const qualified = ['ACCEPTED', 'RESEARCH_COMPLETE', 'STAKEHOLDERS_IDENTIFIED'].includes(company.status);
+                                      const rejected = company.status === 'REJECTED';
+                                      const cls = qualified
+                                        ? 'bg-surgical-navy text-white'
+                                        : rejected
+                                          ? 'bg-rose-50 text-rose-600 border border-rose-100'
+                                          : 'bg-blue-50 text-surgical-cobalt border border-blue-200';
+                                      const label = qualified ? 'Qualified' : rejected ? 'Rejected' : 'Review';
+                                      return <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${cls}`}>{label}</span>;
+                                    })()}
+                                 </h4>
                                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{company.location || "Global Ops"}</p>
                               </div>
                            </div>
-                           <button 
+                           <button
                              onClick={() => setSelectedCompany(company)}
                              className="text-[10px] font-black text-surgical-navy uppercase tracking-widest underline underline-offset-4 decoration-2 decoration-surgical-navy/20 hover:text-surgical-navy/70 transition-all"
                            >
@@ -1448,12 +1525,52 @@ const CampaignWorkspace = () => {
                     {/* Right Column: Deep Intel Narrative */}
                     <div className="md:col-span-7 p-8 md:p-10 space-y-8 flex flex-col justify-between bg-white h-full">
                        <div className="space-y-6 flex-1 overflow-y-auto max-h-[480px] pr-2 select-text custom-scrollbar">
+                          {selectedCompany.opportunity_reason && (
+                             <div className="p-6 bg-red-500/5 rounded-[20px] border border-red-500/10">
+                                <p className="text-[9px] font-black text-red-500 uppercase tracking-widest mb-2">AI Opportunity Identification</p>
+                                <p className="text-sm font-semibold text-slate-700 leading-relaxed italic">"{selectedCompany.opportunity_reason}"</p>
+                             </div>
+                          )}
+
                           <div>
                              <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4 underline decoration-red-500/20 underline-offset-4 decoration-2">Deep Research Insight</h3>
                              <p className="text-slate-600 font-medium text-sm leading-relaxed whitespace-pre-wrap bg-slate-50/50 p-6 rounded-[20px] border border-slate-100">
                                 {selectedCompany.research_summary || selectedCompany.deep_research || "No deep research data available for this entity."}
                              </p>
                           </div>
+
+                          {selectedCompany.matched_pains?.length > 0 && (
+                             <div className="space-y-3">
+                                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Validated Pain Points</p>
+                                <div className="flex flex-wrap gap-2">
+                                   {selectedCompany.matched_pains.map((pain, i) => (
+                                      <span key={i} className="px-3 py-1.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl text-[10px] font-black uppercase tracking-tight">{pain}</span>
+                                   ))}
+                                </div>
+                             </div>
+                          )}
+
+                          {selectedCompany.matched_services?.length > 0 && (
+                             <div className="space-y-3">
+                                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Service Alignment</p>
+                                <div className="flex flex-wrap gap-2">
+                                   {selectedCompany.matched_services.map((service, i) => (
+                                      <span key={i} className="px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl text-[10px] font-black uppercase tracking-tight">{service}</span>
+                                   ))}
+                                </div>
+                             </div>
+                          )}
+
+                          {selectedCompany.growth_hooks?.length > 0 && (
+                             <div className="space-y-3">
+                                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Signals & Hooks</p>
+                                <ul className="space-y-2">
+                                   {[...(selectedCompany.growth_hooks || []), ...(selectedCompany.news_hooks || [])].map((hook, i) => (
+                                      <li key={i} className="text-xs font-semibold text-slate-600 leading-relaxed pl-4 border-l-2 border-slate-200">{hook}</li>
+                                   ))}
+                                </ul>
+                             </div>
+                          )}
                        </div>
 
                        {/* Interactive Navigation Footer */}

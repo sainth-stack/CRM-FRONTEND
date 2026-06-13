@@ -19,12 +19,22 @@ const RootLayout = () => {
   // It is suppressed on auth, onboarding, and the immersive campaign workspace.
   const showSidebar = isLoggedIn && !isAuthPage && !isOnboarding && !isCampaignWorkspace;
 
+  // Pages fully redesigned with explicit dark-theme classes opt OUT of the global
+  // `.dark-portal-theme` override (which force-recolors text/borders and would fight
+  // their hand-tuned cyan/rose/emerald styling). Everything else relies on the override.
+  const rawThemeRoutes = ["/create/setup", "/active", "/inactive", "/contact"];
+  const isRawThemePage = rawThemeRoutes.includes(location.pathname);
+
   const shouldSuppressTopPadding = isHome || isAuthPage || isOnboarding ||
     ["/profile", "/settings", "/change-password"].includes(location.pathname);
 
   return (
     <div className={`min-h-screen flex flex-col font-outfit transition-colors duration-300 ${
-      isCampaignWorkspace ? "bg-brand-light" : "bg-[#030712] text-white dark-portal-theme"
+      isCampaignWorkspace
+        ? "bg-brand-light"
+        : isRawThemePage
+        ? "bg-[#030712] text-white"
+        : "bg-[#030712] text-white dark-portal-theme"
     }`}>
       {!isAuthPage && (
         <Navbar
