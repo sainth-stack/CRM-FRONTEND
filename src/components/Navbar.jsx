@@ -230,7 +230,7 @@ const Navbar = ({ showMenuButton = false, onMenuClick }) => {
                     <UserIcon size={14} />
                     Profile
                   </button>
-                  {role === "USER" && (
+                  {(role === "USER" || role === "SUPER_ADMIN") && (
                     <button
                       role="menuitem"
                       onClick={() => {

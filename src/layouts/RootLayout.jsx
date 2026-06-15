@@ -25,7 +25,8 @@ const RootLayout = () => {
   const rawThemeRoutes = ["/create/setup", "/active", "/inactive", "/contact"];
   const isRawThemePage = rawThemeRoutes.includes(location.pathname);
 
-  const shouldSuppressTopPadding = isHome || isAuthPage || isOnboarding ||
+  const isAdminPage = location.pathname.startsWith("/admin");
+  const shouldSuppressTopPadding = isHome || isAuthPage || isOnboarding || isAdminPage ||
     ["/profile", "/settings", "/change-password"].includes(location.pathname);
 
   return (

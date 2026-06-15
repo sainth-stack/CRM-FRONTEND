@@ -1,42 +1,47 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   PlusCircle,
   Radio,
   Archive,
   Settings as SettingsIcon,
+  Shield,
+  Building2,
   ShieldCheck,
-  BarChart3,
+  Users,
+  Clock,
+  ArrowLeft,
   X,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { canAccessAdmin, isSuperAdmin } from "../utils/roles";
 
-const SIDEBAR_WIDTH = "w-64"; // 16rem / 256px
+const SIDEBAR_WIDTH = "w-64";
+
+const userNavItems = [
+  { name: "Dashboard", to: "/", icon: LayoutDashboard, end: true },
+  { name: "Launch Campaign", to: "/create", icon: PlusCircle },
+  { name: "Active", to: "/active", icon: Radio },
+  { name: "Inactive", to: "/inactive", icon: Archive },
+];
+
+const adminEntryItem = { name: "Administration", to: "/admin", icon: Shield };
+
+const adminSubItems = [
+  { name: "Tenants", to: "/admin/tenants", icon: Building2, superOnly: true },
+  { name: "Organizations", to: "/admin/organizations", icon: Building2 },
+  { name: "User Roles", to: "/admin/user-roles", icon: ShieldCheck },
+  { name: "Users", to: "/admin/users", icon: Users },
+  { name: "User Sessions", to: "/admin/user-sessions", icon: Clock },
+];
 
 const Sidebar = ({ open, onClose }) => {
   const { user } = useAuth();
-  const role = user?.role?.toUpperCase();
-  const isAdmin = role === "ADMIN" || role === "SUPER_ADMIN";
-
-  const primaryItems = isAdmin
-    ? [
-        {
-          name: "Admin Deck",
-          to: role === "SUPER_ADMIN" ? "/sovereign" : "/management",
-          icon: ShieldCheck,
-        },
-        { name: "Analysis", to: "/analysis", icon: BarChart3 },
-      ]
-    : [
-        { name: "Dashboard", to: "/", icon: LayoutDashboard, end: true },
-        { name: "Launch Campaign", to: "/create", icon: PlusCircle },
-        { name: "Active", to: "/active", icon: Radio },
-        { name: "Inactive", to: "/inactive", icon: Archive },
-      ];
-
-  const secondaryItems = isAdmin
-    ? []
-    : [{ name: "Settings", to: "/settings", icon: SettingsIcon }];
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isAdminUser = canAccessAdmin(user);
+  const superAdmin = isSuperAdmin(user);
+  const isAdminRoute = location.pathname.startsWith("/admin");
 
   const linkClass = ({ isActive }) =>
     [
@@ -58,7 +63,6 @@ const Sidebar = ({ open, onClose }) => {
       >
         {({ isActive }) => (
           <>
-            {/* Active accent rail */}
             <span
               className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-[#00f0ff] transition-all duration-200 ${
                 isActive ? "opacity-100" : "opacity-0 group-hover:opacity-40"
@@ -77,9 +81,17 @@ const Sidebar = ({ open, onClose }) => {
     );
   };
 
+  const showSettings = superAdmin || (!isAdminUser && !isAdminRoute);
+  const workspaceItems = isAdminRoute
+    ? adminSubItems.filter((item) => !item.superOnly || superAdmin)
+    : superAdmin
+    ? userNavItems
+    : isAdminUser
+    ? [adminEntryItem]
+    : userNavItems;
+
   return (
     <>
-      {/* Mobile backdrop */}
       {open && (
         <div
           className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
@@ -93,11 +105,8 @@ const Sidebar = ({ open, onClose }) => {
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Mobile close */}
         <div className="flex md:hidden items-center justify-between px-4 pt-4">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">
-            Navigation
-          </span>
+          <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-600">Navigation</span>
           <button
             onClick={onClose}
             className="p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800/60 transition-colors"
@@ -108,24 +117,47 @@ const Sidebar = ({ open, onClose }) => {
         </div>
 
         <nav className="flex-1 overflow-y-auto custom-scrollbar px-3 py-5">
-          <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-600">
-            Workspace
-          </div>
-          <div className="flex flex-col gap-1">{primaryItems.map(renderItem)}</div>
+          {isAdminRoute && (
+            <div className="mb-4 px-1">
+              <button
+                onClick={() => {
+                  navigate("/");
+                  onClose?.();
+                }}
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-xl text-[12px] font-semibold text-zinc-400 hover:text-white hover:bg-zinc-800/40 transition-all"
+              >
+                <ArrowLeft size={16} />
+                Back to Home
+              </button>
+            </div>
+          )}
 
-          {secondaryItems.length > 0 && (
+          <div className="px-3 mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-600">
+            {isAdminRoute ? "Administration" : "Workspace"}
+          </div>
+          <div className="flex flex-col gap-1">{workspaceItems.map(renderItem)}</div>
+
+          {superAdmin && !isAdminRoute && (
+            <>
+              <div className="px-3 mt-7 mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-600">
+                Administration
+              </div>
+              <div className="flex flex-col gap-1">{renderItem(adminEntryItem)}</div>
+            </>
+          )}
+
+          {showSettings && (
             <>
               <div className="px-3 mt-7 mb-2 text-[10px] font-bold uppercase tracking-widest text-zinc-600">
                 Account
               </div>
               <div className="flex flex-col gap-1">
-                {secondaryItems.map(renderItem)}
+                {renderItem({ name: "Settings", to: "/settings", icon: SettingsIcon })}
               </div>
             </>
           )}
         </nav>
 
-        {/* Footer status */}
         <div className="px-5 py-4 border-t border-zinc-900/70">
           <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-zinc-500">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />

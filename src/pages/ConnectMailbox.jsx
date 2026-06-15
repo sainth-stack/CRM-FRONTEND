@@ -33,8 +33,7 @@ const ConnectMailbox = () => {
             setStatus('success');
             
             // Strategic Redirection: Send users to their natural operational habitat
-            const target = user?.role === 'super_admin' ? '/sovereign' : 
-                         user?.role === 'admin' ? '/management' : '/';
+            const target = user?.role === 'admin' ? '/admin/organizations' : '/';
             
             setTimeout(() => navigate(target), 1200); 
         } catch (error) {
