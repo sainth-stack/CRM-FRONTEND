@@ -4,7 +4,7 @@
 // /auth/management/provision endpoint, which creates the account and dispatches the
 // onboarding email. The legacy permission-set logic is intentionally gone.
 import { useCallback, useEffect, useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { adminApi } from "../../lib/api/admin";
@@ -42,6 +42,12 @@ export default function UserRoles() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+
+  // Edit modal — separate state from the Add modal so the two flows don't trample.
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [editForm, setEditForm] = useState({ system_role: "user", organization_id: "", is_active: true });
+  const [updating, setUpdating] = useState(false);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -132,6 +138,76 @@ export default function UserRoles() {
   // For non-super-admins the tenant is pinned, so this still does the right thing.
   const orgsForTenant = orgs.filter((o) => !form.tenant_id || o.tenant?.tenant_id === form.tenant_id);
 
+  // ---- Edit member -----------------------------------------------------------
+  // Reuses PATCH /admin/users/{id}. The org dropdown stays inside the user's
+  // current tenant (the backend rejects cross-tenant org moves). system_role can
+  // only be changed by a super admin (the backend enforces this too).
+  const openEdit = (member) => {
+    setEditingUser(member);
+    setEditForm({
+      system_role: member.system_role || "user",
+      organization_id: member.organization?.organization_id || "",
+      is_active: member.is_active !== false,
+    });
+    setEditDialogOpen(true);
+  };
+
+  // Org options for the editing user — scoped to that user's tenant (admins only
+  // see their own tenant's orgs anyway, but this guards super admins too).
+  const editingUserTenantId = editingUser?.tenant?.tenant_id || null;
+  const orgsForEditingUser = orgs.filter(
+    (o) => !editingUserTenantId || o.tenant?.tenant_id === editingUserTenantId,
+  );
+
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    setUpdating(true);
+    try {
+      // Only send fields that actually changed — keeps the audit log honest and
+      // avoids spurious revoke_sessions calls server-side.
+      const body = {};
+      if (editForm.organization_id && editForm.organization_id !== editingUser.organization?.organization_id) {
+        body.organization_id = editForm.organization_id;
+      }
+      if (editForm.is_active !== (editingUser.is_active !== false)) {
+        body.is_active = editForm.is_active;
+      }
+      if (superAdmin && editForm.system_role && editForm.system_role !== editingUser.system_role) {
+        body.system_role = editForm.system_role;
+      }
+      if (Object.keys(body).length === 0) {
+        showToast({ tone: "info", title: "Nothing to update" });
+        setEditDialogOpen(false);
+        return;
+      }
+      await adminApi.updateUser(token, editingUser.id, body);
+      showToast({ tone: "success", title: "Member updated" });
+      setEditDialogOpen(false);
+      loadUsers();
+    } catch (err) {
+      showToast({ tone: "error", title: "Update failed", description: adminApi.extractMessage(err) });
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  // ---- Delete member ---------------------------------------------------------
+  const handleDelete = async (member) => {
+    if (member.id === user?.id) {
+      showToast({ tone: "error", title: "Cannot delete yourself" });
+      return;
+    }
+    if (!window.confirm(`Delete ${member.email}? This cannot be undone.`)) return;
+    try {
+      await adminApi.deleteUser(token, member.id);
+      showToast({ tone: "success", title: "Member deleted" });
+      loadUsers();
+    } catch (err) {
+      showToast({ tone: "error", title: "Delete failed", description: adminApi.extractMessage(err) });
+    }
+  };
+
   const filtered = users.filter((u) => u.email?.toLowerCase().includes(search.toLowerCase()));
 
   return (
@@ -168,6 +244,29 @@ export default function UserRoles() {
                     ) : (
                       <span className="text-emerald-600 text-xs font-bold">ACTIVE</span>
                     ),
+                },
+                {
+                  key: "actions",
+                  label: "Actions",
+                  align: "right",
+                  render: (r) => {
+                    const isSelf = r.id === user?.id;
+                    return (
+                      <div className="flex justify-end gap-2">
+                        <AdminBtn variant="ghost" onClick={() => openEdit(r)} title="Edit member">
+                          <Pencil size={14} />
+                        </AdminBtn>
+                        <AdminBtn
+                          variant="danger"
+                          onClick={() => handleDelete(r)}
+                          disabled={isSelf}
+                          title={isSelf ? "You can't delete yourself" : "Delete member"}
+                        >
+                          <Trash2 size={14} />
+                        </AdminBtn>
+                      </div>
+                    );
+                  },
                 },
               ]}
               rows={filtered.map((u) => ({ key: u.id, data: u }))}
@@ -249,6 +348,58 @@ export default function UserRoles() {
               </p>
             )}
           </div>
+        </form>
+      </AdminModal>
+
+      {/* Edit member modal — change role (super-admin only), organization, status. */}
+      <AdminModal
+        open={editDialogOpen}
+        onClose={() => setEditDialogOpen(false)}
+        title={editingUser ? `Edit ${editingUser.email}` : "Edit Member"}
+        footer={
+          <>
+            <AdminBtn variant="secondary" onClick={() => setEditDialogOpen(false)}>Cancel</AdminBtn>
+            <AdminBtn onClick={handleUpdate} disabled={updating}>
+              {updating ? "Saving..." : "Save"}
+            </AdminBtn>
+          </>
+        }
+      >
+        <form onSubmit={handleUpdate} className="space-y-4">
+          {/* Role — only super admins may change it (backend also enforces this). */}
+          <AdminSelect
+            label="Role"
+            value={editForm.system_role}
+            onChange={(e) => setEditForm({ ...editForm, system_role: e.target.value })}
+            disabled={!superAdmin}
+          >
+            {allowedRoles.map(([value, label]) => (
+              <option key={value} value={value}>{label}</option>
+            ))}
+          </AdminSelect>
+
+          {/* Organization — scoped to the user's own tenant; backend rejects cross-tenant moves. */}
+          <AdminSelect
+            label="Organization"
+            value={editForm.organization_id}
+            onChange={(e) => setEditForm({ ...editForm, organization_id: e.target.value })}
+            required
+          >
+            <option value="">Select organization</option>
+            {orgsForEditingUser.map((o) => (
+              <option key={o.id} value={o.id}>{o.name}</option>
+            ))}
+          </AdminSelect>
+
+          {/* Status — disable/re-enable the account. Disabling also revokes sessions server-side. */}
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <input
+              type="checkbox"
+              checked={editForm.is_active}
+              onChange={(e) => setEditForm({ ...editForm, is_active: e.target.checked })}
+            />
+            Account active
+          </label>
         </form>
       </AdminModal>
     </AdminPageLayout>
