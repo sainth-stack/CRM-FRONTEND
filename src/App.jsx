@@ -24,7 +24,7 @@ import UserRoles from "./pages/admin/UserRoles";
 import Users from "./pages/admin/Users";
 import UserSessions from "./pages/admin/UserSessions";
 import Settings from "./pages/Settings";
-import { adminDefaultPath, isSuperAdmin } from "./utils/roles";
+import { adminDefaultPath } from "./utils/roles";
 import BusinessProfile from "./pages/BusinessProfile";
 import ChangePassword from "./pages/ChangePassword";
 import { useAuth } from "./context/AuthContext";
@@ -38,11 +38,12 @@ const ProtectedRoute = ({ children }) => {
 };
 
 const CapabilityRoute = ({ children }) => {
-  const { isLoggedIn, user, hasMailbox, loading } = useAuth();
+  // Campaign creation is available to EVERY role (end user, admin, super admin) — each
+  // starts campaigns under their own account, so the only requirement is a connected
+  // mailbox to send from.
+  const { isLoggedIn, hasMailbox, loading } = useAuth();
   if (loading) return null;
   if (!isLoggedIn) return <Navigate to="/login" replace />;
-  if (isSuperAdmin(user)) return children;
-  if (user?.role === "admin") return <Navigate to="/" replace />;
   if (!hasMailbox) return <Navigate to="/connect-mailbox" replace />;
   return children;
 };
@@ -83,15 +84,14 @@ function AppContents() {
 
   const isConnectionPage = location.pathname === "/connect-mailbox" || location.pathname === "/auth/google/callback" || location.pathname === "/connect-calendar";
   const isProfilePage = location.pathname === "/profile" || location.pathname === "/change-password";
-  const isTenantAdmin = user?.role === "admin";
-  const isFullAccessSuperAdmin = isSuperAdmin(user);
-  const skipOnboardingBarriers = isFullAccessSuperAdmin || isTenantAdmin;
 
-  const showMailboxBarrier = isLoggedIn && !hasMailbox && !isConnectionPage && !skipOnboardingBarriers;
-  const showCalendarBarrier = isLoggedIn && hasMailbox && !hasCalendar && !isConnectionPage && !skipOnboardingBarriers;
+  // Onboarding applies to EVERY role: all users (end users, admins, super admins) can
+  // start campaigns under their own account, so each must connect their own mailbox,
+  // connect their calendar, and complete their profile before entering the app.
+  const showMailboxBarrier = isLoggedIn && !hasMailbox && !isConnectionPage;
+  const showCalendarBarrier = isLoggedIn && hasMailbox && !hasCalendar && !isConnectionPage;
   const showProfileBarrier =
     isLoggedIn &&
-    !skipOnboardingBarriers &&
     hasMailbox &&
     hasCalendar &&
     user?.profile_complete === false &&

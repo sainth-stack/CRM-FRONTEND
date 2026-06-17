@@ -25,6 +25,7 @@ export default function Organizations() {
   const superAdmin = isSuperAdmin(user);
   const [items, setItems] = useState([]);
   const [tenants, setTenants] = useState([]);
+  const [allOrgs, setAllOrgs] = useState([]); // full org list (for the parent-org dropdown)
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -65,10 +66,22 @@ export default function Organizations() {
     }
   }, [token, superAdmin]);
 
+  // Load every organization (not just the current page) so the parent-org dropdown
+  // can show all candidates within the selected tenant.
+  const loadAllOrgs = useCallback(async () => {
+    try {
+      const { items } = await adminApi.listOrganizations(token, { page: 1, page_size: 100 });
+      setAllOrgs(items);
+    } catch {
+      /* non-critical: dropdown just shows no parents */
+    }
+  }, [token]);
+
   useEffect(() => {
     load();
     loadTenants();
-  }, [load, loadTenants]);
+    loadAllOrgs();
+  }, [load, loadTenants, loadAllOrgs]);
 
   const filtered = items.filter((o) => o.name?.toLowerCase().includes(search.toLowerCase()));
 
@@ -119,6 +132,7 @@ export default function Organizations() {
       }
       setDialogOpen(false);
       load();
+      loadAllOrgs();
     } catch (err) {
       showToast({ tone: "error", title: "Save failed", description: adminApi.extractMessage(err) });
     } finally {
@@ -222,9 +236,33 @@ export default function Organizations() {
               ))}
             </AdminSelect>
           )}
-          <AdminInput label="Parent Org ID" value={form.parent_id} onChange={(e) => setForm({ ...form, parent_id: e.target.value })} />
-          <AdminInput label="Logo URL" value={form.logo_url} onChange={(e) => setForm({ ...form, logo_url: e.target.value })} />
-          <AdminInput label="Logo Name" value={form.logo_name} onChange={(e) => setForm({ ...form, logo_name: e.target.value })} />
+          {/* Parent Organization — dynamic dropdown showing only orgs in the selected
+              tenant. Requires a tenant first (red alert otherwise). */}
+          <div>
+            <AdminSelect
+              label="Parent Organization"
+              value={form.parent_id}
+              disabled={!form.tenant_id}
+              onChange={(e) => setForm({ ...form, parent_id: e.target.value })}
+            >
+              <option value="">None (top-level)</option>
+              {allOrgs
+                .filter((o) => o.tenant?.tenant_id === form.tenant_id && o.id !== editId)
+                .map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name}
+                  </option>
+                ))}
+            </AdminSelect>
+            {!form.tenant_id && (
+              <p className="mt-1.5 text-sm font-medium text-red-600">
+                ⚠ Select a tenant first to choose a parent organization.
+              </p>
+            )}
+          </div>
+          {/* Logo URL / Logo Name intentionally hidden — they were stored but never
+              rendered anywhere in the app, so collecting them served no purpose. The DB
+              columns remain; wire a real upload/render flow before bringing them back. */}
         </form>
       </AdminModal>
     </AdminPageLayout>

@@ -84,10 +84,8 @@ const Sidebar = ({ open, onClose }) => {
   const showSettings = superAdmin || (!isAdminUser && !isAdminRoute);
   const workspaceItems = isAdminRoute
     ? adminSubItems.filter((item) => !item.superOnly || superAdmin)
-    : superAdmin
-    ? userNavItems
     : isAdminUser
-    ? [adminEntryItem]
+    ? [...userNavItems, adminEntryItem]   // admins & super admins: full campaign nav + admin entry
     : userNavItems;
 
   return (

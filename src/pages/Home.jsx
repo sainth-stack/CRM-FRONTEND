@@ -1,4 +1,4 @@
-import { Link, Navigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { useAuth } from "@/context/AuthContext";
 import { ArrowRight, Radio, PlusCircle, Archive, Users, Mail, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,9 +9,8 @@ const Home = () => {
 
   if (loading) return null;
 
-  if (isLoggedIn && user?.role === "admin") {
-    return <Navigate to="/admin/organizations" replace />;
-  }
+  // Admins (like super admins) land on the campaign dashboard so they can start their
+  // own campaigns; the admin panel remains reachable from the nav.
 
   if (!isLoggedIn) {
     return (

@@ -56,18 +56,23 @@ export const AdminBtn = ({ children, variant = "default", size = "default", clas
   );
 };
 
-export const AdminInput = ({ label, id, className = "", ...props }) => (
+// A required field shows a red "*" after its label so admins can see at a glance
+// which inputs are mandatory. `required` is also forwarded to the native control.
+const RequiredMark = () => <span className="text-red-500 ml-0.5">*</span>;
+
+export const AdminInput = ({ label, id, required, className = "", ...props }) => (
   <div className="space-y-2">
-    {label && <Label htmlFor={id}>{label}</Label>}
-    <Input id={id} className={className} {...props} />
+    {label && <Label htmlFor={id}>{label}{required && <RequiredMark />}</Label>}
+    <Input id={id} required={required} className={className} {...props} />
   </div>
 );
 
-export const AdminSelect = ({ label, children, className = "", ...props }) => (
+export const AdminSelect = ({ label, required, children, className = "", ...props }) => (
   <div className="space-y-2">
-    {label && <Label>{label}</Label>}
+    {label && <Label>{label}{required && <RequiredMark />}</Label>}
     <select
-      className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ${className}`}
+      required={required}
+      className={`flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
       {...props}
     >
       {children}
