@@ -2,7 +2,6 @@ import { useLocation, Link, useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AppLogo } from "@/components/AppLogo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,7 +23,6 @@ const routeNames = {
   "/admin/tenants": "Tenants",
   "/admin/organizations": "Organizations",
   "/admin/user-roles": "User Roles",
-  "/admin/users": "Users",
   "/admin/user-sessions": "User Sessions",
 };
 
@@ -57,9 +55,8 @@ export function AppHeader() {
               {roleLabel.replace("_", " ")}
             </Badge>
           )}
-          <Link to="/" className="hidden md:flex shrink-0">
-            <AppLogo size="xs" lightText={false} />
-          </Link>
+          {/* Brand removed from the header to avoid duplicating the sidebar's
+              FocalReach logo. The sidebar is the single source of brand identity. */}
         </div>
 
         <DropdownMenu>

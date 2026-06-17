@@ -8,7 +8,6 @@ import {
   Shield,
   Building2,
   ShieldCheck,
-  Users,
   Clock,
   ChevronLeft,
   ChevronRight,
@@ -35,7 +34,6 @@ const adminNavItems = [
   { title: "Tenants", path: "/admin/tenants", icon: Building2, superOnly: true },
   { title: "Organizations", path: "/admin/organizations", icon: Building2 },
   { title: "User Roles", path: "/admin/user-roles", icon: ShieldCheck },
-  { title: "Users", path: "/admin/users", icon: Users },
   { title: "User Sessions", path: "/admin/user-sessions", icon: Clock },
 ];
 
@@ -48,13 +46,23 @@ export function AppSidebar() {
   const isAdminUser = canAccessAdmin(user);
   const isAdminRoute = location.pathname.startsWith("/admin");
 
+  // Sidebar layout by route + role:
+  //   /admin routes -> admin sub-items (Tenants filtered for super only).
+  //   anywhere else -> full campaign nav for everyone; admins & super admins also see
+  //                    the Administration entry so they can hop into the panel.
+  // (Previously admins on the dashboard saw ONLY "Administration", with no path to
+  // Launch Campaign / Active / Inactive. Admins can now start their own campaigns,
+  // so they need the full nav like end users.)
   let navItems = userNavItems;
   if (isAdminRoute) {
     navItems = adminNavItems.filter((item) => !item.superOnly || superAdmin);
-  } else if (isAdminUser && !superAdmin) {
-    navItems = [adminEntry];
-  } else if (superAdmin) {
-    navItems = [...userNavItems.filter((i) => i.path !== "/settings"), adminEntry, userNavItems.find((i) => i.path === "/settings")];
+  } else if (isAdminUser) {
+    const settingsItem = userNavItems.find((i) => i.path === "/settings");
+    navItems = [
+      ...userNavItems.filter((i) => i.path !== "/settings"),
+      adminEntry,
+      ...(settingsItem ? [settingsItem] : []),
+    ];
   }
 
   const handleLogout = () => {

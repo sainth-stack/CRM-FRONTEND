@@ -215,9 +215,9 @@ const CampaignSetup = () => {
     if (sizes.length === 0) errors.sizes = "Select at least one company size band.";
     if (!prompt.trim()) errors.prompt = "Add campaign context so we can personalize outreach.";
     if (!file) {
-      errors.file = "Upload a prospect list (CSV) to continue.";
-    } else if (!file.name.toLowerCase().endsWith(".csv")) {
-      errors.file = "Only .CSV files are supported.";
+      errors.file = "Upload a prospect list (CSV or Excel) to continue.";
+    } else if (!/\.(csv|xlsx|xls)$/i.test(file.name)) {
+      errors.file = "Only .csv, .xlsx or .xls files are supported.";
     }
 
     if (Object.keys(errors).length > 0) {
@@ -538,7 +538,7 @@ const CampaignSetup = () => {
                 >
                   <input
                     type="file"
-                    accept=".csv"
+                    accept=".csv,.xlsx,.xls"
                     className="absolute inset-0 opacity-0 cursor-pointer"
                     onChange={(e) => {
                       setFile(e.target.files[0]);
@@ -549,7 +549,7 @@ const CampaignSetup = () => {
                   <p className="text-sm font-medium">
                     Drag &amp; drop or <span className="text-primary">browse</span> to upload
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">.CSV files only</p>
+                  <p className="text-xs text-muted-foreground mt-1">.csv, .xlsx or .xls</p>
                 </div>
               )}
               <FieldError message={fieldErrors.file} />

@@ -21,7 +21,6 @@ import AdminIndex from "./pages/admin/AdminIndex";
 import Tenants from "./pages/admin/Tenants";
 import Organizations from "./pages/admin/Organizations";
 import UserRoles from "./pages/admin/UserRoles";
-import Users from "./pages/admin/Users";
 import UserSessions from "./pages/admin/UserSessions";
 import Settings from "./pages/Settings";
 import { adminDefaultPath } from "./utils/roles";
@@ -115,14 +114,16 @@ function AppContents() {
           <Route index element={<Home />} />
           <Route path="contact" element={<ComingSoon />} />
           <Route path="sovereign" element={<Navigate to="/admin/tenants" replace />} />
-          <Route path="management" element={<Navigate to="/admin/users" replace />} />
+          {/* Legacy /management deeplink — bounce to the unified user-provisioning page. */}
+          <Route path="management" element={<Navigate to="/admin/user-roles" replace />} />
 
           <Route path="admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
             <Route index element={<AdminIndex />} />
             <Route path="tenants" element={<SuperAdminOnlyRoute><Tenants /></SuperAdminOnlyRoute>} />
             <Route path="organizations" element={<Organizations />} />
             <Route path="user-roles" element={<UserRoles />} />
-            <Route path="users" element={<Users />} />
+            {/* Old standalone Users page replaced by User Roles (which now provisions users). */}
+            <Route path="users" element={<Navigate to="/admin/user-roles" replace />} />
             <Route path="user-sessions" element={<UserSessions />} />
           </Route>
 

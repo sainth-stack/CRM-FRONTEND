@@ -28,9 +28,9 @@ const ConnectCalendar = () => {
         setStatus('connecting');
         try {
             await connectCalCalendar(code, state);
-            await checkAuth(); 
+            await checkAuth();
             setStatus('success');
-            setTimeout(() => navigate('/settings'), 1500); 
+            setTimeout(() => navigate('/settings'), 1500);
         } catch (error) {
             setErrorMessage(error.response?.data?.detail || "Calendar connection failed.");
             setStatus('error');
@@ -42,7 +42,7 @@ const ConnectCalendar = () => {
             const sessionKey = `cal_handshake_triggered_${code}`;
             if (!sessionStorage.getItem(sessionKey)) {
                 sessionStorage.setItem(sessionKey, 'true');
-                handleCalendarSuccess({ code, state }); 
+                handleCalendarSuccess({ code, state });
             }
         }
     }, [hasValidCode, status, code, state, handleCalendarSuccess]);
@@ -63,6 +63,7 @@ const ConnectCalendar = () => {
             setConnectingCal(false);
         }
     };
+
 
     return (
         <div className="min-h-screen bg-[#030712] flex items-center justify-center font-outfit select-none text-white relative py-12 lg:py-0">
@@ -248,6 +249,9 @@ const ConnectCalendar = () => {
                                     >
                                         Retry Connection
                                     </button>
+                                    <p className="text-[11px] text-zinc-500 font-medium">
+                                        Stuck in an auto-login loop? <a href="https://app.cal.com/auth/logout" target="_blank" rel="noreferrer" className="text-[#00f0ff] hover:underline">Log out of Cal.com</a> first, then try again.
+                                    </p>
                                 </div>
                             )}
 

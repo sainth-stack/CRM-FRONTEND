@@ -8,7 +8,6 @@ import {
   Shield,
   Building2,
   ShieldCheck,
-  Users,
   Clock,
   ArrowLeft,
   X,
@@ -31,7 +30,6 @@ const adminSubItems = [
   { name: "Tenants", to: "/admin/tenants", icon: Building2, superOnly: true },
   { name: "Organizations", to: "/admin/organizations", icon: Building2 },
   { name: "User Roles", to: "/admin/user-roles", icon: ShieldCheck },
-  { name: "Users", to: "/admin/users", icon: Users },
   { name: "User Sessions", to: "/admin/user-sessions", icon: Clock },
 ];
 

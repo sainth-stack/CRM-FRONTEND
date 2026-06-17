@@ -102,6 +102,11 @@ export const adminApi = {
   provisionUser: (token, email) =>
     request(token, "POST", "/auth/management/users", { body: { email } }),
 
+  // Unified provisioner used by the admin-panel User Roles form: one call mints a
+  // user/admin/super_admin in a tenant+org and triggers the onboarding email.
+  provisionMember: (token, body) =>
+    request(token, "POST", "/auth/management/provision", { body }),
+
   deleteUser: (token, id) => request(token, "DELETE", `/auth/management/users/${id}`),
 
   resendActivation: (token, id) =>
