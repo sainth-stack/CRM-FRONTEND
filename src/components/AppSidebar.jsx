@@ -68,31 +68,34 @@ export function AppSidebar() {
   return (
     <aside
       className={cn(
-        "fixed left-0 top-0 z-40 flex h-screen flex-col transition-all duration-200 rounded-[10px]",
+        "fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-zinc-900/70 transition-all duration-200",
         collapsed ? "w-sidebar-collapsed" : "w-sidebar-expanded"
       )}
-      style={{ background: "#1a2a3a" }}
+      style={{ background: "#060a14" }}
     >
       <div
         className={cn(
-          "flex items-center border-b border-white/[0.06]",
+          "flex items-center border-b border-zinc-900/70",
           collapsed ? "justify-center px-2 h-20" : "justify-start px-4 h-20"
         )}
       >
-        <AppLogo collapsed={collapsed} />
+        <AppLogo collapsed={collapsed} showTagline={!collapsed} size="sm" />
       </div>
 
-      <div className={cn("border-b border-white/[0.06] px-3 py-3", collapsed ? "flex justify-center" : "flex items-center gap-3")}>
+      <div className={cn("border-b border-zinc-900/70 px-3 py-3", collapsed ? "flex justify-center" : "flex items-center gap-3")}>
         <div className="relative h-9 w-9 shrink-0">
-          <div className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ background: "#2a4a6a" }}>
+          <div
+            className="h-9 w-9 rounded-full flex items-center justify-center text-xs font-bold text-zinc-950"
+            style={{ background: "#00f0ff" }}
+          >
             {initials}
           </div>
-          <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 bg-emerald-400" style={{ borderColor: "#1a2a3a" }} />
+          <div className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 bg-emerald-500" style={{ borderColor: "#060a14" }} />
         </div>
         {!collapsed && (
           <div className="min-w-0">
             <p className="text-[13px] font-bold text-white truncate">{displayName}</p>
-            <p className="text-[11px] truncate" style={{ color: "#7a9ab5" }}>{user?.role || ""}</p>
+            <p className="text-[11px] text-zinc-500 truncate">{user?.role || ""}</p>
           </div>
         )}
       </div>
@@ -101,8 +104,7 @@ export function AppSidebar() {
         <div className="px-2 pt-3 pb-1">
           <button
             onClick={() => navigate("/")}
-            className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors w-full hover:bg-white/[0.06]"
-            style={{ color: "#8aaec8" }}
+            className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-semibold text-zinc-400 transition-colors w-full hover:text-white hover:bg-zinc-800/40"
           >
             <ArrowLeft className="h-5 w-5 shrink-0" />
             {!collapsed && <span>Back to Home</span>}
@@ -110,7 +112,7 @@ export function AppSidebar() {
         </div>
       )}
 
-      <nav className="flex-1 space-y-[2px] px-2 py-3 overflow-y-auto">
+      <nav className="flex-1 space-y-1 px-2 py-3 overflow-y-auto">
         {navItems.map((item) => {
           const active = item.path === "/"
             ? location.pathname === "/"
@@ -124,16 +126,25 @@ export function AppSidebar() {
               to={item.path}
               title={item.title}
               className={cn(
-                "group flex items-center gap-3 rounded-lg text-sm font-medium transition-all duration-150",
-                active ? "font-bold text-white" : "hover:bg-white/[0.05]"
+                "group relative flex items-center gap-3 rounded-xl text-[13px] font-semibold transition-all duration-200",
+                active
+                  ? "bg-[#00f0ff]/10 text-white"
+                  : "text-zinc-400 hover:text-white hover:bg-zinc-800/40"
               )}
-              style={{
-                padding: "10px 12px",
-                borderRadius: "8px",
-                ...(active ? { background: "#2a4a6a", color: "#ffffff" } : { color: "#8aaec8" }),
-              }}
+              style={{ padding: "10px 12px" }}
             >
-              <item.icon className="h-[18px] w-[18px] shrink-0" style={{ color: active ? "#ffffff" : "#8aaec8" }} />
+              <span
+                className={cn(
+                  "absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-[#00f0ff] transition-all duration-200",
+                  active ? "opacity-100" : "opacity-0 group-hover:opacity-40"
+                )}
+              />
+              <item.icon
+                className={cn(
+                  "h-[18px] w-[18px] shrink-0 transition-colors",
+                  active ? "text-[#00f0ff]" : "text-zinc-500 group-hover:text-zinc-300"
+                )}
+              />
               {!collapsed && <span>{item.title}</span>}
             </Link>
           );
@@ -143,10 +154,9 @@ export function AppSidebar() {
       <button
         onClick={handleLogout}
         className={cn(
-          "flex items-center gap-3 border-t border-white/[0.06] px-4 py-3 text-sm font-medium transition-colors hover:bg-white/[0.06]",
+          "flex items-center gap-3 border-t border-zinc-900/70 px-4 py-3 text-sm font-semibold text-zinc-400 transition-colors hover:text-white hover:bg-zinc-800/40",
           collapsed ? "justify-center px-2" : ""
         )}
-        style={{ color: "#8aaec8" }}
       >
         <LogOut className="h-4 w-4 shrink-0" />
         {!collapsed && <span>Sign Out</span>}
@@ -154,8 +164,7 @@ export function AppSidebar() {
 
       <button
         onClick={toggle}
-        className="flex h-10 items-center justify-center border-t border-white/[0.06] transition-colors"
-        style={{ color: "#8aaec8" }}
+        className="flex h-10 items-center justify-center border-t border-zinc-900/70 text-zinc-400 transition-colors hover:text-white hover:bg-zinc-800/40"
         aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
       >
         {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}

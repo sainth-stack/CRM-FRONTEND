@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Menu, Settings as SettingsIcon, User as UserIcon, LogOut, Lock } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { AppLogo } from "@/components/AppLogo";
 
 const Navbar = ({ showMenuButton = false, onMenuClick }) => {
   const { isLoggedIn, logout, user } = useAuth();
@@ -78,22 +79,8 @@ const Navbar = ({ showMenuButton = false, onMenuClick }) => {
             </button>
           )}
           {/* Logo Branding */}
-          <Link to="/" className="flex items-center gap-3 group hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 pl-[2px]">
-          <div className="w-[34px] h-[34px] flex items-center justify-center shrink-0">
-            <svg className="w-8 h-8 text-[#00f0ff] drop-shadow-[0_0_8px_rgba(0,240,255,0.45)]" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <circle cx="12" cy="12" r="7.5" stroke="currentColor" strokeWidth="1.5" />
-              <circle cx="12" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.5" />
-              <circle cx="12" cy="12" r="1.8" fill="currentColor" />
-              <line x1="12" y1="1" x2="12" y2="3.2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              <line x1="12" y1="20.8" x2="12" y2="23" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              <line x1="1" y1="12" x2="3.2" y2="12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              <line x1="20.8" y1="12" x2="23" y2="12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.2" strokeDasharray="1.2 2.2" strokeLinecap="round" />
-            </svg>
-          </div>
-          <span className={`font-black tracking-tight ${isDarkPage ? "text-white" : "text-slate-900"}`} style={{ fontSize: "calc(0.92rem + 5px)" }}>
-            Focal<span className="text-[#00f0ff] font-black">Reach</span> <span className="text-zinc-500 font-semibold tracking-wider ml-1" style={{ fontSize: "11px" }}>AI</span>
-          </span>
+          <Link to="/" className="flex items-center group hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 pl-[2px]">
+            <AppLogo size="sm" showWordmark={false} lightText={isDarkPage} />
           </Link>
         </div>
 

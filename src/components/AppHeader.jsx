@@ -2,6 +2,7 @@ import { useLocation, Link, useNavigate } from "react-router-dom";
 import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { AppLogo } from "@/components/AppLogo";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,13 +57,15 @@ export function AppHeader() {
               {roleLabel.replace("_", " ")}
             </Badge>
           )}
-          <span className="text-sm font-semibold text-foreground hidden md:inline">FocalReach AI</span>
+          <Link to="/" className="hidden md:flex shrink-0">
+            <AppLogo size="xs" lightText={false} />
+          </Link>
         </div>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="icon" className="rounded-full" aria-label="User menu">
-              <div className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-white" style={{ background: "#2a4a6a" }}>
+              <div className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold text-zinc-950" style={{ background: "#00f0ff" }}>
                 {initials}
               </div>
             </Button>

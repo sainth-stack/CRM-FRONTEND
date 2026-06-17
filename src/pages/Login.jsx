@@ -28,16 +28,19 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen min-h-[100dvh] w-full" style={{ background: "#152030" }}>
+    <div className="flex min-h-screen min-h-[100dvh] w-full" style={{ background: "#030712" }}>
       <div
         className="flex flex-1 flex-col justify-center px-6 py-10 sm:px-10 md:px-16 lg:px-[70px]"
-        style={{ background: "#1a2a3a" }}
+        style={{ background: "#060a14" }}
       >
-        <div className="mb-8 flex justify-center">
-          <AppLogo />
+        <div className="mb-10 flex flex-col items-center text-center max-w-[420px]">
+          <AppLogo size="xl" showWordmark showTagline layout="stacked" />
+          <p className="mt-5 text-sm text-white/45 leading-relaxed">
+            Sign in to manage campaigns, prospects, and outreach automation.
+          </p>
         </div>
 
-        <h1 className="mb-6 text-[22px] font-normal text-white/90">Login</h1>
+        <h1 className="mb-6 text-[22px] font-semibold text-white/90 max-w-[420px]">Welcome back</h1>
 
         {error && (
           <div className="mb-4 max-w-[420px] rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
@@ -58,7 +61,7 @@ export default function Login() {
               disabled={loading}
               className="h-11 w-full rounded-full border bg-white/5 px-5 text-sm text-white placeholder:text-white/30 outline-none transition-colors"
               style={{ borderColor: "rgba(255,255,255,0.15)" }}
-              onFocus={(e) => (e.target.style.borderColor = "#2563EB")}
+              onFocus={(e) => (e.target.style.borderColor = "#00f0ff")}
               onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.15)")}
               placeholder="Enter your email"
             />
@@ -77,7 +80,7 @@ export default function Login() {
                 disabled={loading}
                 className="h-11 w-full rounded-full border bg-white/5 px-5 pr-12 text-sm text-white placeholder:text-white/30 outline-none transition-colors"
                 style={{ borderColor: "rgba(255,255,255,0.15)" }}
-                onFocus={(e) => (e.target.style.borderColor = "#2563EB")}
+                onFocus={(e) => (e.target.style.borderColor = "#00f0ff")}
                 onBlur={(e) => (e.target.style.borderColor = "rgba(255,255,255,0.15)")}
                 placeholder="Enter your password"
               />
@@ -93,7 +96,7 @@ export default function Login() {
           </div>
 
           <div className="text-right">
-            <Link to="/forgot-password" className="text-sm hover:underline" style={{ color: "#2563EB" }}>
+            <Link to="/forgot-password" className="text-sm hover:underline" style={{ color: "#00f0ff" }}>
               Forgot password?
             </Link>
           </div>
@@ -101,10 +104,10 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="h-11 w-full rounded-full text-sm font-bold text-white uppercase transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
-            style={{ backgroundColor: "#2563EB", letterSpacing: "1.5px" }}
-            onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = "#1d4ed8")}
-            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#2563EB")}
+            className="h-11 w-full rounded-full text-sm font-bold text-zinc-950 uppercase transition-colors flex items-center justify-center gap-2 disabled:opacity-70"
+            style={{ backgroundColor: "#00f0ff", letterSpacing: "1.5px" }}
+            onMouseEnter={(e) => !loading && (e.currentTarget.style.backgroundColor = "#26f3ff")}
+            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "#00f0ff")}
           >
             {loading ? (
               <>
@@ -124,9 +127,9 @@ export default function Login() {
 
       <div
         className="hidden md:flex w-1/2 flex-col items-center justify-center px-10"
-        style={{ background: "#152030" }}
+        style={{ background: "#030712" }}
       >
-        <h2 className="mb-6 text-center text-[22px] font-bold uppercase" style={{ color: "#2563EB", letterSpacing: "1px" }}>
+        <h2 className="mb-6 text-center text-[22px] font-bold uppercase" style={{ color: "#00f0ff", letterSpacing: "1px" }}>
           Welcome to FocalReach AI
         </h2>
         <p className="mb-8 text-center text-sm max-w-md" style={{ color: "rgba(255,255,255,0.5)" }}>
@@ -137,19 +140,19 @@ export default function Login() {
           style={{ borderColor: "rgba(255,255,255,0.08)", background: "rgba(255,255,255,0.03)" }}
         >
           <div className="grid grid-cols-2 gap-4 text-sm" style={{ color: "rgba(255,255,255,0.6)" }}>
-            <div className="rounded-lg p-4" style={{ background: "rgba(37,99,235,0.1)" }}>
+            <div className="rounded-lg p-4" style={{ background: "rgba(0,240,255,0.08)" }}>
               <p className="font-semibold text-white mb-1">Targeted Analytics</p>
               <p className="text-xs">AI-powered prospect research</p>
             </div>
-            <div className="rounded-lg p-4" style={{ background: "rgba(37,99,235,0.1)" }}>
+            <div className="rounded-lg p-4" style={{ background: "rgba(0,240,255,0.08)" }}>
               <p className="font-semibold text-white mb-1">Personalization</p>
               <p className="text-xs">Context-aware email drafts</p>
             </div>
-            <div className="rounded-lg p-4" style={{ background: "rgba(37,99,235,0.1)" }}>
+            <div className="rounded-lg p-4" style={{ background: "rgba(0,240,255,0.08)" }}>
               <p className="font-semibold text-white mb-1">Scale</p>
               <p className="text-xs">Multi-tenant campaign ops</p>
             </div>
-            <div className="rounded-lg p-4" style={{ background: "rgba(37,99,235,0.1)" }}>
+            <div className="rounded-lg p-4" style={{ background: "rgba(0,240,255,0.08)" }}>
               <p className="font-semibold text-white mb-1">Deliverability</p>
               <p className="text-xs">Enterprise-grade outreach</p>
             </div>

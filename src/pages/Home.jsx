@@ -14,17 +14,17 @@ const Home = () => {
 
   if (!isLoggedIn) {
     return (
-      <div className="min-h-screen flex flex-col" style={{ background: "#152030" }}>
+      <div className="min-h-screen flex flex-col" style={{ background: "#030712" }}>
         <div className="flex-1 flex flex-col items-center justify-center px-6 py-20 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight">
-            Scale outreach <span style={{ color: "#2563EB" }}>that converts</span>
+            Scale outreach <span className="text-[#00f0ff]" style={{ textShadow: "0 0 30px rgba(0, 240, 255, 0.25)" }}>that converts</span>
           </h1>
           <p className="text-base text-white/50 max-w-xl mb-10">
             FocalReach AI researches your prospects and crafts hyper-personalized B2B campaigns that get replies.
           </p>
           <div className="flex flex-col sm:flex-row gap-4">
             <Link to="/login">
-              <Button size="lg" className="rounded-full px-8" style={{ background: "#2563EB" }}>
+              <Button size="lg" className="rounded-full px-8 bg-[#00f0ff] text-zinc-950 hover:bg-[#26f3ff]">
                 Sign In <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </Link>
