@@ -1,9 +1,25 @@
 import React from "react";
 import { 
-  FileBarChart, Target, Users, Send, Trash, ArrowLeft, Globe, Linkedin, PieChart, Search, CheckCircle2, Loader2, ShieldCheck
+  FileBarChart, Target, Users, Send, Trash, ArrowLeft, Globe, Linkedin, PieChart, Search, CheckCircle2, Loader2, ShieldCheck, Download
 } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "../config";
+import { Button } from "@/components/ui/button";
+
+const exportButtonClass = "shrink-0 self-start sm:self-auto";
+
+const ExportButton = ({ onClick, className = "" }) => (
+  <Button
+    type="button"
+    variant="brand-outline"
+    size="pill"
+    onClick={onClick}
+    className={`${exportButtonClass} ${className}`.trim()}
+  >
+    <Download size={16} />
+    Export
+  </Button>
+);
 
 const ensureAbsoluteUrl = (url) => {
   if (!url || url === "#" || url === "N/A") return "#";
@@ -38,57 +54,8 @@ const ResearchTabs = ({
   };
 
   return (
-    <div className="flex flex-col md:flex-row bg-[#f8fafc] h-full overflow-hidden">
-      {/* Sidebar section — vertical on desktop, horizontal scroll bar on mobile */}
-      <div className="w-full md:w-64 bg-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-col justify-between md:py-8 shrink-0">
-        <div className="flex md:flex-col gap-1 overflow-x-auto custom-scrollbar px-2 md:px-0 py-2 md:py-0">
-          <button
-            onClick={() => setResearchTab("mission_briefing")}
-            className={`relative flex items-center gap-2 md:gap-3 px-4 md:px-8 py-3 md:py-3.5 text-sm font-semibold transition-all whitespace-nowrap shrink-0 ${researchTab === "mission_briefing" ? "text-slate-900 bg-slate-50 font-bold" : "text-slate-500 hover:bg-slate-50"}`}
-          >
-            {researchTab === "mission_briefing" && <div className="absolute bottom-0 left-2 right-2 h-1 w-auto md:left-0 md:right-auto md:top-1/4 md:bottom-1/4 md:h-auto md:w-1 bg-red-500 rounded-t-lg md:rounded-t-none md:rounded-r-lg" />}
-            <FileBarChart size={18} className={researchTab === "mission_briefing" ? "text-red-500" : "text-slate-400"} />
-            Briefing
-          </button>
-          <button
-            onClick={() => setResearchTab("lead_pipeline")}
-            className={`relative flex items-center gap-2 md:gap-3 px-4 md:px-8 py-3 md:py-3.5 text-sm font-semibold transition-all whitespace-nowrap shrink-0 ${researchTab === "lead_pipeline" ? "text-slate-900 bg-slate-50 font-bold" : "text-slate-500 hover:bg-slate-50"}`}
-          >
-            {researchTab === "lead_pipeline" && <div className="absolute bottom-0 left-2 right-2 h-1 w-auto md:left-0 md:right-auto md:top-1/4 md:bottom-1/4 md:h-auto md:w-1 bg-red-500 rounded-t-lg md:rounded-t-none md:rounded-r-lg" />}
-            <Target size={18} className={researchTab === "lead_pipeline" ? "text-red-500" : "text-slate-400"} />
-            Targets
-          </button>
-          <button
-            onClick={() => setResearchTab("stakeholder_intel")}
-            className={`relative flex items-center gap-2 md:gap-3 px-4 md:px-8 py-3 md:py-3.5 text-sm font-semibold transition-all whitespace-nowrap shrink-0 ${researchTab === "stakeholder_intel" ? "text-slate-900 bg-slate-50 font-bold" : "text-slate-500 hover:bg-slate-50"}`}
-          >
-            {researchTab === "stakeholder_intel" && <div className="absolute bottom-0 left-2 right-2 h-1 w-auto md:left-0 md:right-auto md:top-1/4 md:bottom-1/4 md:h-auto md:w-1 bg-red-500 rounded-t-lg md:rounded-t-none md:rounded-r-lg" />}
-            <Users size={18} className={researchTab === "stakeholder_intel" ? "text-red-500" : "text-slate-400"} />
-            Contacts
-          </button>
-          <button
-            onClick={() => setResearchTab("outreach_protocol")}
-            className={`relative flex items-center gap-2 md:gap-3 px-4 md:px-8 py-3 md:py-3.5 text-sm font-semibold transition-all whitespace-nowrap shrink-0 ${researchTab === "outreach_protocol" ? "text-slate-900 bg-slate-50 font-bold" : "text-slate-500 hover:bg-slate-50"}`}
-          >
-            {researchTab === "outreach_protocol" && <div className="absolute bottom-0 left-2 right-2 h-1 w-auto md:left-0 md:right-auto md:top-1/4 md:bottom-1/4 md:h-auto md:w-1 bg-red-500 rounded-t-lg md:rounded-t-none md:rounded-r-lg" />}
-            <Send size={18} className={researchTab === "outreach_protocol" ? "text-red-500" : "text-slate-400"} />
-            Drafts
-          </button>
-          <button
-            onClick={() => setResearchTab("rejected_artifacts")}
-            className={`relative flex items-center gap-2 md:gap-3 px-4 md:px-8 py-3 md:py-3.5 text-sm font-semibold transition-all whitespace-nowrap shrink-0 ${researchTab === "rejected_artifacts" ? "text-slate-900 bg-slate-50 font-bold" : "text-slate-500 hover:bg-slate-50"}`}
-          >
-            {researchTab === "rejected_artifacts" && <div className="absolute bottom-0 left-2 right-2 h-1 w-auto md:left-0 md:right-auto md:top-1/4 md:bottom-1/4 md:h-auto md:w-1 bg-red-500 rounded-t-lg md:rounded-t-none md:rounded-r-lg" />}
-            <Trash size={18} className={researchTab === "rejected_artifacts" ? "text-red-500" : "text-slate-400"} />
-            Disqualified
-          </button>
-        </div>
-
-
-      </div>
-
-      {/* Content area */}
-      <div className="flex-grow p-4 sm:p-6 lg:p-10 overflow-y-auto h-full min-w-0">
+    <div className="bg-[#f8fafc] h-full overflow-hidden">
+      <div className="p-4 sm:p-6 lg:p-10 overflow-y-auto h-full min-w-0">
         {researchTab === "mission_briefing" && (
           <div className="flex flex-col gap-6 md:gap-8 animate-fadeIn">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
@@ -101,12 +68,7 @@ const ResearchTabs = ({
                 </p>
               </div>
 
-              <button
-                onClick={() => handleExport("mission-briefing", "md")}
-                className="flex items-center justify-center gap-2 bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md shadow-red-500/10 shrink-0 self-start sm:self-auto"
-              >
-                <ArrowLeft className="rotate-180" size={16} /> Export
-              </button>
+              <ExportButton onClick={() => handleExport("mission-briefing", "md")} />
             </div>
             
             {/* Validated campaign inputs — sourced from the Stage-1 input-validation
@@ -289,17 +251,12 @@ const ResearchTabs = ({
                 </p>
               </div>
 
-              <button
-                onClick={() => handleExport("lead-pipeline", "csv")}
-                className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md shadow-red-500/10"
-              >
-                <ArrowLeft className="rotate-180" size={16} /> Export
-              </button>
+              <ExportButton onClick={() => handleExport("lead-pipeline", "csv")} />
             </div>
 
             {campaign.target_companies?.filter(co => co.status !== 'REJECTED').length === 0 ? (
               <div className="py-24 flex flex-col items-center justify-center gap-4 bg-slate-50 rounded-[24px] border border-dashed border-slate-200">
-                <Loader2 size={32} className="text-red-500 animate-spin" />
+                <Loader2 size={32} className="text-[#00f0ff] animate-spin" />
                 <p className="text-slate-400 font-bold text-sm tracking-wide">Looking for lead artifacts...</p>
               </div>
             ) : (
@@ -362,7 +319,7 @@ const ResearchTabs = ({
                         </a>
                       </div>
 
-                      <button className="text-center font-bold text-red-500 text-sm hover:text-red-600 transition-colors flex items-center justify-center gap-1">
+                      <button className="flex items-center justify-center gap-1 text-center text-sm font-semibold text-[#00a8b8] transition-colors hover:text-[#00f0ff]">
                         Show More →
                       </button>
                     </div>
@@ -383,17 +340,12 @@ const ResearchTabs = ({
                 </p>
               </div>
 
-              <button
-                onClick={() => handleExport("stakeholders", "csv")}
-                className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md shadow-red-500/10"
-              >
-                <ArrowLeft className="rotate-180" size={16} /> Export
-              </button>
+              <ExportButton onClick={() => handleExport("stakeholders", "csv")} />
             </div>
 
             {campaign.dms?.length === 0 ? (
               <div className="py-24 flex flex-col items-center justify-center gap-4 bg-slate-50 rounded-[24px] border border-dashed border-slate-200">
-                <Loader2 size={32} className="text-red-500 animate-spin" />
+                <Loader2 size={32} className="text-[#00f0ff] animate-spin" />
                 <p className="text-slate-400 font-bold text-sm tracking-wide">Identifying high-value stakeholders...</p>
               </div>
             ) : (
@@ -483,17 +435,12 @@ const ResearchTabs = ({
                 </p>
               </div>
 
-              <button
-                onClick={() => handleExport("outreach-protocols", "csv")}
-                className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md shadow-red-500/10"
-              >
-                <ArrowLeft className="rotate-180" size={16} /> Export
-              </button>
+              <ExportButton onClick={() => handleExport("outreach-protocols", "csv")} />
             </div>
 
             {campaign.drafts?.length === 0 ? (
               <div className="py-24 flex flex-col items-center justify-center gap-4 bg-slate-50 rounded-[24px] border border-dashed border-slate-200">
-                <Loader2 size={32} className="text-red-500 animate-spin" />
+                <Loader2 size={32} className="text-[#00f0ff] animate-spin" />
                 <p className="text-slate-400 font-bold text-sm tracking-wide">Generating personalized outreach protocols...</p>
               </div>
             ) : (
@@ -553,7 +500,7 @@ const ResearchTabs = ({
                       </div>
 
                       <div className="pt-3 border-t border-slate-50 mt-4 text-center shrink-0">
-                        <button className="font-bold text-red-500 text-sm hover:text-red-600 transition-colors inline-flex items-center justify-center gap-1">
+                        <button className="inline-flex items-center justify-center gap-1 text-sm font-semibold text-[#00a8b8] transition-colors hover:text-[#00f0ff]">
                           Review Engagement Protocol →
                         </button>
                       </div>
@@ -575,12 +522,7 @@ const ResearchTabs = ({
                 </p>
               </div>
 
-              <button
-                onClick={() => handleExport("rejected-artifacts", "csv")}
-                className="flex items-center gap-2 bg-red-500 hover:bg-red-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold transition-all shadow-md shadow-red-500/10"
-              >
-                <ArrowLeft className="rotate-180" size={16} /> Export
-              </button>
+              <ExportButton onClick={() => handleExport("rejected-artifacts", "csv")} />
             </div>
 
             {campaign.target_companies?.filter(co => co.status === 'REJECTED').length === 0 ? (

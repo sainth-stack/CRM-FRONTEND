@@ -24,7 +24,7 @@ export function AppLogo({
 
   const mark = (
     <img
-      src="/logo.svg"
+      src="/logo.png"
       alt="FocalReach"
       width={icon}
       height={icon}

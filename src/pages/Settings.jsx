@@ -177,7 +177,7 @@ const Settings = () => {
                   </p>
                 </div>
               </div>
-              <Button onClick={startCalAuthorization} disabled={connectingCal} className="w-full">
+              <Button onClick={startCalAuthorization} disabled={connectingCal} variant="brand" size="pill" className="w-full">
                 {connectingCal ? (
                   <>
                     <RefreshCcw className="h-4 w-4 animate-spin mr-2" />
@@ -202,7 +202,7 @@ const Settings = () => {
                   </p>
                 </div>
               </div>
-              <Button onClick={startCalAuthorization} disabled={connectingCal} className="w-full">
+              <Button onClick={startCalAuthorization} disabled={connectingCal} variant="brand" size="pill" className="w-full">
                 {connectingCal ? (
                   <>
                     <RefreshCcw className="h-4 w-4 animate-spin mr-2" />
@@ -289,7 +289,7 @@ const Settings = () => {
                 </div>
               )}
 
-              <Button onClick={saveCalSettings} disabled={savingCal} className="w-full sm:w-auto">
+              <Button onClick={saveCalSettings} disabled={savingCal} variant="brand" size="pill" className="w-full sm:w-auto">
                 {savingCal ? "Saving…" : "Save Settings"}
                 {!savingCal && <ArrowRight className="h-4 w-4 ml-1" />}
               </Button>

@@ -14,11 +14,14 @@ import {
 } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "../config";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import LeadLedger from "./LeadLedger";
 import ResearchTabs from "./ResearchTabs";
 import MissionSidebar from "../components/campaign-workspace/MissionSidebar";
 import DraftEditorModal from "../components/campaign-workspace/DraftEditorModal";
 import DraftPreviewModal from "../components/campaign-workspace/DraftPreviewModal";
+import { CampaignWorkspaceSidebar } from "../components/campaign-workspace/CampaignWorkspaceSidebar";
 
 // Helper to force uniform UTC parsing on both timezone-naive and timezone-aware ISO strings
 const parseUtcDate = (dateStr) => {
@@ -208,6 +211,12 @@ const CampaignWorkspace = () => {
   const [showHistoryDM, setShowHistoryDM] = useState(null);
   const [expandedNodes, setExpandedNodes] = useState([]);
   const [navOpen, setNavOpen] = useState(false); // mobile campaign-nav drawer
+  const [campaignNavCollapsed, setCampaignNavCollapsed] = useState(false);
+  const [researchExpanded, setResearchExpanded] = useState(true);
+
+  useEffect(() => {
+    if (activeTab === "research") setResearchExpanded(true);
+  }, [activeTab]);
 
   // Close the draft filter dropdown on any outside click
   useEffect(() => {
@@ -519,88 +528,30 @@ const CampaignWorkspace = () => {
     }
   };
 
-  const navTabs = [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { id: "research", label: "Campaign", icon: Globe },
-    { id: "monitor", label: "Outreach", icon: Mail },
-    { id: "history", label: "Discovery", icon: PhoneCall },
-    { id: "report", label: "Report", icon: FileBarChart },
-  ];
-
   return (
-    <div className="flex h-[calc(100vh-74px)] overflow-hidden select-none">
-      {/* Mobile backdrop for the campaign-nav drawer */}
+    <div className="flex flex-1 min-h-0 overflow-hidden select-none">
       {navOpen && (
         <div
-          className="fixed inset-x-0 top-[74px] bottom-0 z-30 bg-black/60 backdrop-blur-sm md:hidden"
+          className="fixed inset-0 z-30 bg-black/60 backdrop-blur-sm md:hidden"
           onClick={() => setNavOpen(false)}
           aria-hidden="true"
         />
       )}
 
-      {/* Campaign workspace sidebar — static on desktop, slide-in drawer on mobile */}
-      <aside
-        className={`fixed md:static top-[74px] md:top-auto bottom-0 md:bottom-auto left-0 z-40 w-64 md:w-60 shrink-0 bg-[#0a0f1c] border-r border-zinc-800/70 flex flex-col h-[calc(100vh-74px)] md:h-full overflow-hidden transition-transform duration-300 md:translate-x-0 ${
-          navOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
-      >
-        {/* Mission context */}
-        <div className="px-5 py-5 border-b border-zinc-800/70">
-          <Link
-            to="/active"
-            className="inline-flex items-center gap-2 text-[10px] font-bold text-zinc-400 hover:text-[#00f0ff] uppercase tracking-widest transition-colors mb-4"
-          >
-            <ArrowLeft size={14} /> All campaigns
-          </Link>
-          <h1 className="text-[13px] font-bold text-white tracking-tight leading-snug line-clamp-3 break-words" title={campaign.name}>
-            {campaign.name || "Tactical Unit"}
-          </h1>
-        </div>
-
-        {/* Primary navigation */}
-        <nav className="flex-grow py-5 px-3 space-y-1 overflow-y-auto custom-scrollbar">
-          {navTabs.map((t) => {
-            const active = activeTab === t.id;
-            return (
-              <button
-                key={t.id}
-                onClick={() => {
-                  setActiveTab(t.id);
-                  setNavOpen(false);
-                }}
-                className={`group relative w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-[11px] font-bold uppercase tracking-widest transition-all ${
-                  active
-                    ? "bg-[#00f0ff]/10 text-white"
-                    : "text-zinc-400 hover:text-white hover:bg-zinc-800/40"
-                }`}
-              >
-                <span
-                  className={`absolute left-0 top-1/2 -translate-y-1/2 h-5 w-[3px] rounded-r-full bg-[#00f0ff] transition-opacity ${
-                    active ? "opacity-100" : "opacity-0 group-hover:opacity-40"
-                  }`}
-                />
-                <t.icon size={16} className={active ? "text-[#00f0ff]" : "text-zinc-500 group-hover:text-zinc-300"} />
-                {t.label}
-              </button>
-            );
-          })}
-        </nav>
-
-        {/* Footer: lifecycle status */}
-        <div className="px-5 py-4 border-t border-zinc-800/70">
-          <span className="block text-[9px] font-bold text-zinc-500 uppercase tracking-widest leading-none mb-2">
-            Lifecycle
-          </span>
-          <div className="flex items-center gap-2.5">
-            <span className="w-7 h-7 rounded-lg bg-[#00f0ff]/10 border border-[#00f0ff]/20 flex items-center justify-center text-[#00f0ff] shrink-0">
-              <Activity size={14} />
-            </span>
-            <span className="text-[11px] font-bold text-[#00f0ff] uppercase tracking-tight leading-tight">
-              {getDisplayStatus()}
-            </span>
-          </div>
-        </div>
-      </aside>
+      <CampaignWorkspaceSidebar
+        campaignName={campaign.name}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        researchTab={researchTab}
+        setResearchTab={setResearchTab}
+        researchExpanded={researchExpanded}
+        setResearchExpanded={setResearchExpanded}
+        collapsed={campaignNavCollapsed}
+        onToggleCollapse={() => setCampaignNavCollapsed((c) => !c)}
+        lifecycleStatus={getDisplayStatus()}
+        navOpen={navOpen}
+        onNavClose={() => setNavOpen(false)}
+      />
 
       {/* Right content column */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
@@ -639,12 +590,15 @@ const CampaignWorkspace = () => {
                   </p>
                 </div>
               </div>
-              <button 
+              <Button
+                type="button"
+                variant="brand"
+                size="pill"
                 onClick={() => setShowRefineModal(true)}
-                className="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-amber-600/10 flex items-center gap-2 shrink-0"
+                className="shrink-0"
               >
                 <Edit3 size={14} /> Refine Briefing
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -1779,20 +1733,26 @@ const CampaignWorkspace = () => {
                 </div>
 
                 <div className="flex items-center gap-4 pt-4">
-                  <button 
+                  <Button
+                    type="button"
+                    variant="brand-outline"
+                    size="pill"
                     onClick={() => setShowRefineModal(false)}
-                    className="flex-1 py-4 bg-slate-50 hover:bg-slate-100 text-slate-500 rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all"
+                    className="flex-1"
                   >
                     Cancel
-                  </button>
-                  <button 
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="brand"
+                    size="pill"
                     onClick={handleRefineSubmit}
                     disabled={isSaving || Object.keys(refineAnswers).length === 0}
-                    className="flex-[2] py-4 bg-amber-600 hover:bg-amber-700 disabled:bg-amber-200 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest transition-all shadow-lg shadow-amber-600/10 flex items-center justify-center gap-2"
+                    className="flex-[2]"
                   >
                     {isSaving ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
                     Synchronize Refinements
-                  </button>
+                  </Button>
                 </div>
               </div>
             </motion.div>

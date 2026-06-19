@@ -9,10 +9,10 @@ import {
   Building2,
   ShieldCheck,
   Clock,
-  ChevronLeft,
-  ChevronRight,
   ArrowLeft,
   LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSidebarState } from "@/hooks/use-sidebar-state";
@@ -83,11 +83,23 @@ export function AppSidebar() {
     >
       <div
         className={cn(
-          "flex items-center border-b border-zinc-900/70",
-          collapsed ? "justify-center px-2 h-20" : "justify-start px-4 h-20"
+          "relative flex items-center border-b border-zinc-900/70 shrink-0",
+          collapsed ? "justify-center px-2 h-16" : "justify-between px-4 h-16"
         )}
       >
         <AppLogo collapsed={collapsed} showTagline={!collapsed} size="sm" />
+        <button
+          type="button"
+          onClick={toggle}
+          className={cn(
+            "rounded-lg p-1.5 text-zinc-500 transition-all duration-200 hover:bg-zinc-800/60 hover:text-white",
+            collapsed ? "absolute right-1.5 top-1/2 -translate-y-1/2" : "shrink-0"
+          )}
+          aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+        </button>
       </div>
 
       <div className={cn("border-b border-zinc-900/70 px-3 py-3", collapsed ? "flex justify-center" : "flex items-center gap-3")}>
@@ -120,7 +132,7 @@ export function AppSidebar() {
         </div>
       )}
 
-      <nav className="flex-1 space-y-1 px-2 py-3 overflow-y-auto">
+      <nav className="flex-1 min-h-0 space-y-1 px-2 py-3 overflow-y-auto custom-scrollbar">
         {navItems.map((item) => {
           const active = item.path === "/"
             ? location.pathname === "/"
@@ -159,24 +171,18 @@ export function AppSidebar() {
         })}
       </nav>
 
-      <button
-        onClick={handleLogout}
-        className={cn(
-          "flex items-center gap-3 border-t border-zinc-900/70 px-4 py-3 text-sm font-semibold text-zinc-400 transition-colors hover:text-white hover:bg-zinc-800/40",
-          collapsed ? "justify-center px-2" : ""
-        )}
-      >
-        <LogOut className="h-4 w-4 shrink-0" />
-        {!collapsed && <span>Sign Out</span>}
-      </button>
-
-      <button
-        onClick={toggle}
-        className="flex h-10 items-center justify-center border-t border-zinc-900/70 text-zinc-400 transition-colors hover:text-white hover:bg-zinc-800/40"
-        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-      >
-        {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-      </button>
+      <div className="mt-auto shrink-0 border-t border-zinc-900/70">
+        <button
+          onClick={handleLogout}
+          className={cn(
+            "flex w-full items-center gap-3 px-4 py-3 text-sm font-semibold text-zinc-400 transition-colors hover:text-white hover:bg-zinc-800/40",
+            collapsed ? "justify-center px-2" : ""
+          )}
+        >
+          <LogOut className="h-4 w-4 shrink-0" />
+          {!collapsed && <span>Sign Out</span>}
+        </button>
+      </div>
     </aside>
   );
 }
