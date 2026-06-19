@@ -28,7 +28,7 @@ export function AppLogo({
       alt="FocalReach"
       width={icon}
       height={icon}
-      className={cn("shrink-0 drop-shadow-[0_0_10px_rgba(0,240,255,0.35)]", iconClassName)}
+      className={cn("shrink-0 object-contain", iconClassName)}
     />
   );
 
