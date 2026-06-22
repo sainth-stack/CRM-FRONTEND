@@ -524,6 +524,10 @@ const CampaignWorkspace = () => {
       case "STAGE_6_DRAFTING_COMPLETE": return "ENGAGEMENT READY";
       case "COMPLETED": return "MISSION FINISHED";
       case "INTERVENTION_NEEDED": return "INTERVENTION REQUIRED";
+      case "RESEARCHING_USER_COMPANY": return "BRAND ANALYSIS";
+      case "PARTIAL_SUCCESS": return "PARTIALLY COMPLETE";
+      case "FAILED": return "FAILED";
+      case "INACTIVE": return "INACTIVE";
       default: return campaign.status || "NEW";
     }
   };

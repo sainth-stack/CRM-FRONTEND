@@ -35,29 +35,3 @@ export const cleanEmailReply = (body) => {
   return cleaned;
 };
 
-export const getCampaignDisplayStatus = (campaign) => {
-  if (!campaign) return "NEW";
-
-  const companies = campaign.target_companies || [];
-  const allFinalized =
-    companies.length > 0 &&
-    companies.every((company) => company.status === "MEETING_BOOKED" || company.status === "TERMINATED");
-  if (allFinalized) return "COMPLETED";
-
-  switch (String(campaign.status).toUpperCase()) {
-    case "INPUT_VALIDATED":
-      return "INPUT VALIDATED";
-    case "RESEARCHING_USER_COMPANY":
-      return "RESEARCHING";
-    case "FINDING_TARGET_COMPANIES":
-      return "IDENTIFYING TARGETS";
-    case "FINDING_DECISION_MAKERS":
-      return "MAPPING STAKEHOLDERS";
-    case "DRAFTING_EMAILS":
-      return "DRAFTING OUTREACH";
-    case "COMPLETED":
-      return "MONITORING";
-    default:
-      return campaign.status || "NEW";
-  }
-};
