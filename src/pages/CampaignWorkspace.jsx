@@ -199,6 +199,7 @@ const CampaignWorkspace = () => {
   const [refineAnswers, setRefineAnswers] = useState({});
   const [researchTab, setResearchTab] = useState("mission_briefing");
   const [selectedCompany, setSelectedCompany] = useState(null);
+  const [companyModalTab, setCompanyModalTab] = useState("research");
   const [selectedDraft, setSelectedDraft] = useState(null);
   const [previewDraft, setPreviewDraft] = useState(null);
   const [draftEditData, setDraftEditData] = useState({ subject: "", body: "", email: "" });
@@ -1393,165 +1394,231 @@ const CampaignWorkspace = () => {
         </main>
       </div>
 
-      {/* Target Intel Professional Overlay */}
+      {/* Company Intel Modal */}
       <AnimatePresence>
         {selectedCompany && (() => {
-          const score = selectedCompany.relevance_score || selectedCompany.similarity_score?.score || 0;
+          const co         = selectedCompany;
+          const score      = co.relevance_score || 0;
+          const isRejected = co.status === "REJECTED";
+          const meddpicc   = co.v2_intel?.meddpicc || {};
+          const _PH        = new Set(["none evidenced","none stated","none","n/a","not stated","no pain signals","no signals","not applicable","unknown","needs discovery","unclear — no evidenced need","unclear"]);
+          const clean      = (arr) => (arr || []).filter(v => v && !_PH.has(String(v).trim().toLowerCase()));
+          const cleanPains = clean(co.matched_pains);
+          const cleanSvcs  = clean(co.matched_services);
+          const cleanHooks = clean([...(co.pain_hooks || []), ...(co.growth_hooks || []), ...(co.news_hooks || [])]);
+          const disco      = Array.isArray(meddpicc.discovery_checklist) ? meddpicc.discovery_checklist : [];
+          const initials   = (co.name || "C").split(" ").filter(Boolean).map(w => w[0]).join("").toUpperCase().slice(0, 2);
+          const scoreClr   = score >= 70 ? "text-emerald-600" : score >= 45 ? "text-amber-500" : "text-rose-500";
+
+          const Label = ({ children }) => (
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{children}</p>
+          );
+          const Card = ({ title, children }) => (
+            <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-2">
+              <Label>{title}</Label>
+              {children}
+            </div>
+          );
 
           return (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12">
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-16">
+              <motion.div
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                 onClick={() => setSelectedCompany(null)}
-                className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+                className="absolute inset-0 bg-black/40"
               />
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                className="relative w-full max-w-5xl bg-white rounded-[32px] shadow-2xl overflow-y-auto max-h-[85vh] z-10 border border-slate-100 flex flex-col"
+              <motion.div
+                initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
+                transition={{ duration: 0.18 }}
+                className="relative w-full max-w-4xl bg-white rounded-2xl shadow-xl z-10 flex overflow-hidden"
+                style={{ maxHeight: "85vh" }}
               >
-                 {/* Close Button */}
-                 <button 
-                   onClick={() => setSelectedCompany(null)}
-                   className="absolute top-6 right-6 w-10 h-10 bg-slate-50 border border-slate-200/60 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-900 hover:bg-slate-100 transition-all z-20 shadow-sm"
-                 >
-                   <X size={20} />
-                 </button>
+                {/* Close */}
+                <button
+                  onClick={() => setSelectedCompany(null)}
+                  className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                >
+                  <X size={18} />
+                </button>
 
-                 <div className="grid grid-cols-1 md:grid-cols-12 h-full flex-1">
-                    {/* Left Column: Organization Identity */}
-                    <div className="md:col-span-5 p-8 md:p-10 bg-slate-50/50 border-r border-slate-100 space-y-8 flex flex-col justify-between">
-                       <div className="space-y-6">
-                          {/* Logo/Icon Header */}
-                          <div className="flex items-center gap-4">
-                             <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-red-500 to-rose-600 text-white shadow-lg shadow-red-500/10 flex items-center justify-center font-black text-xl tracking-tight select-none">
-                                {(selectedCompany.name || "C")
-                                  .split(" ")
-                                  .filter(Boolean)
-                                  .map(w => w[0])
-                                  .join("")
-                                  .toUpperCase()
-                                  .slice(0, 2)}
-                             </div>
-                             <div className="flex flex-col">
-                                <span className="px-2.5 py-0.5 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-lg text-[10px] font-extrabold uppercase tracking-wider self-start mb-1 shadow-sm">Approved</span>
-                                <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-tight">{selectedCompany.name}</h2>
-                             </div>
-                          </div>
-
-                          <div className="space-y-4">
-                             <a href={ensureAbsoluteUrl(selectedCompany.website)} target="_blank" rel="noreferrer" className="flex items-center gap-2 text-red-500 hover:text-red-600 font-bold text-sm transition-all underline decoration-red-100 underline-offset-4 decoration-2">
-                                {selectedCompany.website} <ExternalLink size={14} />
-                             </a>
-                             <p className="text-slate-500 text-xs font-semibold leading-relaxed">Verified corporate footprint & identity data.</p>
-                          </div>
-                          
-                          {/* Synergy Meter */}
-                          <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-3">
-                             <div className="flex items-center justify-between">
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Alignment Score</span>
-                                <span className="text-lg font-black text-slate-900 bg-red-50 text-red-600 px-2.5 py-1 rounded-lg border border-red-100 shadow-sm">{score}%</span>
-                             </div>
-                             <p className="text-slate-600 font-medium text-xs leading-relaxed italic bg-slate-50/80 p-3.5 rounded-xl border border-slate-100/60">
-                                {selectedCompany.relevance_explanation ? `"${selectedCompany.relevance_explanation}"` : "Strategic alignment verified via target sector analysis."}
-                             </p>
-                          </div>
-
-                          {/* Detail Grid */}
-                          <div className="space-y-3 pt-2">
-                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Strategic Attributes</p>
-                             <div className="grid grid-cols-1 gap-2.5">
-                                <div className="bg-white p-3.5 rounded-xl border border-slate-100 flex items-start gap-3.5 group hover:border-red-100/60 transition-all shadow-sm">
-                                   <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:text-red-500 group-hover:bg-red-50 transition-colors shrink-0">
-                                      <Monitor size={16} />
-                                   </div>
-                                   <div>
-                                      <p className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">Headquarters</p>
-                                      <p className="text-xs font-bold text-slate-800 uppercase tracking-tight">{selectedCompany.location || "Global Operations"}</p>
-                                   </div>
-                                </div>
-
-
-                             </div>
-                          </div>
-                       </div>
+                {/* ── LEFT SIDEBAR ── */}
+                <div className="w-[258px] shrink-0 border-r border-slate-100 flex flex-col overflow-y-auto custom-scrollbar bg-slate-50/50">
+                  <div className="p-6 space-y-5">
+                    {/* Avatar + name */}
+                    <div className="flex flex-col gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-xl bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-base select-none shrink-0">
+                          {initials}
+                        </div>
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border ${isRejected ? "bg-rose-50 text-rose-600 border-rose-100" : "bg-emerald-50 text-emerald-700 border-emerald-100"}`}>
+                          {isRejected ? "Disqualified" : "Qualified"}
+                        </span>
+                      </div>
+                      <h2 className="text-base font-bold text-slate-900 leading-snug">{co.name}</h2>
                     </div>
 
-                    {/* Right Column: Deep Intel Narrative */}
-                    <div className="md:col-span-7 p-8 md:p-10 space-y-8 flex flex-col justify-between bg-white h-full">
-                       <div className="space-y-6 flex-1 overflow-y-auto max-h-[480px] pr-2 select-text custom-scrollbar">
-                          {selectedCompany.opportunity_reason && (
-                             <div className="p-6 bg-red-500/5 rounded-[20px] border border-red-500/10">
-                                <p className="text-[9px] font-black text-red-500 uppercase tracking-widest mb-2">AI Opportunity Identification</p>
-                                <p className="text-sm font-semibold text-slate-700 leading-relaxed italic">"{selectedCompany.opportunity_reason}"</p>
-                             </div>
-                          )}
+                    {/* Score */}
+                    <div className="flex items-center justify-between py-3 border-t border-b border-slate-200">
+                      <span className="text-xs text-slate-500 font-medium">Alignment Score</span>
+                      <span className={`text-lg font-black ${scoreClr}`}>{score}%</span>
+                    </div>
 
+                    {/* Links */}
+                    <div className="flex flex-col gap-2">
+                      {co.website && (
+                        <a href={ensureAbsoluteUrl(co.website)} target="_blank" rel="noreferrer"
+                          className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors">
+                          <Globe size={13} className="shrink-0" />
+                          Visit Website
+                        </a>
+                      )}
+                      {co.linkedin && (
+                        <a href={ensureAbsoluteUrl(co.linkedin)} target="_blank" rel="noreferrer"
+                          className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[#0077b5] hover:bg-[#006bb0] text-xs font-semibold text-white transition-colors">
+                          <Linkedin size={13} className="shrink-0" />
+                          LinkedIn Profile
+                        </a>
+                      )}
+                      {co.contact_email && (
+                        <a href={`mailto:${co.contact_email}`}
+                          className="flex items-center gap-2 text-xs text-slate-500 hover:text-slate-900 font-medium transition-colors truncate">
+                          <Mail size={13} className="shrink-0 text-slate-400" />
+                          <span className="truncate">{co.contact_email}</span>
+                        </a>
+                      )}
+                      {co.contact_number && (
+                        <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
+                          <PhoneCall size={13} className="shrink-0 text-slate-400" />
+                          {co.contact_number}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Firmographics */}
+                    {(co.location || co.company_type || co.employee_count || co.revenue_range) && (
+                      <div className="space-y-3 pt-1 border-t border-slate-200">
+                        {[
+                          { label: "Location",  value: co.location },
+                          { label: "Vertical",  value: co.company_type },
+                          { label: "Headcount", value: co.employee_count },
+                          { label: "Revenue",   value: co.revenue_range },
+                        ].filter(r => r.value).map(({ label, value }) => (
+                          <div key={label}>
+                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{label}</p>
+                            <p className="text-xs font-semibold text-slate-700 mt-0.5">{value}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Buyer Roles */}
+                    {(meddpicc.economic_buyer || meddpicc.champion) && (
+                      <div className="space-y-3 pt-1 border-t border-slate-200">
+                        {meddpicc.economic_buyer && (
                           <div>
-                             <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4 underline decoration-red-500/20 underline-offset-4 decoration-2">Deep Research Insight</h3>
-                             <p className="text-slate-600 font-medium text-sm leading-relaxed whitespace-pre-wrap bg-slate-50/50 p-6 rounded-[20px] border border-slate-100">
-                                {selectedCompany.research_summary || selectedCompany.deep_research || "No deep research data available for this entity."}
-                             </p>
+                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Economic Buyer</p>
+                            <p className="text-xs font-semibold text-slate-700 mt-0.5">{meddpicc.economic_buyer}</p>
                           </div>
+                        )}
+                        {meddpicc.champion && (
+                          <div>
+                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Champion</p>
+                            <p className="text-xs font-semibold text-slate-700 mt-0.5">{meddpicc.champion}</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
 
-                          {selectedCompany.matched_pains?.length > 0 && (
-                             <div className="space-y-3">
-                                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Validated Pain Points</p>
-                                <div className="flex flex-wrap gap-2">
-                                   {selectedCompany.matched_pains.map((pain, i) => (
-                                      <span key={i} className="px-3 py-1.5 bg-rose-50 text-rose-600 border border-rose-100 rounded-xl text-[10px] font-black uppercase tracking-tight">{pain}</span>
-                                   ))}
-                                </div>
-                             </div>
-                          )}
+                {/* ── RIGHT CONTENT ── */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
+                  <div className="p-8 space-y-7">
 
-                          {selectedCompany.matched_services?.length > 0 && (
-                             <div className="space-y-3">
-                                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Service Alignment</p>
-                                <div className="flex flex-wrap gap-2">
-                                   {selectedCompany.matched_services.map((service, i) => (
-                                      <span key={i} className="px-3 py-1.5 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-xl text-[10px] font-black uppercase tracking-tight">{service}</span>
-                                   ))}
-                                </div>
-                             </div>
-                          )}
+                    {/* ICP reasoning — top */}
+                    {co.relevance_explanation && (
+                      <Card title="ICP Reasoning">
+                        <p className="text-sm text-slate-500 font-medium leading-relaxed italic">"{co.relevance_explanation}"</p>
+                      </Card>
+                    )}
 
-                          {selectedCompany.growth_hooks?.length > 0 && (
-                             <div className="space-y-3">
-                                <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Signals & Hooks</p>
-                                <ul className="space-y-2">
-                                   {[...(selectedCompany.growth_hooks || []), ...(selectedCompany.news_hooks || [])].map((hook, i) => (
-                                      <li key={i} className="text-xs font-semibold text-slate-600 leading-relaxed pl-4 border-l-2 border-slate-200">{hook}</li>
-                                   ))}
-                                </ul>
-                             </div>
-                          )}
-                       </div>
+                    {/* Rejection reason */}
+                    {isRejected && co.rejection_reason && (
+                      <div className="flex gap-3 p-4 bg-rose-50 border border-rose-100 rounded-xl">
+                        <AlertCircle size={15} className="text-rose-400 shrink-0 mt-0.5" />
+                        <div>
+                          <Label>Disqualification Reason</Label>
+                          <p className="text-sm text-rose-700 font-medium leading-relaxed">{co.rejection_reason}</p>
+                        </div>
+                      </div>
+                    )}
 
-                       {/* Interactive Navigation Footer */}
-                       <div className="pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center gap-4">
-                          <a 
-                            href={ensureAbsoluteUrl(selectedCompany.linkedin, selectedCompany.name)} 
-                            target="_blank" 
-                            rel="noreferrer"
-                            className="w-full flex items-center justify-center gap-3 py-4 bg-[#0077b5] hover:bg-[#006bb0] text-white rounded-2xl font-bold text-sm uppercase tracking-widest hover:scale-[1.01] active:scale-[0.99] transition-all shadow-lg shadow-blue-500/10"
-                          >
-                             <Linkedin size={20} /> LinkedIn Profile
-                          </a>
-                          <a 
-                            href={ensureAbsoluteUrl(selectedCompany.website)} 
-                            target="_blank" 
-                            rel="noreferrer"
-                            className="w-full flex items-center justify-center gap-3 py-4 bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-2xl font-bold text-sm uppercase tracking-widest hover:scale-[1.01] active:scale-[0.99] transition-all"
-                          >
-                             <Globe size={20} /> View Website
-                          </a>
-                       </div>
-                    </div>
-                 </div>
+                    {/* Opportunity signal */}
+                    {co.opportunity_reason && (
+                      <Card title="Opportunity Signal">
+                        <p className="text-sm text-slate-600 font-medium leading-relaxed italic">"{co.opportunity_reason}"</p>
+                      </Card>
+                    )}
+
+                    {/* Research summary */}
+                    <Card title="Company Overview">
+                      <p className="text-sm text-slate-600 font-medium leading-relaxed whitespace-pre-wrap">
+                        {co.research_summary || co.deep_research || "No research data available."}
+                      </p>
+                    </Card>
+
+                    {/* Pain signals */}
+                    {cleanHooks.length > 0 && (
+                      <Card title="Signals & Challenges">
+                        <ul className="space-y-2">
+                          {cleanHooks.map((h, i) => (
+                            <li key={i} className="flex items-start gap-2.5 text-sm text-slate-600 font-medium leading-relaxed">
+                              <span className="w-1 h-1 rounded-full bg-slate-400 mt-2 shrink-0" />
+                              {h}
+                            </li>
+                          ))}
+                        </ul>
+                      </Card>
+                    )}
+
+                    {/* Pain points */}
+                    {cleanPains.length > 0 && (
+                      <Card title="Validated Pain Points">
+                        <div className="flex flex-wrap gap-2">
+                          {cleanPains.map((p, i) => (
+                            <span key={i} className="px-3 py-1 bg-rose-50 text-rose-600 border border-rose-100 rounded-lg text-xs font-semibold">{p}</span>
+                          ))}
+                        </div>
+                      </Card>
+                    )}
+
+                    {/* Service alignment */}
+                    {cleanSvcs.length > 0 && (
+                      <Card title="Service Alignment">
+                        <div className="flex flex-wrap gap-2">
+                          {cleanSvcs.map((s, i) => (
+                            <span key={i} className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg text-xs font-semibold">{s}</span>
+                          ))}
+                        </div>
+                      </Card>
+                    )}
+
+                    {/* Value metrics */}
+                    {meddpicc.metrics && !_PH.has(String(meddpicc.metrics).trim().toLowerCase()) && (
+                      <Card title="Value Metrics">
+                        <p className="text-sm text-slate-600 font-medium leading-relaxed">{meddpicc.metrics}</p>
+                      </Card>
+                    )}
+
+                    {/* Evidence of need */}
+                    {meddpicc.need_evidence && !_PH.has(String(meddpicc.need_evidence).trim().toLowerCase()) && (
+                      <Card title="Evidence of Need">
+                        <p className="text-sm text-slate-600 font-medium leading-relaxed">{meddpicc.need_evidence}</p>
+                      </Card>
+                    )}
+
+                  </div>
+                </div>
               </motion.div>
             </div>
           );
