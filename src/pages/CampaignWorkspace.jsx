@@ -10,7 +10,7 @@ import {
   X, Edit3, Send, Trash, Maximize2, Clock, Calendar, Link2,
   TrendingUp, PieChart, Target, ShieldCheck, LayoutDashboard,
   Activity, BarChart3, Filter, ChevronDown,
-  PenLine, Inbox, HelpCircle, RefreshCw, Menu
+  PenLine, Inbox, HelpCircle, Menu
 } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "../config";
@@ -22,6 +22,7 @@ import MissionSidebar from "../components/campaign-workspace/MissionSidebar";
 import DraftEditorModal from "../components/campaign-workspace/DraftEditorModal";
 import DraftPreviewModal from "../components/campaign-workspace/DraftPreviewModal";
 import { CampaignWorkspaceSidebar } from "../components/campaign-workspace/CampaignWorkspaceSidebar";
+import { DispatchConfirmModal } from "../components/campaign-workspace/DispatchConfirmModal";
 
 // Helper to force uniform UTC parsing on both timezone-naive and timezone-aware ISO strings
 const parseUtcDate = (dateStr) => {
@@ -205,7 +206,6 @@ const CampaignWorkspace = () => {
   const [draftEditData, setDraftEditData] = useState({ subject: "", body: "", email: "" });
   const [sendingId, setSendingId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [dispatchingId, setDispatchingId] = useState(null);
   const [isDispatchingAll, setIsDispatchingAll] = useState(false);
   const [draftFilter, setDraftFilter] = useState(null);   // null = show all
   const [showDraftFilter, setShowDraftFilter] = useState(false);
@@ -214,6 +214,18 @@ const CampaignWorkspace = () => {
   const [navOpen, setNavOpen] = useState(false); // mobile campaign-nav drawer
   const [campaignNavCollapsed, setCampaignNavCollapsed] = useState(false);
   const [researchExpanded, setResearchExpanded] = useState(true);
+
+  // Dispatch confirmation modal state
+  const [showDispatchModal, setShowDispatchModal] = useState(false);
+  const [dispatchModalData, setDispatchModalData] = useState({
+    draftId: null,
+    isDraft: true, // true for single draft, false for batch
+    recipientName: "",
+    recipientEmail: "",
+    scheduledTime: null,
+    pendingCount: 0,
+  });
+  const [isConfirmingDispatch, setIsConfirmingDispatch] = useState(false);
 
   useEffect(() => {
     if (activeTab === "research") setResearchExpanded(true);
@@ -369,44 +381,57 @@ const CampaignWorkspace = () => {
     return () => clearInterval(interval);
   }, [fetchCampaignDetails]);
 
-  const handleSendMessage = async (draftId, name) => {
+  const handleSendMessage = async (draftId, name, email) => {
+    // Fetch the preview slot WITHOUT scheduling anything, then show the modal.
+    // The actual scheduling only happens when the user confirms.
     setSendingId(draftId);
     try {
-        const res = await axios.post(`${API_BASE_URL}/drafts/${draftId}/send`);
-        const data = res.data;
-        if (data.message === "already_scheduled") {
-            alert(`Already scheduled: Email to ${name} is queued for ${data.display}.`);
-        } else if (data.scheduled_at) {
-            alert(`Scheduled: Email to ${name} will be sent on ${data.display} (${data.timezone}).`);
-        } else {
-            alert(`Engagement protocol targeting ${name} has been deployed.`);
-        }
-        await fetchCampaignDetails();
+      const res = await axios.get(`${API_BASE_URL}/drafts/${draftId}/next-slot`);
+      const data = res.data;
+      setDispatchModalData({
+        draftId,
+        isDraft: true,
+        recipientName: name,
+        recipientEmail: email || "",
+        scheduledTime: data.scheduled_at,
+        pendingCount: 0,
+      });
+      setShowDispatchModal(true);
     } catch (error) {
-        console.error("Tactical Deployment Failure:", error);
-        const errorDetail = error.response?.data?.detail || "Strategic deployment failed. Please check your communication protocols.";
-        alert(`ERROR: ${errorDetail}`);
+      console.error("Tactical Deployment Failure:", error);
+      const errorDetail = error.response?.data?.detail || "Strategic deployment failed. Please check your communication protocols.";
+      alert(`ERROR: ${errorDetail}`);
     } finally {
-        setSendingId(null);
+      setSendingId(null);
     }
   };
 
-  const handleDispatchNudge = async (dmId, name) => {
-    setDispatchingId(dmId);
+  const handleDispatchConfirm = async (mode) => {
+    const { draftId, recipientName } = dispatchModalData;
+    if (!draftId) return;
+
+    setIsConfirmingDispatch(true);
     try {
-      const res = await axios.post(`${API_BASE_URL}/prospects/${dmId}/dispatch`);
-      const data = res.data;
-      if (data.message === "already_scheduled") {
-        alert(`Already queued: Reminder to ${name} is scheduled for ${data.display}.`);
+      if (mode === "send-now") {
+        await axios.post(`${API_BASE_URL}/drafts/${draftId}/send-now`);
+        alert(`✅ Email to ${recipientName} queued for immediate delivery!`);
       } else {
-        alert(`Dispatch scheduled: Reminder to ${name} will be sent on ${data.display} (${data.timezone}).`);
+        const res = await axios.post(`${API_BASE_URL}/drafts/${draftId}/send`);
+        const data = res.data;
+        if (data.message === "already_scheduled") {
+          alert(`Already scheduled: Email to ${recipientName} is queued for ${data.display}.`);
+        } else {
+          alert(`✅ Email to ${recipientName} scheduled for ${data.display}.`);
+        }
       }
+      setShowDispatchModal(false);
       await fetchCampaignDetails();
     } catch (error) {
-      const detail = error.response?.data?.detail || "Dispatch failed.";
-      alert(`ERROR: ${detail}`);
+      console.error("Dispatch error:", error);
+      const errorDetail = error.response?.data?.detail || "Deployment failed.";
+      alert(`ERROR: ${errorDetail}`);
     } finally {
-      setDispatchingId(null);
+      setIsConfirmingDispatch(false);
     }
   };
 
@@ -427,17 +452,6 @@ const CampaignWorkspace = () => {
     } finally {
       setIsDispatchingAll(false);
     }
-  };
-
-  // States that support manual nudge dispatch
-  const isDispatchable = (dm) => {
-    const s = (dm.state || dm.status || "").toUpperCase();
-    return (
-      s === "INITIAL_SENT" ||
-      s === "REMINDER_1_SENT" ||
-      s === "FOLLOWUP_ACTIVE" ||
-      s === "WAITING_FOR_REPLY"
-    );
   };
 
   const handleUpdatePrompt = async (newPrompt) => {
@@ -773,10 +787,13 @@ const CampaignWorkspace = () => {
                                       </div>
                                     ) : (
                                       <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter ${
-                                        dmStatus.includes("SENT")   ? "bg-surgical-navy text-white" :
-                                        dmStatus.includes("REPLIED") ? "bg-emerald-500 text-white" :
-                                        dmStatus.includes("DRAFTED") ? "bg-amber-50 text-amber-600 border border-amber-200" :
-                                        "bg-slate-100 text-slate-500"
+                                        dmStatus.includes("SENT")       ? "bg-surgical-navy text-white" :
+                                        dmStatus.includes("REPLIED")    ? "bg-emerald-500 text-white" :
+                                        dmStatus.includes("DRAFTED")    ? "bg-amber-50 text-amber-600 border border-amber-200" :
+                                        dmStatus === "FOLLOWUP_ACTIVE"  ? "bg-teal-50 text-teal-700 border border-teal-200" :
+                                        dmStatus === "WAITING_FOR_REPLY"? "bg-purple-50 text-purple-700 border border-purple-200" :
+                                        dmStatus === "MEETING_BOOKED"   ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                                        "bg-slate-100 text-slate-600 border border-slate-200"
                                       }`}>
                                         {dmStatus.replace(/_/g, " ")}
                                       </span>
@@ -784,19 +801,6 @@ const CampaignWorkspace = () => {
                                   </td>
                                   <td className="px-8 py-6">
                                     <div className="flex items-center justify-end gap-2">
-                                      {/* Hide Dispatch button when a send is already scheduled */}
-                                      {isDispatchable(dm) && !hasScheduledDispatch && (
-                                        <button
-                                          onClick={() => handleDispatchNudge(dm.id, dm.name)}
-                                          disabled={dispatchingId === dm.id}
-                                          className="flex items-center gap-1.5 px-3 py-2 bg-surgical-navy hover:bg-slate-800 text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm shadow-surgical-navy/20 disabled:opacity-50"
-                                        >
-                                          {dispatchingId === dm.id
-                                            ? <Loader2 size={11} className="animate-spin" />
-                                            : <Send size={11} />}
-                                          Dispatch
-                                        </button>
-                                      )}
                                       <button
                                         onClick={() => setShowHistoryDM(dm)}
                                         className="px-4 py-2 bg-slate-50 hover:bg-surgical-navy hover:text-white text-slate-400 border border-slate-100 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
@@ -1070,7 +1074,7 @@ const CampaignWorkspace = () => {
                                       <Edit3 size={14} /> Refine
                                     </button>
                                     <button
-                                      onClick={() => { if (!isScheduled) handleSendMessage(draft.id, dm?.name); }}
+                                      onClick={() => { if (!isScheduled) handleSendMessage(draft.id, dm?.name, dm?.email); }}
                                       disabled={isScheduled || sendingId === draft.id}
                                       className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-surgical-navy hover:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md shadow-surgical-navy/20 disabled:opacity-40 disabled:cursor-not-allowed"
                                     >
@@ -1190,7 +1194,7 @@ const CampaignWorkspace = () => {
                               <Edit3 size={14} /> Refine
                             </button>
                             <button
-                              onClick={() => handleSendMessage(draft.id, dm?.name)}
+                              onClick={() => handleSendMessage(draft.id, dm?.name, dm?.email)}
                               disabled={sendingId === draft.id}
                               className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-surgical-navy hover:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md shadow-surgical-navy/20 disabled:opacity-50"
                             >
@@ -1830,6 +1834,18 @@ const CampaignWorkspace = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Dispatch Confirmation Modal */}
+      <DispatchConfirmModal
+        isOpen={showDispatchModal}
+        onClose={() => setShowDispatchModal(false)}
+        recipientName={dispatchModalData.recipientName}
+        recipientEmail={dispatchModalData.recipientEmail}
+        scheduledTime={dispatchModalData.scheduledTime}
+        onSchedule={() => handleDispatchConfirm("schedule")}
+        onSendNow={() => handleDispatchConfirm("send-now")}
+        isLoading={isConfirmingDispatch}
+      />
     </div>
   );
 };
