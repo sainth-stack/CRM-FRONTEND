@@ -112,6 +112,46 @@ export const adminApi = {
   resendActivation: (token, id) =>
     request(token, "POST", `/auth/management/resend-activation/${id}`),
 
+  // Org assets (brochures + use-cases)
+  listAssets: (token, assetType) =>
+    request(token, "GET", "/uploads/assets", { params: assetType ? { asset_type: assetType } : {} }).then((d) => ({
+      items: d.assets || [],
+    })),
+
+  uploadBrochure: (token, file) => {
+    const form = new FormData();
+    form.append("file", file);
+    return fetch(`${API_BASE_URL}/uploads/brochure`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    }).then(async (r) => {
+      const text = await r.text();
+      const data = text ? JSON.parse(text) : {};
+      if (!r.ok) throw new Error(extractMessage(data));
+      return data;
+    });
+  },
+
+  uploadUsecase: (token, file) => {
+    const form = new FormData();
+    form.append("file", file);
+    return fetch(`${API_BASE_URL}/uploads/usecase`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    }).then(async (r) => {
+      const text = await r.text();
+      const data = text ? JSON.parse(text) : {};
+      if (!r.ok) throw new Error(extractMessage(data));
+      return data;
+    });
+  },
+
+  deleteAsset: (token, id) => request(token, "DELETE", `/uploads/assets/${id}`),
+
+  assetDownloadUrl: (id) => `${API_BASE_URL}/uploads/assets/${id}`,
+
   listSessions: (token, params) =>
     request(token, "GET", "/admin/sessions", { params }).then((d) => ({
       items: d.sessions || [],

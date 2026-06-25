@@ -102,6 +102,8 @@ export default function UserRoles() {
       ...emptyForm,
       // Admins live in their own tenant — preselect it and they can't change it.
       tenant_id: superAdmin ? "" : (user?.tenant?.tenant_id || ""),
+      // Admins can only add users to their own organization — pin it here.
+      organization_id: superAdmin ? "" : (user?.organization?.organization_id || ""),
     });
     setDialogOpen(true);
   };
@@ -290,17 +292,21 @@ export default function UserRoles() {
         }
       >
         <form onSubmit={handleSave} className="space-y-4">
-          {/* Role — defaults to "user"; super-admin sees all three options. */}
-          <AdminSelect
-            label="Role"
-            value={form.system_role}
-            onChange={(e) => setForm({ ...form, system_role: e.target.value })}
-            required
-          >
-            {allowedRoles.map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </AdminSelect>
+          {/* Role — super admins choose; admins always mint "User" accounts. */}
+          {superAdmin ? (
+            <AdminSelect
+              label="Role"
+              value={form.system_role}
+              onChange={(e) => setForm({ ...form, system_role: e.target.value })}
+              required
+            >
+              {allowedRoles.map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </AdminSelect>
+          ) : (
+            <AdminInput label="Role" value="User" disabled />
+          )}
 
           <AdminInput
             label="Email"
@@ -328,26 +334,34 @@ export default function UserRoles() {
             <AdminInput label="Tenant" value={user?.tenant?.tenant_name || "—"} disabled />
           )}
 
-          {/* Organization — dynamic, tenant-scoped, with red alert when tenant unset. */}
-          <div>
-            <AdminSelect
+          {/* Organization — super admins choose freely; admins are pinned to their own org. */}
+          {superAdmin ? (
+            <div>
+              <AdminSelect
+                label="Organization"
+                value={form.organization_id}
+                disabled={!form.tenant_id}
+                onChange={(e) => setForm({ ...form, organization_id: e.target.value })}
+                required
+              >
+                <option value="">Select organization</option>
+                {orgsForTenant.map((o) => (
+                  <option key={o.id} value={o.id}>{o.name}</option>
+                ))}
+              </AdminSelect>
+              {!form.tenant_id && (
+                <p className="mt-1.5 text-sm font-medium text-red-600">
+                  ⚠ Select a tenant first to choose an organization.
+                </p>
+              )}
+            </div>
+          ) : (
+            <AdminInput
               label="Organization"
-              value={form.organization_id}
-              disabled={!form.tenant_id}
-              onChange={(e) => setForm({ ...form, organization_id: e.target.value })}
-              required
-            >
-              <option value="">Select organization</option>
-              {orgsForTenant.map((o) => (
-                <option key={o.id} value={o.id}>{o.name}</option>
-              ))}
-            </AdminSelect>
-            {!form.tenant_id && (
-              <p className="mt-1.5 text-sm font-medium text-red-600">
-                ⚠ Select a tenant first to choose an organization.
-              </p>
-            )}
-          </div>
+              value={user?.organization?.organization_name || "—"}
+              disabled
+            />
+          )}
         </form>
       </AdminModal>
 

@@ -4,4 +4,4 @@ export const canAccessAdmin = (user) => isSuperAdmin(user) || isAdmin(user);
 export const hasFullAppAccess = (user) => isSuperAdmin(user);
 
 export const adminDefaultPath = (user) =>
-  isSuperAdmin(user) ? "/admin/tenants" : "/admin/organizations";
+  isSuperAdmin(user) ? "/admin/tenants" : "/admin/user-roles";

@@ -22,6 +22,7 @@ import Tenants from "./pages/admin/Tenants";
 import Organizations from "./pages/admin/Organizations";
 import UserRoles from "./pages/admin/UserRoles";
 import UserSessions from "./pages/admin/UserSessions";
+import FileUploads from "./pages/admin/FileUploads";
 import Settings from "./pages/Settings";
 import { adminDefaultPath } from "./utils/roles";
 import BusinessProfile from "./pages/BusinessProfile";
@@ -125,6 +126,7 @@ function AppContents() {
             {/* Old standalone Users page replaced by User Roles (which now provisions users). */}
             <Route path="users" element={<Navigate to="/admin/user-roles" replace />} />
             <Route path="user-sessions" element={<UserSessions />} />
+            <Route path="file-uploads" element={<FileUploads />} />
           </Route>
 
           <Route path="connect-mailbox" element={<ProtectedRoute><ConnectMailbox /></ProtectedRoute>} />

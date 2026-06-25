@@ -9,6 +9,7 @@ import {
   Building2,
   ShieldCheck,
   Clock,
+  FileUp,
   ArrowLeft,
   LogOut,
   PanelLeftClose,
@@ -32,9 +33,10 @@ const adminEntry = { title: "Administration", path: "/admin", icon: Shield };
 
 const adminNavItems = [
   { title: "Tenants", path: "/admin/tenants", icon: Building2, superOnly: true },
-  { title: "Organizations", path: "/admin/organizations", icon: Building2 },
+  { title: "Organizations", path: "/admin/organizations", icon: Building2, superOnly: true },
   { title: "User Roles", path: "/admin/user-roles", icon: ShieldCheck },
   { title: "User Sessions", path: "/admin/user-sessions", icon: Clock },
+  { title: "File Uploads", path: "/admin/file-uploads", icon: FileUp },
 ];
 
 export function AppSidebar() {
