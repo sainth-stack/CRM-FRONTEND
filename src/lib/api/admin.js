@@ -150,6 +150,13 @@ export const adminApi = {
 
   deleteAsset: (token, id) => request(token, "DELETE", `/uploads/assets/${id}`),
 
+  reorderAssets: (token, assetType, orderedIds) =>
+    request(token, "PATCH", "/uploads/assets/reorder", {
+      body: { asset_type: assetType, ordered_ids: orderedIds },
+    }).then((d) => ({
+      items: d.assets || [],
+    })),
+
   assetDownloadUrl: (id) => `${API_BASE_URL}/uploads/assets/${id}`,
 
   listSessions: (token, params) =>

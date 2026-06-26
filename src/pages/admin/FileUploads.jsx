@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Upload, Trash2, Copy, Check, FileText, Loader2 } from "lucide-react";
+import { Upload, Trash2, Copy, Check, FileText, Loader2, ArrowUp, ArrowDown } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { adminApi } from "../../lib/api/admin";
@@ -115,7 +115,43 @@ function AssetSection({ title, description, assetType, uploadFn, token, showToas
     }
   };
 
+  const moveAsset = async (asset, direction) => {
+    const currentIndex = items.findIndex((item) => item.id === asset.id);
+    const nextIndex = currentIndex + direction;
+    if (currentIndex < 0 || nextIndex < 0 || nextIndex >= items.length) return;
+
+    const reordered = [...items];
+    [reordered[currentIndex], reordered[nextIndex]] = [reordered[nextIndex], reordered[currentIndex]];
+    setItems(reordered);
+    try {
+      const { items: rows } = await adminApi.reorderAssets(token, assetType, reordered.map((item) => item.id));
+      setItems(rows);
+      showToast({ tone: "success", title: "Order Updated" });
+    } catch (err) {
+      setItems(items);
+      showToast({ tone: "error", title: "Reorder failed", description: adminApi.extractMessage(err) });
+    }
+  };
+
   const columns = [
+    {
+      key: "order",
+      label: "Order",
+      render: (r) => {
+        const index = items.findIndex((item) => item.id === r.id);
+        return (
+          <div className="flex items-center gap-1">
+            <span className="w-6 text-xs font-bold text-slate-500 tabular-nums">{index + 1}</span>
+            <AdminBtn variant="ghost" onClick={() => moveAsset(r, -1)} title="Move up" disabled={index <= 0}>
+              <ArrowUp size={14} />
+            </AdminBtn>
+            <AdminBtn variant="ghost" onClick={() => moveAsset(r, 1)} title="Move down" disabled={index >= items.length - 1}>
+              <ArrowDown size={14} />
+            </AdminBtn>
+          </div>
+        );
+      },
+    },
     {
       key: "name",
       label: "File",

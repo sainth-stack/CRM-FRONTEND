@@ -854,7 +854,7 @@ const CampaignWorkspace = () => {
                       if (s === "DISPATCH_SCHEDULED") cls = "bg-blue-50 text-blue-600 border-blue-200";
                       else if (s === "DRAFTED")        cls = "bg-amber-50 text-amber-600 border-amber-200";
                       else if (s === "INITIAL_SENT")   cls = "bg-indigo-50 text-indigo-600 border-indigo-200";
-                      else if (s === "REMINDER_1_SENT" || s === "REMINDER_2_SENT")
+                      else if (/^REMINDER_[1-6]_SENT$/.test(s))
                                                        cls = "bg-purple-50 text-purple-600 border-purple-200";
                       else if (s === "FOLLOWUP_ACTIVE") cls = "bg-teal-50 text-teal-600 border-teal-200";
                       else if (s === "NEUTRAL")        cls = "bg-slate-100 text-slate-600 border-slate-300";

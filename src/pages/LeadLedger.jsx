@@ -218,7 +218,7 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
     const s = (dm.state || dm.status || "").toUpperCase();
     return (
       s === "INITIAL_SENT" ||
-      s === "REMINDER_1_SENT" ||
+      /^REMINDER_[1-6]_SENT$/.test(s) ||
       s === "FOLLOWUP_ACTIVE" ||
       s === "WAITING_FOR_REPLY"
     );
@@ -229,11 +229,17 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
     try {
       const res = await axios.post(`${API_BASE_URL}/prospects/${dmId}/dispatch`);
       const data = res.data;
-      if (data.message === "already_scheduled") {
+      if (data.message === "already_drafted") {
         showToast({
           tone: "info",
-          title: "Already Queued",
-          description: `Reminder to ${name} is already scheduled for ${data.display}.`,
+          title: "Already Drafted",
+          description: `Reminder ${data.reminder_number} for ${name} is already waiting for review.`,
+        });
+      } else if (data.message === "drafted") {
+        showToast({
+          tone: "success",
+          title: "Reminder Drafted",
+          description: `Reminder ${data.reminder_number} for ${name} is ready for human review.`,
         });
       } else {
         showToast({
