@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle2, Loader2, Mail, X, RotateCcw, Clock, AlertCircle, MessageSquare } from "lucide-react";
+import { CheckCircle2, Loader2, Mail, X, Clock, AlertCircle, Send, Sparkles } from "lucide-react";
 
 // Helper to force uniform UTC parsing on both timezone-naive and timezone-aware ISO strings
 const parseUtcDate = (dateStr) => {
   if (!dateStr) return null;
   if (dateStr instanceof Date) return dateStr;
-  
+
   let formatted = String(dateStr);
   // If it's a naive ISO timestamp (e.g. "2026-05-21T18:50:00" without timezone offset/marker)
   // append 'Z' so JavaScript interprets it uniformly as UTC (matching database timezone semantics).
@@ -17,7 +17,7 @@ const parseUtcDate = (dateStr) => {
   ) {
     formatted += "Z";
   }
-  
+
   const parsed = new Date(formatted);
   return isNaN(parsed.getTime()) ? null : parsed;
 };
@@ -59,8 +59,12 @@ const DraftEditorModal = ({
   onClose,
   onSave,
   isSaving,
+  onAIRefine, // optional: (instruction) => Promise<void> — wired later to a backend refine endpoint
 }) => {
   const [expandedItems, setExpandedItems] = useState([]);
+  const [showRefinePrompt, setShowRefinePrompt] = useState(false);
+  const [refineInstruction, setRefineInstruction] = useState("");
+  const [isRefining, setIsRefining] = useState(false);
 
   const toggleItemExpansion = (idx) => {
     setExpandedItems((prev) =>
@@ -87,7 +91,7 @@ const DraftEditorModal = ({
       rawItems.push({
         timestamp: parsedDate,
         type: log.direction === "SENT" ? "SENT" : "RECEIVED",
-        title: log.direction === "SENT" ? "Email Outbound" : "Signal Captured",
+        title: log.direction === "SENT" ? "Email sent" : "Reply received",
         subject: log.subject,
         body: log.body,
         isOpened: log.direction === "SENT" && (selectedDraft.id.charCodeAt(0) % 2 === 0), // Deterministic representation
@@ -102,8 +106,8 @@ const DraftEditorModal = ({
     rawItems.push({
       timestamp: draftDate,
       type: "MILESTONE",
-      title: "Draft Created",
-      description: "Initial outreach draft prepared by Ghostwriter AI.",
+      title: "Draft created",
+      description: "Initial outreach draft prepared by AI.",
     });
   }
 
@@ -112,7 +116,7 @@ const DraftEditorModal = ({
     rawItems.push({
       timestamp: dmDate,
       type: "STRATEGY",
-      title: "Strategy Target Identified",
+      title: "Target identified",
       description: dm.similarity_score.reason,
     });
   }
@@ -121,7 +125,7 @@ const DraftEditorModal = ({
     rawItems.push({
       timestamp: dmDate,
       type: "MILESTONE",
-      title: "Contact Created",
+      title: "Contact added",
       description: `Added to campaign "${campaign.name || "Default Outbound"}".`,
     });
   }
@@ -135,98 +139,98 @@ const DraftEditorModal = ({
     timeLabel: formatTimeAgo(item.timestamp),
   }));
 
+  const handleRefineSend = async () => {
+    if (!refineInstruction.trim() || isRefining) return;
+    setIsRefining(true);
+    try {
+      if (onAIRefine) {
+        await onAIRefine(refineInstruction.trim());
+      }
+      setRefineInstruction("");
+      setShowRefinePrompt(false);
+    } finally {
+      setIsRefining(false);
+    }
+  };
+
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-6 lg:p-12 overflow-y-auto select-none">
-        {/* Backdrop glass blur */}
+        {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-[#0F172A]/40 backdrop-blur-md"
+          className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
         />
 
-        {/* Adaptive Panel Layout */}
+        {/* Panel */}
         <motion.div
           initial={{ opacity: 0, scale: 0.98, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.98, y: 15 }}
-          transition={{ type: "spring", damping: 30, stiffness: 280 }}
-          className="relative w-full max-w-[1360px] min-h-screen md:min-h-0 md:h-[90vh] bg-gradient-to-br from-[#FAF5F4] to-[#FFFDFC] rounded-none md:rounded-3xl shadow-2xl overflow-hidden flex flex-col z-10 font-sans border border-[#FAF1EE] text-slate-800"
+          transition={{ duration: 0.18 }}
+          className="relative w-full max-w-[1100px] min-h-screen md:min-h-0 md:h-[85vh] bg-white rounded-none md:rounded-2xl shadow-xl overflow-hidden flex flex-col z-10 border border-slate-200"
         >
-          {/* Main Top Header */}
-          <div className="px-6 py-5 md:px-10 md:py-6 flex items-center justify-between border-b border-[#FAF1EE] bg-white/70 backdrop-blur-sm sticky top-0 z-20 shrink-0">
-            <div className="flex items-center gap-4">
-              {/* Dark monogram avatar */}
-              <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-extrabold text-lg shadow-md shadow-slate-950/10">
+          {/* Header */}
+          <div className="px-6 py-4 flex items-center justify-between border-b border-slate-100 shrink-0">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white font-semibold text-sm shrink-0">
                 {(dm?.name || "TW").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
               </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-lg md:text-xl font-black text-slate-900 tracking-tight leading-none">
-                    {dm?.name || "Stakeholder Name"}
-                  </h3>
-                  <span className="px-2 py-0.5 bg-[#FFF0EF] text-[#FE1919] border border-[#FFDEDC] rounded-lg text-[9px] font-black uppercase tracking-widest">
-                    Draft Refinement
-                  </span>
-                </div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
-                  Refining outreach for {company?.industry || "target market"} automation
+              <div className="min-w-0">
+                <h3 className="text-base font-semibold text-slate-900 truncate">
+                  {dm?.name || "Stakeholder Name"}
+                </h3>
+                <p className="text-xs text-slate-400 truncate">
+                  Editing draft for {company?.name || "target company"}
                 </p>
               </div>
             </div>
-            
-            <div className="flex items-center gap-3">
-              {/* Reset/Regenerate placeholder to match references */}
-              <button 
-                onClick={() => {
-                  if (selectedDraft.variants && selectedDraft.variants["A"]) {
-                    const variant = selectedDraft.variants["A"];
-                    onDraftEditChange({ ...draftEditData, subject: variant.subject, body: variant.body });
-                  }
-                }}
-                title="Reset to original generated draft"
-                className="w-10 h-10 hover:bg-slate-50 border border-[#FAF1EE] rounded-xl flex items-center justify-center text-slate-400 hover:text-[#FE1919] transition-all bg-white shadow-sm"
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setShowRefinePrompt(true)}
+                className="flex items-center gap-1.5 px-3 py-2 hover:bg-slate-100 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
               >
-                <RotateCcw size={16} />
+                <Sparkles size={14} />
+                Regenerate
               </button>
-              <button 
-                onClick={onClose} 
-                className="w-10 h-10 hover:bg-[#FFF0EF] hover:text-[#FE1919] border border-[#FAF1EE] rounded-xl flex items-center justify-center text-slate-400 transition-all bg-white shadow-sm"
+              <button
+                onClick={onClose}
+                className="w-8 h-8 hover:bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors"
               >
-                <X size={18} strokeWidth={2.5} />
+                <X size={16} />
               </button>
             </div>
           </div>
 
-          {/* Scrolling Split Columns */}
+          {/* Body */}
           <div className="flex flex-col md:flex-row flex-grow overflow-hidden select-text">
-            
-            {/* Left Workspace Panel: Draft Editor (65% width) */}
-            <div className="w-full md:w-[65%] flex flex-col p-6 md:p-10 overflow-y-auto border-r border-[#FAF1EE] gap-6 bg-white/40">
-              
-              {/* Informational Alert Box */}
-              <div className="p-4 bg-[#FFFDF5] border border-[#FBEFCD] rounded-2xl flex items-start gap-3 shadow-sm select-none">
-                <AlertCircle size={18} className="text-[#D97706] shrink-0 mt-0.5" />
-                <p className="text-xs font-semibold text-[#B45309] leading-relaxed">
-                  Review AI-generated content for accuracy. Strategic headers are optimized for current market sentiment in the {company?.industry || "target"} sector.
+
+            {/* Left: Draft editor */}
+            <div className="w-full md:w-[64%] flex flex-col p-6 overflow-y-auto border-r border-slate-100 gap-5">
+
+              <div className="p-3.5 bg-amber-50 rounded-xl flex items-start gap-2.5">
+                <AlertCircle size={16} className="text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-800 leading-relaxed">
+                  Review the AI-generated content before sending — check facts, names, and tone.
                 </p>
               </div>
 
-              {/* Organization & Email Row */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 select-none">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-[#8192B4] uppercase tracking-widest block">
-                    Target Organization
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-slate-400 block">
+                    Organization
                   </label>
-                  <div className="bg-white px-4 py-3.5 rounded-xl border border-[#FAF1EE] text-sm font-semibold text-slate-800 shadow-sm">
+                  <div className="bg-slate-50 px-3.5 py-2.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-800">
                     {company?.name || "Company Name"}
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-[#8192B4] uppercase tracking-widest block">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-slate-400 block">
                     Recipient Email
                   </label>
                   <div className="relative flex items-center">
@@ -234,54 +238,43 @@ const DraftEditorModal = ({
                       type="email"
                       value={draftEditData.email}
                       onChange={(event) => onDraftEditChange({ ...draftEditData, email: event.target.value })}
-                      className="w-full bg-white px-4 py-3.5 pr-10 rounded-xl border border-[#FAF1EE] text-sm font-semibold text-slate-800 shadow-sm outline-none focus:border-[#FE1919]/20 focus:ring-1 focus:ring-[#FE1919]/25 transition-all"
+                      className="w-full bg-white px-3.5 py-2.5 pr-9 rounded-lg border border-slate-200 text-sm text-slate-800 outline-none focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200 transition-colors"
                       placeholder="name@company.com"
                     />
-                    <div className="absolute right-3.5 text-slate-300">
-                      <Mail size={15} />
-                    </div>
+                    <Mail size={14} className="absolute right-3 text-slate-300" />
                   </div>
                 </div>
               </div>
 
-              {/* Strategic Subject Input */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-[#8192B4] uppercase tracking-widest block">
-                  Strategic Subject Header
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-400 block">
+                  Subject
                 </label>
-                <div className="relative flex items-center">
-                  {/* The thematic solid red vertical bar */}
-                  <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#FE1919] rounded-l-xl" />
-                  <input
-                    type="text"
-                    value={draftEditData.subject}
-                    onChange={(event) => onDraftEditChange({ ...draftEditData, subject: event.target.value })}
-                    className="w-full bg-white p-4 pl-6 rounded-xl font-extrabold text-slate-800 outline-none text-base border border-[#FAF1EE] shadow-sm focus:border-[#FE1919]/20 focus:ring-1 focus:ring-[#FE1919]/25 transition-all"
-                    placeholder="Enter subject line..."
-                  />
-                </div>
+                <input
+                  type="text"
+                  value={draftEditData.subject}
+                  onChange={(event) => onDraftEditChange({ ...draftEditData, subject: event.target.value })}
+                  className="w-full bg-white px-3.5 py-2.5 rounded-lg font-medium text-slate-900 outline-none text-sm border border-slate-200 focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200 transition-colors"
+                  placeholder="Enter subject line..."
+                />
               </div>
 
-              {/* Narrative Protocol Body Editor */}
-              <div className="space-y-2 flex-grow flex flex-col">
-                <label className="text-[10px] font-black text-[#8192B4] uppercase tracking-widest block">
-                  Narrative Protocol Body
+              <div className="space-y-1.5 flex-grow flex flex-col">
+                <label className="text-xs font-medium text-slate-400 block">
+                  Message
                 </label>
-                <div className="relative flex-grow flex flex-col bg-white rounded-2xl border border-[#FAF1EE] shadow-sm p-6">
-                  <textarea
-                    value={draftEditData.body}
-                    onChange={(event) => onDraftEditChange({ ...draftEditData, body: event.target.value })}
-                    className="w-full flex-grow min-h-[320px] md:min-h-[220px] bg-transparent font-medium text-slate-600 outline-none text-[15px] leading-relaxed resize-none pt-2 custom-scrollbar"
-                    placeholder="Compose outreach copy..."
-                  />
-                </div>
+                <textarea
+                  value={draftEditData.body}
+                  onChange={(event) => onDraftEditChange({ ...draftEditData, body: event.target.value })}
+                  className="w-full flex-grow min-h-[280px] md:min-h-[200px] bg-white rounded-lg border border-slate-200 p-4 text-slate-700 outline-none text-sm leading-relaxed resize-none custom-scrollbar focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200 transition-colors"
+                  placeholder="Compose outreach copy..."
+                />
               </div>
 
-              {/* Dynamic AI Variant Tabs */}
               {selectedDraft.variants && (
-                <div className="space-y-2 border-t border-[#FAF1EE] pt-6 select-none">
-                  <label className="text-[10px] font-black text-[#8192B4] uppercase tracking-widest block">
-                    Alternative AI Model Variants
+                <div className="space-y-2 border-t border-slate-100 pt-5">
+                  <label className="text-xs font-medium text-slate-400 block">
+                    Alternative versions
                   </label>
                   <div className="flex gap-2 flex-wrap">
                     {Object.keys(selectedDraft.variants).map((vKey) => {
@@ -297,10 +290,10 @@ const DraftEditorModal = ({
                               body: variant.body,
                             });
                           }}
-                          className={`px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                          className={`px-3.5 py-2 rounded-lg text-sm font-medium transition-colors border ${
                             isActive
-                              ? "bg-slate-900 border-slate-950 text-white shadow-md"
-                              : "bg-white text-slate-500 border-[#FAF1EE] hover:bg-slate-50"
+                              ? "bg-slate-900 border-slate-900 text-white"
+                              : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
                           }`}
                         >
                           Variant {vKey}
@@ -313,28 +306,18 @@ const DraftEditorModal = ({
 
             </div>
 
-            {/* Right Workspace Panel: Thread History Timeline (35% width) */}
-            <div className="w-full md:w-[35%] bg-[#FDFBFB] p-6 md:p-10 overflow-y-auto flex flex-col border-t md:border-t-0 border-[#FAF1EE] gap-6">
-              
-              {/* Section Header */}
-              <div className="flex items-center gap-3 border-b border-[#FAF1EE] pb-4 select-none">
-                <div className="w-8 h-8 rounded-xl bg-[#FFF0EF] text-[#FE1919] flex items-center justify-center">
-                  <Clock size={16} />
-                </div>
-                <div>
-                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest">
-                    Thread History
-                  </h4>
-                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-                    Operational Engagement Chain
-                  </p>
-                </div>
+            {/* Right: Thread history */}
+            <div className="w-full md:w-[36%] bg-slate-50 p-6 overflow-y-auto flex flex-col border-t md:border-t-0 border-slate-100 gap-5">
+
+              <div className="flex items-center gap-2.5 border-b border-slate-200 pb-3">
+                <Clock size={15} className="text-slate-400" />
+                <h4 className="text-sm font-semibold text-slate-900">
+                  Thread History
+                </h4>
               </div>
 
-              {/* Elegant Vertical Timeline */}
-              <div className="relative pl-6 space-y-6 flex-grow">
-                {/* Timeline vertical connector line */}
-                <div className="absolute left-[7px] top-1.5 bottom-1.5 w-0.5 bg-[#FAF1EE]" />
+              <div className="relative pl-5 space-y-5 flex-grow">
+                <div className="absolute left-[5px] top-1.5 bottom-1.5 w-px bg-slate-200" />
 
                 {timelineItems.map((item, idx) => {
                   const textContent = item.body ? item.body.replace(/<[^>]*>/g, '') : (item.description || "");
@@ -342,83 +325,76 @@ const DraftEditorModal = ({
                   const isExpanded = expandedItems.includes(idx);
 
                   return (
-                    <div key={idx} className="relative flex flex-col gap-2 group">
-                      
-                      {/* Timeline Node Bullet */}
-                      <div className={`absolute -left-[24px] top-1.5 w-[14px] h-[14px] rounded-full border-2 bg-white transition-all ${
+                    <div key={idx} className="relative flex flex-col gap-1.5">
+
+                      <div className={`absolute -left-[19px] top-1.5 w-3 h-3 rounded-full border-2 bg-white ${
                         item.type === "SENT" ? "border-indigo-500" :
                         item.type === "RECEIVED" ? "border-emerald-500" :
                         "border-slate-300"
                       }`} />
 
-                      {/* Timeline Card Header */}
-                      <div className="flex items-center justify-between select-none">
-                        <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium text-slate-900">
                           {item.title}
                         </span>
-                        <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-tight">
+                        <span className="text-xs text-slate-400">
                           {item.timeLabel}
                         </span>
                       </div>
 
-                       {/* Timeline Content Block */}
-                      <div 
+                      <div
                         onClick={() => {
                           if (isLongContent) {
                             toggleItemExpansion(idx);
                           }
                         }}
-                        className={`bg-white p-4 rounded-2xl border border-[#FAF1EE] shadow-sm flex flex-col gap-2 transition-all select-text ${
-                          isLongContent
-                            ? "hover:border-[#FAF1EE]/80 hover:shadow-md cursor-pointer"
-                            : "cursor-default"
+                        className={`bg-white p-3.5 rounded-xl border border-slate-200 flex flex-col gap-1.5 select-text ${
+                          isLongContent ? "cursor-pointer hover:bg-slate-50 transition-colors" : ""
                         }`}
                       >
                         {item.subject && (
-                          <p className="text-xs font-black text-slate-800 leading-tight">
+                          <p className="text-sm font-medium text-slate-800 leading-tight">
                             Subject: {item.subject}
                           </p>
                         )}
-                        
+
                         {item.body && (
-                          <p className={`text-[11px] font-semibold text-slate-500 leading-relaxed whitespace-pre-wrap ${
-                            isExpanded ? "" : "line-clamp-3 text-ellipsis overflow-hidden"
+                          <p className={`text-sm text-slate-500 leading-relaxed whitespace-pre-wrap ${
+                            isExpanded ? "" : "line-clamp-3"
                           }`}>
                             {item.body.replace(/<[^>]*>/g, '')}
                           </p>
                         )}
 
                         {item.description && (
-                          <p className={`text-[11px] font-semibold text-slate-500 leading-relaxed italic ${
-                            isExpanded ? "" : "line-clamp-3 text-ellipsis overflow-hidden"
+                          <p className={`text-sm text-slate-500 leading-relaxed ${
+                            isExpanded ? "" : "line-clamp-3"
                           }`}>
-                            "{item.description}"
+                            {item.description}
                           </p>
                         )}
 
-                        {/* Display custom read/clicked badges matching references */}
                         {item.type === "SENT" && (
-                          <div className="flex gap-1.5 mt-1 select-none">
-                            <span className={`px-2 py-0.5 border rounded-lg text-[8px] font-black uppercase tracking-wider ${
-                              item.isOpened 
-                                ? "bg-emerald-50 border-emerald-100 text-emerald-600" 
-                                : "bg-slate-50 border-slate-100 text-slate-400"
+                          <div className="flex gap-1.5 mt-0.5">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              item.isOpened
+                                ? "bg-emerald-50 text-emerald-700"
+                                : "bg-slate-100 text-slate-500"
                             }`}>
                               {item.isOpened ? "Opened" : "Unread"}
                             </span>
                             {item.isOpened && item.isClicked && (
-                              <span className="px-2 py-0.5 bg-blue-50 border border-blue-100 text-blue-600 rounded-lg text-[8px] font-black uppercase tracking-wider">
+                              <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded-full text-xs font-medium">
                                 Clicked
                               </span>
                             )}
                           </div>
                         )}
 
-                        {/* Dynamic read/expand footer indicator */}
                         {isLongContent && (
-                          <div className="mt-1.5 flex items-center justify-between border-t border-[#FAF1EE]/80 pt-2 select-none">
-                            <span className="text-[9px] font-black text-[#FE1919] hover:text-[#D61414] uppercase tracking-widest transition-colors flex items-center gap-1">
-                              {isExpanded ? "Show Less ↑" : "Read Full Draft ↓"}
+                          <div className="mt-1 flex items-center justify-between border-t border-slate-100 pt-1.5">
+                            <span className="text-xs font-medium text-indigo-600">
+                              {isExpanded ? "Show less" : "Read more"}
                             </span>
                           </div>
                         )}
@@ -432,25 +408,82 @@ const DraftEditorModal = ({
             </div>
           </div>
 
-          {/* Action Footer */}
-          <div className="px-6 py-5 md:px-10 md:py-6 border-t border-[#FAF1EE] bg-white/70 backdrop-blur-sm flex items-center justify-end gap-4 shrink-0 select-none">
+          {/* Footer */}
+          <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0">
             <button
               onClick={onClose}
-              className="px-5 py-3 text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-slate-800 hover:bg-slate-50 rounded-xl transition-all"
+              className="px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
             >
-              Discard Changes
+              Discard
             </button>
             <button
               onClick={onSave}
               disabled={isSaving}
-              className="px-6 py-3.5 bg-slate-900 hover:bg-slate-850 disabled:opacity-50 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-slate-900/10 hover:shadow-xl active:scale-[0.99] transition-all flex items-center gap-2"
+              className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white rounded-lg text-sm font-medium transition-colors active:scale-[0.98]"
             >
-              {isSaving ? <Loader2 size={13} className="animate-spin" /> : <CheckCircle2 size={13} />}
-              Save & Refine
+              {isSaving ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+              Save changes
             </button>
           </div>
         </motion.div>
       </div>
+
+      {/* AI Refine instruction pop-up */}
+      {showRefinePrompt && (
+        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 select-none">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => !isRefining && setShowRefinePrompt(false)}
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+          />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96, y: 10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 10 }}
+            transition={{ duration: 0.15 }}
+            className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 p-5 z-10"
+          >
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles size={15} className="text-indigo-500" />
+                <h4 className="text-sm font-semibold text-slate-900">Refine with AI</h4>
+              </div>
+              <button
+                onClick={() => !isRefining && setShowRefinePrompt(false)}
+                className="w-7 h-7 hover:bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                autoFocus
+                value={refineInstruction}
+                onChange={(e) => setRefineInstruction(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleRefineSend();
+                  }
+                }}
+                placeholder="Eg. please mention what changes you wanted to make. Add additional data if available."
+                className="flex-grow bg-slate-50 px-3.5 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-800 outline-none focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200 transition-colors"
+              />
+              <button
+                onClick={handleRefineSend}
+                disabled={!refineInstruction.trim() || isRefining}
+                className="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white rounded-lg transition-colors"
+              >
+                {isRefining ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </AnimatePresence>
   );
 };

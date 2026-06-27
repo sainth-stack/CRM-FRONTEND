@@ -60,10 +60,10 @@ const ResearchTabs = ({
           <div className="flex flex-col gap-6 md:gap-8 animate-fadeIn">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
               <div className="flex flex-col gap-1 min-w-0">
-                <h2 className="text-2xl md:text-3xl font-bold text-slate-900 break-words">
+                <h2 className="text-2xl font-bold text-slate-900 tracking-tight break-words">
                   {campaign.user_intel?.company_name || "Company Profile"}
                 </h2>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-slate-500 mt-0.5">
                   Analytical identity breakdown and strategic market posture
                 </p>
               </div>
@@ -80,8 +80,8 @@ const ResearchTabs = ({
                     campaign.target_industry ||
                     "N/A",
                   Icon: Target,
-                  tint: "text-brand-primary",
-                  bg: "bg-brand-primary/10",
+                  tint: "text-indigo-600",
+                  bg: "bg-indigo-50",
                 },
                 {
                   label: "Target Location",
@@ -103,13 +103,13 @@ const ResearchTabs = ({
               ].map(({ label, value, Icon, tint, bg }) => (
                 <div
                   key={label}
-                  className="bg-card rounded-lg border shadow-sm px-6 py-6 flex items-center gap-4"
+                  className="bg-white rounded-2xl border border-slate-200 px-6 py-6 flex items-center gap-4"
                 >
                   <div className={`w-12 h-12 rounded-lg ${bg} flex items-center justify-center ${tint} shrink-0`}>
                     <Icon size={22} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest leading-none mb-1.5">{label}</p>
+                    <p className="text-xs font-medium text-slate-400 leading-none mb-1.5">{label}</p>
                     <p className="text-base font-bold text-slate-900 truncate">{value}</p>
                   </div>
                 </div>
@@ -117,10 +117,10 @@ const ResearchTabs = ({
             </div>
 
             {/* Strategic Intent — full width */}
-            <div className="bg-card rounded-lg border shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2 px-6 pt-5 pb-3 border-b">
-                <Target className="text-muted-foreground shrink-0" size={15} />
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Strategic Intent</h3>
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+              <div className="flex items-center gap-2 px-6 pt-5 pb-3 border-b border-slate-100">
+                <Target className="text-slate-400 shrink-0" size={15} />
+                <h3 className="text-sm font-semibold text-slate-900">Strategic Intent</h3>
               </div>
               <div className="px-6 py-5">
                 <p className="text-sm leading-7 whitespace-pre-wrap">
@@ -130,10 +130,10 @@ const ResearchTabs = ({
             </div>
 
             {/* Company Intelligence Summary — full width */}
-            <div className="bg-card rounded-lg border shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2 px-6 pt-5 pb-3 border-b">
-                <PieChart className="text-muted-foreground shrink-0" size={15} />
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Company Intelligence Summary</h3>
+            <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+              <div className="flex items-center gap-2 px-6 pt-5 pb-3 border-b border-slate-100">
+                <PieChart className="text-slate-400 shrink-0" size={15} />
+                <h3 className="text-sm font-semibold text-slate-900">Company Intelligence Summary</h3>
               </div>
               <div className="px-6 py-5">
                 <p className="text-sm leading-7 whitespace-pre-wrap">
@@ -145,14 +145,14 @@ const ResearchTabs = ({
             {/* Row 2: Services & Posture */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {/* Services & Market Footprint */}
-              <div className="bg-card rounded-lg border shadow-sm p-6 flex flex-col gap-5">
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col gap-5">
                 <div className="flex items-center gap-2">
-                  <Target className="text-muted-foreground shrink-0" size={15} />
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Services & Market Footprint</h3>
+                  <Target className="text-slate-400 shrink-0" size={15} />
+                  <h3 className="text-sm font-semibold text-slate-900">Services & Market Footprint</h3>
                 </div>
                 <div className="space-y-4">
                   <div>
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Core Services</p>
+                    <p className="text-xs font-medium text-slate-400 mb-2">Core Services</p>
                     <div className="flex flex-wrap gap-1.5">
                       {(typeof campaign.user_intel?.offerings === 'string'
                         ? JSON.parse(campaign.user_intel.offerings || '[]')
@@ -162,7 +162,7 @@ const ResearchTabs = ({
                     </div>
                   </div>
                   <div>
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Target Customer Profiles</p>
+                    <p className="text-xs font-medium text-slate-400 mb-2">Target Customer Profiles</p>
                     <div className="flex flex-wrap gap-1.5">
                       {(campaign.user_intel?.target_customers || []).map((c, i) => (
                         <span key={i} className="bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-md text-[11px] font-medium text-emerald-700">{c}</span>
@@ -173,20 +173,20 @@ const ResearchTabs = ({
               </div>
 
               {/* Strategic Posture */}
-              <div className="bg-card rounded-lg border shadow-sm p-6 flex flex-col gap-5">
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 flex flex-col gap-5">
                 <div className="flex items-center gap-2">
-                  <ShieldCheck className="text-muted-foreground shrink-0" size={15} />
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Strategic Posture</h3>
+                  <ShieldCheck className="text-slate-400 shrink-0" size={15} />
+                  <h3 className="text-sm font-semibold text-slate-900">Strategic Posture</h3>
                 </div>
                 <div className="space-y-4">
                   {campaign.user_intel?.motto && (
                     <div className="p-3 bg-muted rounded-md border">
-                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-1">Brand Mission</p>
+                      <p className="text-xs font-medium text-slate-400 mb-1">Brand Mission</p>
                       <p className="text-sm font-medium italic">"{campaign.user_intel.motto}"</p>
                     </div>
                   )}
                   <div>
-                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Competitive Advantages</p>
+                    <p className="text-xs font-medium text-slate-400 mb-2">Competitive Advantages</p>
                     <ul className="space-y-2">
                       {(campaign.user_intel?.competitive_advantages || []).slice(0, 4).map((adv, i) => (
                         <li key={i} className="flex items-start gap-2.5 text-sm leading-snug">
@@ -203,10 +203,10 @@ const ResearchTabs = ({
             {/* Row 3: Proof Points & Pain Map */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
               {/* Proof Points */}
-              <div className="bg-card rounded-lg border shadow-sm p-6">
+              <div className="bg-white rounded-2xl border border-slate-200 p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <CheckCircle2 className="text-emerald-500 shrink-0" size={15} />
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Validation & Proof Points</h3>
+                  <h3 className="text-sm font-semibold text-slate-900">Validation & Proof Points</h3>
                 </div>
                 <ul className="space-y-2.5">
                   {(campaign.user_intel?.proof_points || []).map((point, i) => (
@@ -219,10 +219,10 @@ const ResearchTabs = ({
               </div>
 
               {/* Pain Map */}
-              <div className="bg-card rounded-lg border shadow-sm p-6">
+              <div className="bg-white rounded-2xl border border-slate-200 p-6">
                 <div className="flex items-center gap-2 mb-4">
                   <Users className="text-rose-400 shrink-0" size={15} />
-                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Surgical Pain-Map Intelligence</h3>
+                  <h3 className="text-sm font-semibold text-slate-900">Surgical Pain-Map Intelligence</h3>
                 </div>
                 <div className="space-y-3">
                   {(campaign.user_intel?.capability_to_pain_map || []).slice(0, 3).map((item, i) => (
@@ -230,7 +230,7 @@ const ResearchTabs = ({
                       <p className="text-[10px] font-bold text-rose-400 uppercase tracking-widest mb-1">Target Pain</p>
                       <p className="text-sm mb-2 leading-snug">{item.pain}</p>
                       <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Strategy</p>
-                      <p className="text-sm text-muted-foreground leading-snug">{item.solution}</p>
+                      <p className="text-sm text-slate-500 leading-snug">{item.solution}</p>
                     </div>
                   ))}
                 </div>

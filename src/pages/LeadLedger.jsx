@@ -4,19 +4,20 @@ import {
   Search, Users, Download, ArrowLeft, ArrowUpRight,
   Building2, Plus, ArrowRight, Filter, ChevronDown,
   Globe, Linkedin, Mail, CheckCircle2, MoreHorizontal,
-  TrendingUp, Activity, MapPin, Target, Cpu, Inbox, X,
-  Loader2, Send
+  TrendingUp, Activity, MapPin, Target, Cpu, Inbox, X
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import * as XLSX from "xlsx";
 import { useToast } from "../context/ToastContext";
-import CompanyIntelModal from "../components/campaign-workspace/CompanyIntelModal";
+import { CompanyDetailModal } from "../components/campaign-workspace/CompanyDetailModal";
 import DraftEditorModal from "../components/campaign-workspace/DraftEditorModal";
 import axios from "axios";
 import API_BASE_URL from "../config";
 
-const LeadLedger = ({ campaign, hideSidebar = false }) => {
-  const [activeView, setActiveView] = useState("DASHBOARD"); // DASHBOARD, PIPELINE, ANALYSIS
+const LeadLedger = ({ campaign, hideSidebar = false, activeView: controlledActiveView, setActiveView: controlledSetActiveView }) => {
+  const [internalActiveView, setInternalActiveView] = useState("DASHBOARD"); // DASHBOARD, PIPELINE, ANALYSIS
+  const activeView = controlledActiveView ?? internalActiveView;
+  const setActiveView = controlledSetActiveView ?? setInternalActiveView;
   const [dashboardPage, setDashboardPage] = useState(1);
   const [pipelinePage, setPipelinePage] = useState(1);
   const [selectedSentimentFilter, setSelectedSentimentFilter] = useState(null); // null, "POSITIVE", "NEUTRAL", "NEGATIVE"
@@ -100,6 +101,19 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
 
   const totalDashboardPages = Math.ceil(companies.length / itemsPerPage) || 1;
   const paginatedCompanies = companies.slice((dashboardPage - 1) * itemsPerPage, dashboardPage * itemsPerPage);
+
+  // Windowed page list so pagination never overflows the page width (e.g. 1 ... 4 5 6 ... 50)
+  const getPageWindow = (current, total) => {
+    if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+    const pages = new Set([1, total, current, current - 1, current + 1]);
+    const sorted = [...pages].filter(p => p >= 1 && p <= total).sort((a, b) => a - b);
+    const out = [];
+    sorted.forEach((p, i) => {
+      if (i > 0 && p - sorted[i - 1] > 1) out.push("...");
+      out.push(p);
+    });
+    return out;
+  };
 
   const totalPipelinePages = Math.ceil(contacts.length / itemsPerPage) || 1;
   const paginatedContacts = contacts.slice((pipelinePage - 1) * itemsPerPage, pipelinePage * itemsPerPage);
@@ -375,28 +389,6 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
 
       {/* 2. Content view: scrollable only within bounds */}
       <main className={`flex-grow p-8 overflow-y-auto overflow-x-hidden h-full select-none ${hideSidebar ? "bg-surgical-bg" : "bg-[#F8FAFC]"}`}>
-        {hideSidebar && (
-          <div className="flex items-center gap-2 mb-8 bg-white p-1.5 rounded-2xl w-fit border border-surgical-border shadow-sm">
-            {[
-              { id: "DASHBOARD", label: "Companies", icon: Building2 },
-              { id: "PIPELINE", label: "Prospects", icon: Users },
-              { id: "ANALYSIS", label: "Analysis", icon: BarChart2 }
-            ].map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveView(tab.id)}
-                className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                  activeView === tab.id
-                    ? "bg-surgical-navy text-white shadow-lg shadow-surgical-navy/20"
-                    : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
-                }`}
-              >
-                <tab.icon size={14} />
-                {tab.label}
-              </button>
-            ))}
-          </div>
-        )}
         <AnimatePresence mode="wait">
           {activeView === "DASHBOARD" && (
             <motion.div
@@ -407,129 +399,130 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
               transition={{ duration: 0.2 }}
               className="space-y-6"
             >
-              {/* Top Banner Row */}
+              {/* Page header */}
               <div className="flex items-center justify-between flex-wrap gap-4">
-                <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-                  Dashboard
-                </h1>
+                <div>
+                  <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Companies</h1>
+                  <p className="text-sm text-slate-500 mt-0.5">{totalOrgs} organizations tracked in this campaign</p>
+                </div>
 
                 {/* Metrics row */}
-                <div className="flex items-center gap-4 flex-wrap">
-                  <div className="bg-white border border-surgical-border p-3 px-6 rounded-2xl shadow-sm flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-surgical-navy">
-                      <Layers size={18} />
+                <div className="flex items-center gap-3 flex-wrap">
+                  <div className="bg-white border border-slate-200 px-4 py-2.5 rounded-xl flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                      <Layers size={16} />
                     </div>
                     <div>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Total Orgs</p>
-                      <span className="text-lg font-extrabold text-slate-800 tracking-tight tabular-nums">{totalOrgs}</span>
+                      <p className="text-[11px] font-medium text-slate-400">Total Orgs</p>
+                      <span className="text-sm font-semibold text-slate-900 tabular-nums">{totalOrgs}</span>
                     </div>
                   </div>
 
-                  <div className="bg-white border border-slate-100 p-3 px-5 rounded-2xl shadow-sm flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-600">
-                      <Users size={18} />
+                  <div className="bg-white border border-slate-200 px-4 py-2.5 rounded-xl flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600">
+                      <Users size={16} />
                     </div>
                     <div>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Decision Makers</p>
-                      <span className="text-lg font-extrabold text-slate-800 tracking-tight tabular-nums">{totalDMs}</span>
+                      <p className="text-[11px] font-medium text-slate-400">Decision Makers</p>
+                      <span className="text-sm font-semibold text-slate-900 tabular-nums">{totalDMs}</span>
                     </div>
                   </div>
 
-                  <div className="bg-white border border-slate-100 p-3 px-5 rounded-2xl shadow-sm flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-xl bg-red-50 flex items-center justify-center text-red-600">
-                      <BarChart2 size={18} />
+                  <div className="bg-white border border-slate-200 px-4 py-2.5 rounded-xl flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600">
+                      <BarChart2 size={16} />
                     </div>
                     <div>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Active Missions</p>
-                      <span className="text-lg font-extrabold text-slate-800 tracking-tight tabular-nums">{activeMissions}</span>
+                      <p className="text-[11px] font-medium text-slate-400">Active Missions</p>
+                      <span className="text-sm font-semibold text-slate-900 tabular-nums">{activeMissions}</span>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Data Table section without search and filter buttons */}
-              <div className="bg-white border border-slate-100 rounded-[24px] p-5 shadow-sm overflow-hidden">
-                <div className="flex justify-end items-center mb-4">
+              {/* Data table card */}
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+                <div className="flex justify-end items-center px-5 py-3.5 border-b border-slate-100">
                   <button
                     onClick={handleExport}
-                    className="flex items-center gap-2 bg-surgical-navy hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md shadow-surgical-navy/20 active:scale-95"
+                    className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors active:scale-[0.98]"
                   >
-                    <Download size={14} /> Export Protocol
+                    <Download size={14} /> Export
                   </button>
                 </div>
 
-                {/* Main Table Grid - No Checkbox, No ID Column */}
                 <div className="overflow-x-auto max-w-full">
                   <table className="w-full border-collapse">
                     <thead>
-                      <tr className="bg-slate-50/50 border-b border-slate-100">
-                        <th className="px-3 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Company Name</th>
-                        <th className="px-3 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">LinkedIn</th>
-                        <th className="px-3 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Website</th>
-                        <th className="px-3 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">HQ</th>
-                        <th className="px-3 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Size</th>
-                        <th className="px-3 py-2.5 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                      <tr className="border-b border-slate-100">
+                        <th className="px-5 py-2.5 text-left text-xs font-medium text-slate-400">Company Name</th>
+                        <th className="px-5 py-2.5 text-left text-xs font-medium text-slate-400">LinkedIn</th>
+                        <th className="px-5 py-2.5 text-left text-xs font-medium text-slate-400">Website</th>
+                        <th className="px-5 py-2.5 text-left text-xs font-medium text-slate-400">HQ</th>
+                        <th className="px-5 py-2.5 text-left text-xs font-medium text-slate-400">Size</th>
+                        <th className="px-5 py-2.5 text-left text-xs font-medium text-slate-400">Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-50">
+                    <tbody className="divide-y divide-slate-100">
                       {paginatedCompanies.length === 0 ? (
                         <tr>
-                          <td colSpan="6" className="px-4 py-8 text-center text-slate-400 font-bold text-xs">
-                            No active target modules.
+                          <td colSpan="6" className="px-5 py-10 text-center text-slate-400 text-sm">
+                            No companies yet.
                           </td>
                         </tr>
                       ) : (
                         paginatedCompanies.map((item, index) => (
-                          <motion.tr 
+                          <motion.tr
                             key={item.id}
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             transition={{ delay: index * 0.01 }}
                             onClick={() => setSelectedCompany(item)}
-                            className="hover:bg-slate-50 transition-colors group cursor-pointer"
+                            className="hover:bg-slate-50 transition-colors cursor-pointer"
                           >
-                            <td className="px-3 py-3">
+                            <td className="px-5 py-3">
                               <div className="flex items-center gap-2.5">
-                                <div className="w-5 h-5 rounded bg-slate-100 flex items-center justify-center text-slate-500 font-extrabold text-xs uppercase border border-slate-200/50 shadow-sm">
+                                <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 font-semibold text-xs uppercase shrink-0">
                                   {item.name?.charAt(0) || "C"}
                                 </div>
-                                <span className="text-sm font-extrabold text-slate-800 tracking-tight truncate max-w-[150px]">
+                                <span className="text-sm font-medium text-slate-900 truncate max-w-[150px]">
                                   {item.name}
                                 </span>
                               </div>
                             </td>
-                            <td className="px-3 py-3">
-                              <a 
-                                href={getFallbackLinkedin(item)} 
-                                target="_blank" rel="noreferrer" 
-                                className="text-blue-500 flex items-center gap-1 font-bold text-xs hover:underline truncate max-w-[130px] block"
+                            <td className="px-5 py-3">
+                              <a
+                                href={getFallbackLinkedin(item)}
+                                target="_blank" rel="noreferrer"
+                                className="text-indigo-600 text-sm hover:underline truncate max-w-[130px] block"
                                 title={getFallbackLinkedin(item)}
+                                onClick={(e) => e.stopPropagation()}
                               >
                                 {getFallbackLinkedin(item).replace('https://', '').replace('www.', '')}
                               </a>
                             </td>
-                            <td className="px-3 py-3">
-                              <span className="text-xs font-bold text-slate-400 hover:text-slate-600 truncate max-w-[120px] block">
+                            <td className="px-5 py-3">
+                              <span className="text-sm text-slate-500 truncate max-w-[120px] block">
                                 {item.website?.replace('https://', '').replace('www.', '') || "N/A"}
                               </span>
                             </td>
-                            <td className="px-3 py-3 text-xs font-bold text-slate-500 uppercase truncate max-w-[100px]">
+                            <td className="px-5 py-3 text-sm text-slate-500 truncate max-w-[100px]">
                               {item.location || "N/A"}
                             </td>
-                            <td className="px-3 py-3 text-xs font-bold text-slate-500 tabular-nums uppercase">
+                            <td className="px-5 py-3 text-sm text-slate-500 tabular-nums">
                               {getFallbackSize(item)}
                             </td>
-                            <td className="px-3 py-3">
+                            <td className="px-5 py-3">
                               {item.status === 'REJECTED' ? (
-                                 <span className="inline-flex items-center gap-1.5 px-3 py-1 text-[9px] font-black rounded-lg border bg-slate-50 text-slate-400 border-slate-200 uppercase tracking-widest">
+                                 <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-500">
                                     Rejected
                                  </span>
                               ) : item.status === 'PENDING' ? (
-                                 <span className="inline-flex items-center gap-1.5 px-3 py-1 text-[9px] font-black rounded-lg border bg-amber-50 text-amber-600 border-amber-200 uppercase tracking-widest">
+                                 <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full bg-amber-50 text-amber-700">
                                     Pending
                                  </span>
                               ) : (
-                                 <span className="inline-flex items-center gap-1.5 px-3 py-1 text-[9px] font-black rounded-lg border bg-surgical-navy text-white border-surgical-navy uppercase tracking-widest shadow-sm">
+                                 <span className="inline-flex items-center px-2.5 py-1 text-xs font-medium rounded-full bg-emerald-50 text-emerald-700">
                                     Approved
                                  </span>
                               )}
@@ -541,35 +534,37 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
                   </table>
                 </div>
 
-                {/* Pagination Controls */}
+                {/* Pagination */}
                 {totalDashboardPages > 1 && (
-                  <div className="flex items-center justify-between mt-4 px-2 border-t border-slate-50 pt-4 select-none">
-                    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
-                      Page {dashboardPage} of {totalDashboardPages}
+                  <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-100 select-none">
+                    <span className="text-sm text-slate-500">
+                      Page <span className="font-medium text-slate-700">{dashboardPage}</span> of {totalDashboardPages}
                     </span>
-                    <div className="flex items-center gap-1.5">
-                      <button 
+                    <div className="flex items-center gap-1">
+                      <button
                         onClick={() => setDashboardPage(prev => Math.max(prev - 1, 1))}
                         disabled={dashboardPage === 1}
-                        className="px-3 py-1.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 rounded-xl text-xs font-bold transition-all disabled:opacity-40 disabled:hover:bg-white shadow-sm"
+                        className="px-3 py-1.5 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
                       >
                         Previous
                       </button>
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: totalDashboardPages }, (_, idx) => idx + 1).map(p => (
+                      {getPageWindow(dashboardPage, totalDashboardPages).map((p, i) => (
+                        p === "..." ? (
+                          <span key={`ellipsis-${i}`} className="w-8 h-8 flex items-center justify-center text-sm text-slate-400">...</span>
+                        ) : (
                           <button
                             key={p}
                             onClick={() => setDashboardPage(p)}
-                            className={`w-7 h-7 rounded-xl text-xs font-bold transition-all ${dashboardPage === p ? "bg-red-50 text-red-600 border border-red-100 font-black" : "text-slate-400 hover:bg-slate-50"}`}
+                            className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${dashboardPage === p ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-100"}`}
                           >
                             {p}
                           </button>
-                        ))}
-                      </div>
-                      <button 
+                        )
+                      ))}
+                      <button
                         onClick={() => setDashboardPage(prev => Math.min(prev + 1, totalDashboardPages))}
                         disabled={dashboardPage === totalDashboardPages}
-                        className="px-3 py-1.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 rounded-xl text-xs font-bold transition-all disabled:opacity-40 disabled:hover:bg-white shadow-sm"
+                        className="px-3 py-1.5 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
                       >
                         Next
                       </button>
@@ -589,59 +584,47 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
               transition={{ duration: 0.2 }}
               className="space-y-6"
             >
-              {/* Pipeline Header */}
-              <div className="flex items-center justify-between">
+              {/* Page header */}
+              <div className="flex items-center justify-between flex-wrap gap-4">
                 <div>
-                  <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">
-                    Lead Pipeline
-                  </h1>
-                  <p className="text-slate-400 text-xs font-bold tracking-wider uppercase mt-1">Direct Contacts & Prospects</p>
+                  <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Prospects</h1>
+                  <p className="text-sm text-slate-500 mt-0.5">Direct contacts across your target organizations</p>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={handleDispatchAll}
-                    disabled={isDispatchingAll}
-                    className="flex items-center gap-2 bg-surgical-navy hover:bg-slate-800 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-surgical-navy/20 active:scale-95 disabled:opacity-50"
-                  >
-                    {isDispatchingAll
-                      ? <Loader2 size={13} className="animate-spin" />
-                      : <Send size={13} />}
-                    Dispatch All
-                  </button>
-                  <button
                     onClick={handleExport}
-                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-md shadow-red-500/20 active:scale-95"
+                    className="flex items-center gap-2 bg-black hover:bg-slate-800 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors active:scale-[0.98]"
                   >
-                    <ArrowLeft className="rotate-180" size={14} /> Export
+                    <Download size={14} /> Export
                   </button>
                 </div>
               </div>
 
-              {/* Data Table section - No Rank Column */}
-              <div className="bg-white border border-slate-100 rounded-[24px] p-5 shadow-sm overflow-hidden">
+              {/* Data table card */}
+              <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
                 <div className="overflow-x-auto max-w-full">
                   <table className="w-full border-collapse">
                     <thead>
-                      <tr className="bg-slate-50/50 border-b border-slate-100">
-                        <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100">Prospect Name</th>
-                        <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100">Organization</th>
-                        <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100">LinkedIn</th>
-                        <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100">Verified Email</th>
-                        <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider border-r border-slate-100">Active Status</th>
-                        <th className="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Actions</th>
+                      <tr className="border-b border-slate-100">
+                        <th className="px-5 py-2.5 text-left text-xs font-medium text-slate-400">Prospect Name</th>
+                        <th className="px-5 py-2.5 text-left text-xs font-medium text-slate-400">Organization</th>
+                        <th className="px-5 py-2.5 text-left text-xs font-medium text-slate-400">LinkedIn</th>
+                        <th className="px-5 py-2.5 text-left text-xs font-medium text-slate-400">Verified Email</th>
+                        <th className="px-5 py-2.5 text-left text-xs font-medium text-slate-400">Time Zone</th>
+                        <th className="px-5 py-2.5 text-left text-xs font-medium text-slate-400">Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-50">
+                    <tbody className="divide-y divide-slate-100">
                       {paginatedContacts.length === 0 ? (
                         <tr>
-                          <td colSpan="6" className="px-4 py-8 text-center text-slate-400 font-bold text-xs">
-                            No active prospect contacts found.
+                          <td colSpan="6" className="px-5 py-10 text-center text-slate-400 text-sm">
+                            No prospect contacts yet.
                           </td>
                         </tr>
                       ) : (
                         paginatedContacts.map((item, index) => (
-                          <motion.tr 
+                          <motion.tr
                             key={item.id}
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
@@ -653,54 +636,43 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
                                 setSelectedDraft(draft);
                               }
                             }}
-                            className="hover:bg-slate-50 transition-colors group cursor-pointer"
+                            className="hover:bg-slate-50 transition-colors cursor-pointer"
                           >
-                            <td className="px-4 py-4 border-r border-slate-100">
+                            <td className="px-5 py-3">
                               <div className="flex flex-col">
-                                <span className="text-sm font-black text-slate-800 uppercase tracking-tighter">
+                                <span className="text-sm font-medium text-slate-900">
                                   {item.name}
                                 </span>
-                                <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate max-w-[150px]">
+                                <span className="text-xs text-slate-400 truncate max-w-[150px]">
                                   {item.position}
                                 </span>
                               </div>
                             </td>
-                            <td className="px-4 py-4 border-r border-slate-100">
-                              <span className="text-xs font-bold text-slate-600 uppercase tracking-tight italic bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
+                            <td className="px-5 py-3">
+                              <span className="text-sm text-slate-600">
                                 {item.companyName}
                               </span>
                             </td>
-                            <td className="px-4 py-4 border-r border-slate-100">
-                              <a href={getFallbackContactLinkedin(item)} target="_blank" rel="noreferrer" className="text-blue-500 hover:underline transition-all text-xs font-bold truncate block max-w-[150px]">
+                            <td className="px-5 py-3">
+                              <a href={getFallbackContactLinkedin(item)} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline transition-all text-sm truncate block max-w-[150px]" onClick={(e) => e.stopPropagation()}>
                                 {getFallbackContactLinkedin(item).replace('https://', '').replace('www.', '')}
                               </a>
                             </td>
-                            <td className="px-4 py-4 border-r border-slate-100">
+                            <td className="px-5 py-3">
                               <div className="flex items-center gap-2">
-                                <Mail size={12} className="text-slate-400" />
-                                <span className="text-xs font-bold text-slate-500 tabular-nums underline decoration-slate-200 underline-offset-4 decoration-dotted">
+                                <Mail size={13} className="text-slate-400" />
+                                <span className="text-sm text-slate-500 tabular-nums">
                                   {item.email || "N/A"}
                                 </span>
                               </div>
                             </td>
-                            <td className="px-4 py-4 border-r border-slate-100">
-                              {getStatusBadge(item.status)}
+                            <td className="px-5 py-3">
+                              <span className="text-sm text-slate-500">
+                                {item.display_timezone || "N/A"}
+                              </span>
                             </td>
-                            <td className="px-4 py-4" onClick={e => e.stopPropagation()}>
-                              {isDispatchable(item) ? (
-                                <button
-                                  onClick={() => handleDispatch(item.id, item.name)}
-                                  disabled={isDispatching === item.id}
-                                  className="flex items-center gap-1.5 px-3 py-1.5 bg-surgical-navy hover:bg-slate-800 text-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all shadow-sm shadow-surgical-navy/20 disabled:opacity-50 whitespace-nowrap"
-                                >
-                                  {isDispatching === item.id
-                                    ? <Loader2 size={11} className="animate-spin" />
-                                    : <Send size={11} />}
-                                  Dispatch
-                                </button>
-                              ) : (
-                                <span className="text-[9px] font-bold text-slate-300 uppercase tracking-widest">—</span>
-                              )}
+                            <td className="px-5 py-3">
+                              {getStatusBadge(item.status)}
                             </td>
                           </motion.tr>
                         ))
@@ -709,35 +681,37 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
                   </table>
                 </div>
 
-                {/* Pipeline Pagination Controls */}
+                {/* Pagination */}
                 {totalPipelinePages > 1 && (
-                  <div className="flex items-center justify-between mt-4 px-2 border-t border-slate-50 pt-4 select-none">
-                    <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
-                      Page {pipelinePage} of {totalPipelinePages}
+                  <div className="flex items-center justify-between px-5 py-3.5 border-t border-slate-100 select-none">
+                    <span className="text-sm text-slate-500">
+                      Page <span className="font-medium text-slate-700">{pipelinePage}</span> of {totalPipelinePages}
                     </span>
-                    <div className="flex items-center gap-1.5">
-                      <button 
+                    <div className="flex items-center gap-1">
+                      <button
                         onClick={() => setPipelinePage(prev => Math.max(prev - 1, 1))}
                         disabled={pipelinePage === 1}
-                        className="px-3 py-1.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 rounded-xl text-xs font-bold transition-all disabled:opacity-40 disabled:hover:bg-white shadow-sm"
+                        className="px-3 py-1.5 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
                       >
                         Previous
                       </button>
-                      <div className="flex items-center gap-1">
-                        {Array.from({ length: totalPipelinePages }, (_, idx) => idx + 1).map(p => (
+                      {getPageWindow(pipelinePage, totalPipelinePages).map((p, i) => (
+                        p === "..." ? (
+                          <span key={`ellipsis-${i}`} className="w-8 h-8 flex items-center justify-center text-sm text-slate-400">...</span>
+                        ) : (
                           <button
                             key={p}
                             onClick={() => setPipelinePage(p)}
-                            className={`w-7 h-7 rounded-xl text-xs font-bold transition-all ${pipelinePage === p ? "bg-red-50 text-red-600 border border-red-100 font-black" : "text-slate-400 hover:bg-slate-50"}`}
+                            className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${pipelinePage === p ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-100"}`}
                           >
                             {p}
                           </button>
-                        ))}
-                      </div>
-                      <button 
+                        )
+                      ))}
+                      <button
                         onClick={() => setPipelinePage(prev => Math.min(prev + 1, totalPipelinePages))}
                         disabled={pipelinePage === totalPipelinePages}
-                        className="px-3 py-1.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 rounded-xl text-xs font-bold transition-all disabled:opacity-40 disabled:hover:bg-white shadow-sm"
+                        className="px-3 py-1.5 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
                       >
                         Next
                       </button>
@@ -820,70 +794,63 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
                 className="space-y-8 select-none"
               >
                 {/* Header Section */}
-                <div className="flex items-center justify-between border-b border-[#FAF1EE] pb-5">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-red-50 text-red-600 border border-red-100 rounded-2xl flex items-center justify-center shadow-sm">
-                      <TrendingUp size={24} strokeWidth={2.5} />
-                    </div>
-                    <div>
-                      <h1 className="text-3xl font-black text-slate-900 tracking-tight leading-none">
-                        Campaign Intelligence & Analytics
-                      </h1>
-                      <p className="text-slate-400 text-xs font-bold tracking-wider uppercase mt-2">Real-time engagement breakdown & advanced intelligence diagnostics</p>
-                    </div>
+                <div className="flex items-center justify-between border-b border-slate-100 pb-5">
+                  <div>
+                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Analysis</h1>
+                    <p className="text-sm text-slate-500 mt-0.5">Engagement breakdown and pipeline diagnostics</p>
                   </div>
 
                   <button
                     onClick={handleExport}
-                    className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-lg shadow-red-500/20 active:scale-95"
+                    className="flex items-center gap-2 border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors active:scale-[0.98]"
                   >
-                    <ArrowLeft className="rotate-180" size={14} /> Export Strategic Report
+                    <Download size={14} /> Export Report
                   </button>
                 </div>
 
                 {/* 1. Stat Grid Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                  <div className="bg-white border border-[#FAF1EE] p-6 rounded-[28px] shadow-sm flex flex-col justify-between h-[130px] hover:shadow-md transition-shadow">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="bg-white border border-slate-200 p-5 rounded-2xl flex flex-col justify-between h-[120px]">
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Profiled Contacts</span>
-                      <div className="w-8 h-8 rounded-xl bg-red-50 flex items-center justify-center text-red-500"><Users size={16} /></div>
+                      <span className="text-xs font-medium text-slate-400">Profiled Contacts</span>
+                      <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600"><Users size={16} /></div>
                     </div>
                     <div>
-                      <h3 className="text-3xl font-black text-slate-900 tracking-tight">{totalDMsAnalysed}</h3>
-                      <p className="text-[9px] font-bold text-emerald-600 uppercase tracking-wider mt-1">Identified decision makers</p>
+                      <h3 className="text-2xl font-semibold text-slate-900 tabular-nums">{totalDMsAnalysed}</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">Identified decision makers</p>
                     </div>
                   </div>
 
-                  <div className="bg-white border border-[#FAF1EE] p-6 rounded-[28px] shadow-sm flex flex-col justify-between h-[130px] hover:shadow-md transition-shadow">
+                  <div className="bg-white border border-slate-200 p-5 rounded-2xl flex flex-col justify-between h-[120px]">
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Validated Companies</span>
-                      <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500"><Building2 size={16} /></div>
+                      <span className="text-xs font-medium text-slate-400">Validated Companies</span>
+                      <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600"><Building2 size={16} /></div>
                     </div>
                     <div>
-                      <h3 className="text-3xl font-black text-slate-900 tracking-tight">{approvedCos}</h3>
-                      <p className="text-[9px] font-bold text-indigo-600 uppercase tracking-wider mt-1">Approved targets out of {rawCompanies.length}</p>
+                      <h3 className="text-2xl font-semibold text-slate-900 tabular-nums">{approvedCos}</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">Approved targets out of {rawCompanies.length}</p>
                     </div>
                   </div>
 
-                  <div className="bg-white border border-[#FAF1EE] p-6 rounded-[28px] shadow-sm flex flex-col justify-between h-[130px] hover:shadow-md transition-shadow">
+                  <div className="bg-white border border-slate-200 p-5 rounded-2xl flex flex-col justify-between h-[120px]">
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Average Synergy</span>
-                      <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500"><BarChart2 size={16} /></div>
+                      <span className="text-xs font-medium text-slate-400">Average Synergy</span>
+                      <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600"><BarChart2 size={16} /></div>
                     </div>
                     <div>
-                      <h3 className="text-3xl font-black text-slate-900 tracking-tight">{avgSynergy}%</h3>
-                      <p className="text-[9px] font-bold text-amber-600 uppercase tracking-wider mt-1">Alignment matching average</p>
+                      <h3 className="text-2xl font-semibold text-slate-900 tabular-nums">{avgSynergy}%</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">Alignment matching average</p>
                     </div>
                   </div>
 
-                  <div className="bg-white border border-[#FAF1EE] p-6 rounded-[28px] shadow-sm flex flex-col justify-between h-[130px] hover:shadow-md transition-shadow">
+                  <div className="bg-white border border-slate-200 p-5 rounded-2xl flex flex-col justify-between h-[120px]">
                     <div className="flex justify-between items-center">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sent & Queued</span>
-                      <div className="w-8 h-8 rounded-xl bg-rose-50 flex items-center justify-center text-rose-500"><Mail size={16} /></div>
+                      <span className="text-xs font-medium text-slate-400">Sent & Queued</span>
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600"><Mail size={16} /></div>
                     </div>
                     <div>
-                      <h3 className="text-3xl font-black text-slate-900 tracking-tight">{sentDMs + draftedDMs}</h3>
-                      <p className="text-[9px] font-bold text-red-600 uppercase tracking-wider mt-1">Outreach pipelines ready</p>
+                      <h3 className="text-2xl font-semibold text-slate-900 tabular-nums">{sentDMs + draftedDMs}</h3>
+                      <p className="text-xs text-slate-400 mt-0.5">Outreach pipelines ready</p>
                     </div>
                   </div>
                 </div>
@@ -891,44 +858,44 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
                 {/* 2. Graphical Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Graph A: Lead Approval & Quality Donut / Multi-Ring */}
-                  <div className="bg-white border border-[#FAF1EE] p-6 rounded-[28px] shadow-sm flex flex-col justify-between h-[380px] overflow-hidden hover:shadow-md transition-all">
+                  <div className="bg-white border border-slate-200 p-6 rounded-2xl flex flex-col justify-between h-[380px] overflow-hidden">
                     <div>
-                      <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2 mb-1">
+                      <h3 className="text-sm font-semibold text-slate-900 mb-1">
                         Qualification Audit
                       </h3>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Ratio of valid target identities</p>
+                      <p className="text-xs text-slate-400 mb-4">Ratio of valid target identities</p>
 
                       <div className="flex flex-col gap-6 mt-4">
                         {/* Custom visual progress bars for clear representation */}
                         <div className="space-y-2">
-                          <div className="flex justify-between text-xs font-extrabold text-slate-800">
-                            <span className="flex items-center gap-1.5 uppercase text-[10px] tracking-wider text-emerald-600">
+                          <div className="flex justify-between text-sm font-medium text-slate-700">
+                            <span className="flex items-center gap-1.5 text-xs text-emerald-700">
                               <span className="w-2.5 h-2.5 rounded bg-emerald-500 block shrink-0" />
                               Approved Companies
                             </span>
                             <span className="tabular-nums">{approvedCos} / {rawCompanies.length}</span>
                           </div>
-                          <div className="w-full h-3 bg-slate-50 border border-slate-100 rounded-full overflow-hidden flex">
+                          <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden flex">
                             <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${Math.round((approvedCos / totalCompaniesCount) * 100)}%` }} />
                           </div>
                         </div>
 
                         <div className="space-y-2">
-                          <div className="flex justify-between text-xs font-extrabold text-slate-800">
-                            <span className="flex items-center gap-1.5 uppercase text-[10px] tracking-wider text-rose-500">
+                          <div className="flex justify-between text-sm font-medium text-slate-700">
+                            <span className="flex items-center gap-1.5 text-xs text-rose-600">
                               <span className="w-2.5 h-2.5 rounded bg-rose-500 block shrink-0" />
                               Rejected Companies
                             </span>
                             <span className="tabular-nums">{rejectedCos} / {rawCompanies.length}</span>
                           </div>
-                          <div className="w-full h-3 bg-slate-50 border border-slate-100 rounded-full overflow-hidden flex">
+                          <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden flex">
                             <div className="h-full bg-rose-500 rounded-full transition-all duration-500" style={{ width: `${Math.round((rejectedCos / totalCompaniesCount) * 100)}%` }} />
                           </div>
                         </div>
 
-                        <div className="border-t border-[#FAF1EE] pt-5 mt-3 flex flex-col gap-1 text-center bg-gradient-to-r from-emerald-50/20 to-transparent p-3 rounded-2xl">
-                          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Campaign Identity Success Rate</span>
-                          <span className="text-2xl font-black text-slate-800 tabular-nums">
+                        <div className="border-t border-slate-100 pt-5 mt-3 flex flex-col gap-1 text-center">
+                          <span className="text-xs text-slate-400">Campaign Identity Success Rate</span>
+                          <span className="text-2xl font-semibold text-slate-900 tabular-nums">
                             {Math.round((approvedCos / totalCompaniesCount) * 100)}%
                           </span>
                         </div>
@@ -937,58 +904,57 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
                   </div>
 
                   {/* Graph B: Conversion Funnel Stages */}
-                  <div className="bg-white border border-[#FAF1EE] p-6 rounded-[28px] shadow-sm flex flex-col justify-between h-[380px] overflow-hidden hover:shadow-md transition-all">
+                  <div className="bg-white border border-slate-200 p-6 rounded-2xl flex flex-col justify-between h-[380px] overflow-hidden">
                     <div>
-                      <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2 mb-1">
+                      <h3 className="text-sm font-semibold text-slate-900 mb-1">
                         Pipeline Conversion Funnel
                       </h3>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Stage lifecycle of direct contacts</p>
+                      <p className="text-xs text-slate-400 mb-4">Stage lifecycle of direct contacts</p>
 
-                      <div className="flex flex-col gap-4 mt-2">
-                        {/* Interactive stepped funnel layout */}
-                        <div className="p-3 bg-slate-50/70 border border-slate-100/60 rounded-2xl flex items-center justify-between hover:bg-slate-100/50 transition-colors">
+                      <div className="flex flex-col gap-3 mt-2">
+                        <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-7 h-7 bg-red-100 flex items-center justify-center rounded-xl text-red-600 font-bold text-xs shrink-0">1</div>
+                            <div className="w-7 h-7 bg-white border border-slate-200 flex items-center justify-center rounded-lg text-slate-500 font-semibold text-xs shrink-0">1</div>
                             <div className="flex flex-col">
-                              <span className="text-xs font-black text-slate-800 uppercase tracking-wider leading-tight">Total Discovered</span>
-                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Identified direct prospects</span>
+                              <span className="text-sm font-medium text-slate-800 leading-tight">Total Discovered</span>
+                              <span className="text-xs text-slate-400">Identified direct prospects</span>
                             </div>
                           </div>
-                          <span className="text-sm font-black text-slate-800 tabular-nums">{totalDMsAnalysed}</span>
+                          <span className="text-sm font-semibold text-slate-900 tabular-nums">{totalDMsAnalysed}</span>
                         </div>
 
-                        <div className="p-3 bg-slate-50/70 border border-slate-100/60 rounded-2xl flex items-center justify-between hover:bg-slate-100/50 transition-colors">
+                        <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-7 h-7 bg-amber-100 flex items-center justify-center rounded-xl text-amber-600 font-bold text-xs shrink-0">2</div>
+                            <div className="w-7 h-7 bg-white border border-slate-200 flex items-center justify-center rounded-lg text-amber-600 font-semibold text-xs shrink-0">2</div>
                             <div className="flex flex-col">
-                              <span className="text-xs font-black text-slate-800 uppercase tracking-wider leading-tight">Outreach Prepared</span>
-                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Drafted protocol</span>
+                              <span className="text-sm font-medium text-slate-800 leading-tight">Outreach Prepared</span>
+                              <span className="text-xs text-slate-400">Drafted protocol</span>
                             </div>
                           </div>
-                          <span className="text-sm font-black text-slate-800 tabular-nums">{draftedDMs + sentDMs}</span>
+                          <span className="text-sm font-semibold text-slate-900 tabular-nums">{draftedDMs + sentDMs}</span>
                         </div>
 
-                        <div className="p-3 bg-slate-50/70 border border-slate-100/60 rounded-2xl flex items-center justify-between hover:bg-slate-100/50 transition-colors">
+                        <div className="p-3 bg-slate-50 rounded-xl flex items-center justify-between">
                           <div className="flex items-center gap-3">
-                            <div className="w-7 h-7 bg-emerald-100 flex items-center justify-center rounded-xl text-emerald-600 font-bold text-xs shrink-0">3</div>
+                            <div className="w-7 h-7 bg-white border border-slate-200 flex items-center justify-center rounded-lg text-emerald-600 font-semibold text-xs shrink-0">3</div>
                             <div className="flex flex-col">
-                              <span className="text-xs font-black text-slate-800 uppercase tracking-wider leading-tight">Engaged & Inbound</span>
-                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Replies & active orbits</span>
+                              <span className="text-sm font-medium text-slate-800 leading-tight">Engaged & Inbound</span>
+                              <span className="text-xs text-slate-400">Replies & active orbits</span>
                             </div>
                           </div>
-                          <span className="text-sm font-black text-slate-800 tabular-nums">{positiveReplies}</span>
+                          <span className="text-sm font-semibold text-slate-900 tabular-nums">{positiveReplies}</span>
                         </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Graph C: Sentiment & Reply Intent Analysis */}
-                  <div className="bg-white border border-[#FAF1EE] p-6 rounded-[28px] shadow-sm flex flex-col justify-between h-[380px] overflow-hidden hover:shadow-md transition-all">
+                  <div className="bg-white border border-slate-200 p-6 rounded-2xl flex flex-col justify-between h-[380px] overflow-hidden">
                     <div>
-                      <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2 mb-1">
+                      <h3 className="text-sm font-semibold text-slate-900 mb-1">
                         Sentiment Analysis
                       </h3>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4">Breakdown of reply intent signals</p>
+                      <p className="text-xs text-slate-400 mb-4">Breakdown of reply intent signals</p>
 
                       <div className="flex flex-col gap-5 mt-3">
                         {/* Horizontal Stacked Bar */}
@@ -1023,7 +989,7 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
                         <div className="flex flex-col gap-3 mt-2 select-none">
                           <div 
                             onClick={() => setSelectedSentimentFilter("POSITIVE")}
-                            className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-all border border-transparent hover:border-[#FAF1EE] w-full"
+                            className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-all border border-transparent hover:border-slate-200 w-full"
                             title="Click to view positive response prospects"
                           >
                             <span className="flex items-center gap-2 text-xs font-bold text-slate-600">
@@ -1037,7 +1003,7 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
 
                           <div 
                             onClick={() => setSelectedSentimentFilter("NEUTRAL")}
-                            className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-all border border-transparent hover:border-[#FAF1EE] w-full"
+                            className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-all border border-transparent hover:border-slate-200 w-full"
                             title="Click to view neutral response prospects"
                           >
                             <span className="flex items-center gap-2 text-xs font-bold text-slate-600">
@@ -1051,7 +1017,7 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
 
                           <div 
                             onClick={() => setSelectedSentimentFilter("NEGATIVE")}
-                            className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-all border border-transparent hover:border-[#FAF1EE] w-full"
+                            className="flex items-center justify-between p-2 rounded-xl hover:bg-slate-50 cursor-pointer transition-all border border-transparent hover:border-slate-200 w-full"
                             title="Click to view negative response prospects"
                           >
                             <span className="flex items-center gap-2 text-xs font-bold text-slate-600">
@@ -1072,41 +1038,41 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   
                   {/* Left Column: Target Vertical Alignment Leaderboard */}
-                  <div className="bg-white border border-[#FAF1EE] p-6 rounded-[28px] shadow-sm flex flex-col justify-between min-h-[380px] hover:shadow-md transition-all">
+                  <div className="bg-white border border-slate-200 p-6 rounded-2xl flex flex-col justify-between min-h-[380px]">
                     <div>
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                            <BarChart2 size={16} className="text-[#FE1919]" />
-                            Target Vertical Alignment Leaderboard
+                          <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                            <BarChart2 size={16} className="text-indigo-600" />
+                            Target Vertical Alignment
                           </h3>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Top targeted sectors sorted by volume and synergy</p>
+                          <p className="text-xs text-slate-400 mt-0.5">Top targeted sectors by volume and synergy</p>
                         </div>
-                        <span className="px-2 py-0.5 bg-[#FFF0EF] text-[#FE1919] border border-[#FFDEDC] rounded-lg text-[8px] font-black uppercase tracking-widest">
+                        <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-md text-[10px] font-medium">
                           Market Penetration
                         </span>
                       </div>
 
                       <div className="space-y-4 mt-6">
                         {industries.length === 0 ? (
-                          <p className="text-xs text-slate-400 font-bold italic py-10 text-center">No vertical clusters mapped.</p>
+                          <p className="text-sm text-slate-400 py-10 text-center">No vertical clusters mapped.</p>
                         ) : (
                           industries.map((ind, i) => (
-                            <div key={i} className="flex flex-col gap-1.5 p-3 rounded-2xl hover:bg-slate-50 transition-colors">
-                              <div className="flex items-center justify-between text-xs font-extrabold text-slate-800">
+                            <div key={i} className="flex flex-col gap-1.5 p-3 rounded-xl hover:bg-slate-50 transition-colors">
+                              <div className="flex items-center justify-between text-sm font-medium text-slate-800">
                                 <span className="flex items-center gap-2 truncate pr-4">
-                                  <span className="w-5 h-5 rounded-lg bg-slate-900 text-white flex items-center justify-center text-[9px] font-black">{i + 1}</span>
+                                  <span className="w-5 h-5 rounded-md bg-slate-900 text-white flex items-center justify-center text-[10px] font-semibold">{i + 1}</span>
                                   {ind.name}
                                 </span>
                                 <span className="flex items-center gap-1.5 shrink-0">
-                                  <span className="px-2 py-0.5 bg-slate-50 border border-slate-100 rounded text-[9px] font-black text-slate-400 uppercase">{ind.count} {ind.count === 1 ? 'Org' : 'Orgs'}</span>
-                                  <span className="text-[#FE1919] font-black">{ind.avgScore}% Match</span>
+                                  <span className="px-2 py-0.5 bg-slate-100 rounded text-xs text-slate-500">{ind.count} {ind.count === 1 ? 'Org' : 'Orgs'}</span>
+                                  <span className="text-indigo-600 font-semibold text-xs">{ind.avgScore}% Match</span>
                                 </span>
                               </div>
-                              <div className="w-full h-2 bg-slate-50 border border-slate-100 rounded-full overflow-hidden flex">
-                                <div 
-                                  className="h-full bg-slate-900 rounded-full transition-all" 
-                                  style={{ width: `${ind.avgScore}%` }} 
+                              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden flex">
+                                <div
+                                  className="h-full bg-slate-900 rounded-full transition-all"
+                                  style={{ width: `${ind.avgScore}%` }}
                                 />
                               </div>
                             </div>
@@ -1117,85 +1083,85 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
                   </div>
 
                   {/* Right Column: Strategic Executive Persona Distribution */}
-                  <div className="bg-white border border-[#FAF1EE] p-6 rounded-[28px] shadow-sm flex flex-col justify-between min-h-[380px] hover:shadow-md transition-all">
+                  <div className="bg-white border border-slate-200 p-6 rounded-2xl flex flex-col justify-between min-h-[380px]">
                     <div>
                       <div className="flex justify-between items-start mb-2">
                         <div>
-                          <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider flex items-center gap-2">
-                            <Cpu size={16} className="text-indigo-500" />
-                            Strategic Persona Seniority Mapping
+                          <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+                            <Cpu size={16} className="text-indigo-600" />
+                            Persona Seniority Mapping
                           </h3>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Target stakeholder distribution based on organizational hierarchy</p>
+                          <p className="text-xs text-slate-400 mt-0.5">Target stakeholder distribution by hierarchy</p>
                         </div>
-                        <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-lg text-[8px] font-black uppercase tracking-widest">
+                        <span className="px-2 py-0.5 bg-indigo-50 text-indigo-600 rounded-md text-[10px] font-medium">
                           Persona Metrics
                         </span>
                       </div>
 
                       <div className="space-y-4 mt-6">
                         {/* Executive Leadership (C-Level) */}
-                        <div className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors">
+                        <div className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-rose-50 text-rose-500 flex items-center justify-center font-bold text-xs shrink-0">CXO</div>
+                            <div className="w-9 h-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center font-semibold text-xs shrink-0">CXO</div>
                             <div className="flex flex-col">
-                              <span className="text-xs font-black text-slate-800 uppercase tracking-wider leading-none">Executive Leadership</span>
-                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{execCount} Decision Makers targeted</span>
+                              <span className="text-sm font-medium text-slate-800 leading-none">Executive Leadership</span>
+                              <span className="text-xs text-slate-400 mt-1">{execCount} decision makers targeted</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
-                            <span className="text-xs font-black text-slate-900">{execPercent}%</span>
-                            <div className="w-16 h-2 bg-slate-50 border border-slate-100 rounded-full overflow-hidden shrink-0">
+                            <span className="text-sm font-semibold text-slate-900">{execPercent}%</span>
+                            <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden shrink-0">
                               <div className="h-full bg-rose-500 rounded-full" style={{ width: `${execPercent}%` }} />
                             </div>
                           </div>
                         </div>
 
                         {/* Middle Management (VP / Directors) */}
-                        <div className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors">
+                        <div className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-500 flex items-center justify-center font-bold text-xs shrink-0">DIR</div>
+                            <div className="w-9 h-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-semibold text-xs shrink-0">DIR</div>
                             <div className="flex flex-col">
-                              <span className="text-xs font-black text-slate-800 uppercase tracking-wider leading-none">Middle Management</span>
-                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{vpCount} Decision Makers targeted</span>
+                              <span className="text-sm font-medium text-slate-800 leading-none">Middle Management</span>
+                              <span className="text-xs text-slate-400 mt-1">{vpCount} decision makers targeted</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
-                            <span className="text-xs font-black text-slate-900">{vpPercent}%</span>
-                            <div className="w-16 h-2 bg-slate-50 border border-slate-100 rounded-full overflow-hidden shrink-0">
+                            <span className="text-sm font-semibold text-slate-900">{vpPercent}%</span>
+                            <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden shrink-0">
                               <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${vpPercent}%` }} />
                             </div>
                           </div>
                         </div>
 
                         {/* Operational Managers / Leads */}
-                        <div className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors">
+                        <div className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center font-bold text-xs shrink-0">MGR</div>
+                            <div className="w-9 h-9 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-semibold text-xs shrink-0">MGR</div>
                             <div className="flex flex-col">
-                              <span className="text-xs font-black text-slate-800 uppercase tracking-wider leading-none">Operational Leadership</span>
-                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{mgrCount} Decision Makers targeted</span>
+                              <span className="text-sm font-medium text-slate-800 leading-none">Operational Leadership</span>
+                              <span className="text-xs text-slate-400 mt-1">{mgrCount} decision makers targeted</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
-                            <span className="text-xs font-black text-slate-900">{mgrPercent}%</span>
-                            <div className="w-16 h-2 bg-slate-50 border border-slate-100 rounded-full overflow-hidden shrink-0">
+                            <span className="text-sm font-semibold text-slate-900">{mgrPercent}%</span>
+                            <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden shrink-0">
                               <div className="h-full bg-amber-500 rounded-full" style={{ width: `${mgrPercent}%` }} />
                             </div>
                           </div>
                         </div>
 
                         {/* Other Personnel */}
-                        <div className="flex items-center justify-between p-3 rounded-2xl hover:bg-slate-50 transition-colors">
+                        <div className="flex items-center justify-between p-3 rounded-xl hover:bg-slate-50 transition-colors">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-xl bg-slate-50 text-slate-500 flex items-center justify-center font-bold text-xs shrink-0">STF</div>
+                            <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center font-semibold text-xs shrink-0">STF</div>
                             <div className="flex flex-col">
-                              <span className="text-xs font-black text-slate-800 uppercase tracking-wider leading-none">Other Strategic Contacts</span>
-                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">{otherCount} Decision Makers targeted</span>
+                              <span className="text-sm font-medium text-slate-800 leading-none">Other Strategic Contacts</span>
+                              <span className="text-xs text-slate-400 mt-1">{otherCount} decision makers targeted</span>
                             </div>
                           </div>
                           <div className="flex items-center gap-4">
-                            <span className="text-xs font-black text-slate-900">{otherPercent}%</span>
-                            <div className="w-16 h-2 bg-slate-50 border border-slate-100 rounded-full overflow-hidden shrink-0">
+                            <span className="text-sm font-semibold text-slate-900">{otherPercent}%</span>
+                            <div className="w-16 h-2 bg-slate-100 rounded-full overflow-hidden shrink-0">
                               <div className="h-full bg-slate-400 rounded-full" style={{ width: `${otherPercent}%` }} />
                             </div>
                           </div>
@@ -1212,9 +1178,9 @@ const LeadLedger = ({ campaign, hideSidebar = false }) => {
       </main>
 
       {/* V2 Intelligence Modals */}
-      <CompanyIntelModal 
-        selectedCompany={selectedCompany} 
-        onClose={() => setSelectedCompany(null)} 
+      <CompanyDetailModal
+        company={selectedCompany}
+        onClose={() => setSelectedCompany(null)}
       />
       
       <DraftEditorModal

@@ -1,6 +1,6 @@
 import React from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Lock, FileText } from "lucide-react";
+import { X, Lock } from "lucide-react";
 
 const DraftPreviewModal = ({ selectedDraft, campaign, onClose }) => {
   if (!selectedDraft) {
@@ -14,96 +14,86 @@ const DraftPreviewModal = ({ selectedDraft, campaign, onClose }) => {
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-12 overflow-y-auto select-none">
-        {/* Backdrop glass blur */}
+        {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-[#0F172A]/40 backdrop-blur-md"
+          className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
         />
 
-        {/* Premium Preview Card */}
+        {/* Modal */}
         <motion.div
           initial={{ opacity: 0, scale: 0.98, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.98, y: 15 }}
-          transition={{ type: "spring", damping: 30, stiffness: 280 }}
-          className="relative w-full max-w-[960px] bg-gradient-to-br from-[#FAF5F4] to-[#FFFDFC] rounded-3xl shadow-2xl overflow-hidden flex flex-col z-10 border border-[#FAF1EE] text-slate-800 font-sans"
+          transition={{ duration: 0.18 }}
+          className="relative w-full max-w-[720px] bg-white rounded-2xl shadow-xl overflow-hidden flex flex-col z-10 border border-slate-200"
         >
           {/* Header */}
-          <div className="px-6 py-5 md:px-10 md:py-6 flex items-center justify-between border-b border-[#FAF1EE] bg-white/70 backdrop-blur-sm sticky top-0 z-20 shrink-0">
-            <div className="flex items-center gap-4">
-              {/* Dark monogram avatar */}
-              <div className="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white font-extrabold text-lg shadow-md shadow-slate-950/10">
+          <div className="px-6 py-5 flex items-center justify-between border-b border-slate-100 shrink-0">
+            <div className="flex items-center gap-3.5 min-w-0">
+              <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center text-white font-semibold text-sm shrink-0">
                 {(dm?.name || "TW").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
               </div>
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h3 className="text-lg md:text-xl font-black text-slate-900 tracking-tight leading-none">
-                    {dm?.name || "Stakeholder Name"}
-                  </h3>
-                  <span className="px-2.5 py-0.5 bg-blue-50 border border-blue-100 text-blue-600 rounded-lg text-[9px] font-black uppercase tracking-widest">
-                    Draft Preview
-                  </span>
-                </div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">
-                  Active Outreach Dossier for {company?.name || "Target Organization"}
+              <div className="min-w-0">
+                <h3 className="text-base font-semibold text-slate-900 truncate">
+                  {dm?.name || "Stakeholder Name"}
+                </h3>
+                <p className="text-xs text-slate-400 truncate">
+                  Draft for {company?.name || "Target Organization"}
                 </p>
               </div>
             </div>
-            
-            <button 
-              onClick={onClose} 
-              className="w-10 h-10 hover:bg-[#FFF0EF] hover:text-[#FE1919] border border-[#FAF1EE] rounded-xl flex items-center justify-center text-slate-400 transition-all bg-white shadow-sm"
+
+            <button
+              onClick={onClose}
+              className="w-8 h-8 hover:bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors shrink-0"
             >
-              <X size={18} strokeWidth={2.5} />
+              <X size={16} />
             </button>
           </div>
 
-          {/* Scrolling Content Panel */}
-          <div className="p-6 md:p-10 overflow-y-auto flex flex-col gap-6 select-text max-h-[60vh] custom-scrollbar bg-white/40">
-            
-            {/* Target Org & Secure Recipient Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 select-none">
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-[#8192B4] uppercase tracking-widest block">
-                  Target Organization
+          {/* Content */}
+          <div className="p-6 overflow-y-auto flex flex-col gap-5 select-text max-h-[60vh] custom-scrollbar">
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-400 block">
+                  Organization
                 </label>
-                <div className="bg-white px-4 py-3.5 rounded-xl border border-[#FAF1EE] text-sm font-semibold text-slate-800 shadow-sm">
+                <div className="bg-slate-50 px-3.5 py-2.5 rounded-lg border border-slate-200 text-sm font-medium text-slate-800">
                   {company?.name || "Company Name"}
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-[10px] font-black text-[#8192B4] uppercase tracking-widest block">
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-slate-400 block">
                   Recipient Email
                 </label>
-                <div className="relative bg-[#FAF5F4]/60 px-4 py-3.5 pr-10 rounded-xl border border-[#FAF1EE] text-sm font-semibold text-slate-500 shadow-sm flex items-center justify-between">
-                  <span>{email}</span>
-                  <Lock size={14} className="text-slate-400" />
+                <div className="bg-slate-50 px-3.5 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-500 flex items-center justify-between gap-2">
+                  <span className="truncate">{email}</span>
+                  <Lock size={13} className="text-slate-400 shrink-0" />
                 </div>
               </div>
             </div>
 
-            {/* Strategic Subject Header Container */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-[#8192B4] uppercase tracking-widest block">
-                Strategic Subject Header
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-400 block">
+                Subject
               </label>
-              <div className="relative bg-white p-4 pl-6 rounded-xl font-extrabold text-slate-900 border border-[#FAF1EE] shadow-sm flex items-center select-all">
-                <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-[#FE1919] rounded-l-xl" />
-                <span>{selectedDraft.subject}</span>
+              <div className="bg-slate-50 px-3.5 py-2.5 rounded-lg border border-slate-200 text-sm font-semibold text-slate-900 select-all">
+                {selectedDraft.subject}
               </div>
             </div>
 
-            {/* Static Narrative Protocol Body */}
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-[#8192B4] uppercase tracking-widest block">
-                Narrative Protocol Body
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-slate-400 block">
+                Message
               </label>
-              <div className="bg-white rounded-2xl border border-[#FAF1EE] shadow-sm p-6 md:p-8 min-h-[220px] max-h-[360px] overflow-y-auto custom-scrollbar select-all">
-                <p className="font-medium text-slate-600 text-[15px] leading-relaxed whitespace-pre-wrap">
+              <div className="bg-slate-50 rounded-lg border border-slate-200 p-4 min-h-[180px] max-h-[320px] overflow-y-auto custom-scrollbar select-all">
+                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">
                   {selectedDraft.body}
                 </p>
               </div>
@@ -111,14 +101,13 @@ const DraftPreviewModal = ({ selectedDraft, campaign, onClose }) => {
 
           </div>
 
-          {/* Action Footer */}
-          <div className="px-6 py-5 md:px-10 md:py-6 border-t border-[#FAF1EE] bg-white/70 backdrop-blur-sm flex items-center justify-end shrink-0 select-none">
+          {/* Footer */}
+          <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-end shrink-0">
             <button
               onClick={onClose}
-              className="px-6 py-3.5 bg-slate-900 hover:bg-slate-850 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-slate-900/10 hover:shadow-xl active:scale-[0.99] transition-all flex items-center gap-2"
+              className="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-medium transition-colors active:scale-[0.98]"
             >
-              <FileText size={13} />
-              Close Preview
+              Close
             </button>
           </div>
         </motion.div>

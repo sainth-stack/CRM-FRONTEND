@@ -4,12 +4,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Users, Mail,
   CheckCircle2, Loader2, AlertCircle,
-  ArrowLeft, ExternalLink, Globe,
-  Linkedin, MessageSquare, ChevronRight,
+  ArrowLeft, ExternalLink,
+  MessageSquare, ChevronRight,
   Monitor, PhoneCall,
   X, Edit3, Send, Trash, Maximize2, Clock, Calendar, Link2,
   TrendingUp, PieChart, Target, ShieldCheck, LayoutDashboard,
-  Activity, BarChart3, Filter, ChevronDown,
+  Filter, ChevronDown,
   PenLine, Inbox, HelpCircle
 } from "lucide-react";
 import axios from "axios";
@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import LeadLedger from "./LeadLedger";
 import ResearchTabs from "./ResearchTabs";
+import { CompanyDetailModal } from "../components/campaign-workspace/CompanyDetailModal";
 import MissionSidebar from "../components/campaign-workspace/MissionSidebar";
 import DraftEditorModal from "../components/campaign-workspace/DraftEditorModal";
 import DraftPreviewModal from "../components/campaign-workspace/DraftPreviewModal";
@@ -114,17 +115,6 @@ const formatMeetingTime = (utcDateString, displayTimezone) => {
 };
 
 
-const ensureAbsoluteUrl = (url, fallbackName = "") => {
-  if (!url || url === "#" || url === "N/A" || url === "unknown") {
-    if (fallbackName) {
-      return `https://www.linkedin.com/company/${fallbackName.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
-    }
-    return "#";
-  }
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  return `https://${url}`;
-};
-
 const cleanEmailReply = (body) => {
   if (!body) return "";
   const patterns = [
@@ -142,6 +132,79 @@ const cleanEmailReply = (body) => {
     }
   }
   return cleaned;
+};
+
+// A reminder draft's followup_index is stored as 100 + reminder_number (see backend/app/services/reminder_sequence.py).
+const REMINDER_INDEX_BASE = 100;
+
+// Translates raw backend prospect/draft states into plain-English status labels + badge colors.
+// `draft` (optional) is the actual pending EmailDraft row, used to tell "initial" vs "follow-up N" apart
+// since the backend often leaves dm.state stale (pointing at the previous SENT stage) while a new
+// draft is awaiting human approval — see reminder_sequence.py's record_reminder_draft().
+const getFriendlyStatus = (rawState, draft = null) => {
+  const s = (rawState || "DRAFTED").toUpperCase();
+
+  if (s === "DISPATCH_SCHEDULED") {
+    return { label: "Scheduled", cls: "bg-blue-50 text-blue-700 border-blue-200" };
+  }
+  if (s === "DRAFTED") {
+    if (draft?.draft_type === "REMINDER") {
+      const n = (draft.followup_index || 0) - REMINDER_INDEX_BASE;
+      return {
+        label: `Follow-up ${n > 0 ? n : 1} Drafted (Human Approval)`,
+        cls: "bg-amber-50 text-amber-700 border-amber-200",
+      };
+    }
+    if (draft?.draft_type === "FOLLOWUP" || draft?.draft_type === "DISCOVERY") {
+      return { label: "Scheduling Email Drafted (Human Approval)", cls: "bg-amber-50 text-amber-700 border-amber-200" };
+    }
+    return { label: "Initial Drafted (Human Approval)", cls: "bg-amber-50 text-amber-700 border-amber-200" };
+  }
+  if (s === "INITIAL_SENT") {
+    return { label: "Initial Sent", cls: "bg-indigo-50 text-indigo-700 border-indigo-200" };
+  }
+  const reminderMatch = s.match(/^REMINDER_([1-6])_SENT$/);
+  if (reminderMatch) {
+    return { label: `Follow-up ${reminderMatch[1]} Sent`, cls: "bg-indigo-50 text-indigo-700 border-indigo-200" };
+  }
+  if (s === "WAITING_FOR_REPLY") {
+    return { label: "Waiting for Reply", cls: "bg-purple-50 text-purple-700 border-purple-200" };
+  }
+  if (s === "FOLLOWUP_ACTIVE") {
+    return { label: "Scheduling Email Sent", cls: "bg-indigo-50 text-indigo-700 border-indigo-200" };
+  }
+  if (s === "POSITIVE") {
+    return { label: "Discovery Call", cls: "bg-blue-50 text-blue-700 border-blue-200" };
+  }
+  if (s === "DISCOVERY_CALL" || s === "MEETING_BOOKED") {
+    return { label: "Meeting Booked", cls: "bg-emerald-50 text-emerald-700 border-emerald-200" };
+  }
+  if (s === "NEGATIVE" || s === "TERMINATED") {
+    return { label: "Terminated", cls: "bg-rose-50 text-rose-700 border-rose-200" };
+  }
+  if (s === "NEUTRAL") {
+    return { label: "Neutral", cls: "bg-slate-100 text-slate-600 border-slate-200" };
+  }
+  if (s === "ON_HOLD") {
+    return { label: "On Hold", cls: "bg-slate-100 text-slate-600 border-slate-200" };
+  }
+  if (s === "DISCOVERY_EXPIRED") {
+    return { label: "Discovery Expired", cls: "bg-rose-50 text-rose-600 border-rose-200" };
+  }
+  return { label: s.replace(/_/g, " "), cls: "bg-slate-100 text-slate-600 border-slate-200" };
+};
+
+// Windowed page list so pagination never overflows the page width (e.g. 1 ... 4 5 6 ... 50)
+const getPageWindow = (current, total) => {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages = new Set([1, total, current, current - 1, current + 1]);
+  const sorted = [...pages].filter(p => p >= 1 && p <= total).sort((a, b) => a - b);
+  const out = [];
+  sorted.forEach((p, i) => {
+    if (i > 0 && p - sorted[i - 1] > 1) out.push("...");
+    out.push(p);
+  });
+  return out;
 };
 
 const ProgressTracker = ({ status }) => {
@@ -195,7 +258,10 @@ const CampaignWorkspace = () => {
   const [campaign, setCampaign] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("research");
+  const [dashboardSubTab, setDashboardSubTab] = useState("DASHBOARD"); // DASHBOARD, PIPELINE, ANALYSIS
+  const [dashboardExpanded, setDashboardExpanded] = useState(false);
   const [monitorTab, setMonitorTab] = useState("monitor"); // monitor, drafts
+  const [monitorExpanded, setMonitorExpanded] = useState(false);
   const [discoveryTab, setDiscoveryTab] = useState("drafts"); // drafts, scheduled
   const [showRefineModal, setShowRefineModal] = useState(false);
   const [refineAnswers, setRefineAnswers] = useState({});
@@ -210,6 +276,9 @@ const CampaignWorkspace = () => {
   const [isDispatchingAll, setIsDispatchingAll] = useState(false);
   const [draftFilter, setDraftFilter] = useState(null);   // null = show all
   const [showDraftFilter, setShowDraftFilter] = useState(false);
+  const [monitorPage, setMonitorPage] = useState(1);
+  const [monitorStatusFilter, setMonitorStatusFilter] = useState(null); // null = show all
+  const [showMonitorFilter, setShowMonitorFilter] = useState(false);
   const [showHistoryDM, setShowHistoryDM] = useState(null);
   const [expandedNodes, setExpandedNodes] = useState([]);
   const [navOpen, setNavOpen] = useState(false); // mobile campaign-nav drawer
@@ -230,6 +299,8 @@ const CampaignWorkspace = () => {
 
   useEffect(() => {
     if (activeTab === "research") setResearchExpanded(true);
+    if (activeTab === "dashboard") setDashboardExpanded(true);
+    if (activeTab === "monitor") setMonitorExpanded(true);
   }, [activeTab]);
 
   // Close the draft filter dropdown on any outside click
@@ -242,32 +313,20 @@ const CampaignWorkspace = () => {
     return () => document.removeEventListener("mousedown", handler);
   }, [showDraftFilter]);
 
+  // Close the monitor filter dropdown on any outside click
+  useEffect(() => {
+    if (!showMonitorFilter) return;
+    const handler = (e) => {
+      if (!e.target.closest("[data-monitor-filter]")) setShowMonitorFilter(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [showMonitorFilter]);
+
   const toggleNodeExpansion = (nodeId) => {
     setExpandedNodes(prev => 
       prev.includes(nodeId) ? prev.filter(id => id !== nodeId) : [...prev, nodeId]
     );
-  };
-
-  const scrollToDraft = (dmId) => {
-    if (!dmId || !campaign?.drafts) return;
-    
-    // Pick the most recent draft (thanks to backend sorting)
-    const targetDraft = campaign.drafts.find(d => 
-      String(d.decision_maker_id) === String(dmId) && 
-      String(d.status).toUpperCase().includes("DRAFTED")
-    );
-    
-    if (targetDraft) {
-      const draftId = String(targetDraft.id);
-
-      // Delay scroll slightly to allow React state to propagate to DOM
-      setTimeout(() => {
-        const element = document.getElementById(`draft-card-${draftId}`);
-        if (element) {
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 100);
-    }
   };
 
   // Dynamic, consolidated chronological sequence builder
@@ -562,10 +621,18 @@ const CampaignWorkspace = () => {
         campaignName={campaign.name}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        dashboardSubTab={dashboardSubTab}
+        setDashboardSubTab={setDashboardSubTab}
+        dashboardExpanded={dashboardExpanded}
+        setDashboardExpanded={setDashboardExpanded}
         researchTab={researchTab}
         setResearchTab={setResearchTab}
         researchExpanded={researchExpanded}
         setResearchExpanded={setResearchExpanded}
+        monitorSubTab={monitorTab}
+        setMonitorSubTab={setMonitorTab}
+        monitorExpanded={monitorExpanded}
+        setMonitorExpanded={setMonitorExpanded}
         collapsed={campaignNavCollapsed}
         onToggleCollapse={() => setCampaignNavCollapsed((c) => !c)}
         lifecycleStatus={getDisplayStatus()}
@@ -617,7 +684,12 @@ const CampaignWorkspace = () => {
                 exit={{ opacity: 0, x: -20 }}
                 className="h-full"
               >
-                <LeadLedger campaign={campaign} hideSidebar={true} />
+                <LeadLedger
+                  campaign={campaign}
+                  hideSidebar={true}
+                  activeView={dashboardSubTab}
+                  setActiveView={setDashboardSubTab}
+                />
               </motion.div>
             )}
 
@@ -650,158 +722,249 @@ const CampaignWorkspace = () => {
                 exit={{ opacity: 0, x: -20 }}
                 className="p-10 max-w-[1600px] mx-auto space-y-8"
               >
-                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-4 select-none">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-surgical-navy/5 text-surgical-navy rounded-xl flex items-center justify-center border border-surgical-navy/10 shadow-sm">
-                      <BarChart3 size={20} strokeWidth={3} />
-                    </div>
-                    <div>
-                      <span className="px-2.5 py-0.5 bg-surgical-navy/5 text-surgical-navy border border-surgical-navy/10 rounded-lg text-[10px] font-black uppercase tracking-widest self-start mb-1 inline-block">Tactical Suite</span>
-                      <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight uppercase italic leading-none">Outreach Hub</h3>
-                    </div>
-                  </div>
-
-                  {/* Sub-Navigation Tabs */}
-                  <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-surgical-border shadow-sm">
-                    <button
-                      onClick={() => setMonitorTab("monitor")}
-                      className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                        monitorTab === "monitor"
-                          ? "bg-surgical-navy text-white shadow-lg shadow-surgical-navy/20"
-                          : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      <Activity size={14} />
-                      Monitor
-                    </button>
-                    <button
-                      onClick={() => setMonitorTab("drafts")}
-                      className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
-                        monitorTab === "drafts"
-                          ? "bg-surgical-navy text-white shadow-lg shadow-surgical-navy/20"
-                          : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
-                      }`}
-                    >
-                      <Mail size={14} />
-                      Drafts Outreach
-                    </button>
+                <div className="flex items-center justify-between gap-4 mb-2">
+                  <div>
+                    <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Outreach</h1>
+                    <p className="text-sm text-slate-500 mt-0.5">Track replies and manage messages waiting for your approval</p>
                   </div>
                 </div>
 
                 {monitorTab === "monitor" ? (
-                  <div className="bg-white rounded-[32px] border border-surgical-border overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-slate-50/50">
-                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Stakeholder Protocol</th>
-                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Organization</th>
-                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Live Status</th>
-                            <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-50">
-                          {(campaign.dms || []).filter(dm => !["NEW", "SYNCED"].includes(dm.state || dm.status)).length === 0 ? (
-                            <tr>
-                              <td colSpan="4" className="px-8 py-20 text-center">
-                                <div className="flex flex-col items-center gap-4 text-slate-300">
-                                  <Inbox size={40} strokeWidth={1} className="opacity-20 text-surgical-navy" />
-                                  <p className="text-xs font-bold uppercase tracking-widest italic">Awaiting initial signal deployment...</p>
-                                </div>
-                              </td>
-                            </tr>
-                          ) : (
-                            (campaign.dms || []).filter(dm => !["NEW", "SYNCED"].includes(dm.state || dm.status)).map(dm => {
-                              const co = campaign.target_companies.find(c => c.id === dm.target_company_id);
-                              const dmStatus = dm.state || dm.status || "NEW";
+                  (() => {
+                    const MONITOR_PAGE_SIZE = 10;
 
-                              // Check if this DM has a pending scheduled draft
-                              const scheduledDraft = (campaign.drafts || []).find(
-                                d => d.decision_maker_id === dm.id &&
-                                     d.status === "DRAFTED" &&
-                                     d.dispatch_state === "QUEUED" &&
-                                     d.scheduled_at
-                              );
-                              const hasScheduledDispatch = !!scheduledDraft;
+                    // Build one row per active DM with its resolved friendly status up front,
+                    // so filtering/pagination/badge rendering all share the same computed value.
+                    const monitorRows = (campaign.dms || [])
+                      .filter(dm => !["NEW", "SYNCED"].includes(dm.state || dm.status))
+                      .map(dm => {
+                        const co = campaign.target_companies.find(c => c.id === dm.target_company_id);
+                        const dmStatus = dm.state || dm.status || "NEW";
 
-                              // Format the scheduled slot for tooltip / secondary label
-                              const scheduledLabel = (() => {
-                                if (!scheduledDraft?.scheduled_at) return null;
-                                const raw = String(scheduledDraft.scheduled_at).endsWith("Z")
-                                  ? scheduledDraft.scheduled_at
-                                  : scheduledDraft.scheduled_at + "Z";
-                                const d = new Date(raw);
-                                if (isNaN(d.getTime())) return null;
-                                return d.toLocaleString("en-US", {
-                                  weekday: "short", month: "short", day: "numeric",
-                                  hour: "numeric", minute: "2-digit",
-                                  timeZoneName: "short",
-                                  timeZone: dm.display_timezone || undefined,
-                                });
-                              })();
+                        const scheduledDraft = (campaign.drafts || []).find(
+                          d => d.decision_maker_id === dm.id &&
+                               d.status === "DRAFTED" &&
+                               d.dispatch_state === "QUEUED" &&
+                               d.scheduled_at
+                        );
+                        const hasScheduledDispatch = !!scheduledDraft;
 
-                              return (
-                                <tr key={dm.id} className="hover:bg-slate-50/50 transition-colors group">
-                                  <td className="px-8 py-6">
-                                    <div className="flex items-center gap-4">
-                                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs border ${
-                                        hasScheduledDispatch
-                                          ? "bg-blue-50 text-blue-600 border-blue-100"
-                                          : "bg-surgical-navy/5 text-surgical-navy border-surgical-navy/10"
-                                      }`}>
-                                        {(dm.name || "P").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
-                                      </div>
-                                      <div>
-                                        <p className="text-sm font-black text-slate-900 uppercase tracking-tight leading-none mb-1">{dm.name}</p>
-                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{dm.position || "Decision Maker"}</p>
-                                      </div>
-                                    </div>
-                                  </td>
-                                  <td className="px-8 py-6 text-sm font-bold text-slate-500 uppercase">{co?.name}</td>
-                                  <td className="px-8 py-6 text-center">
-                                    {hasScheduledDispatch ? (
-                                      <div className="flex flex-col items-center gap-1">
-                                        <span className="px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter bg-blue-50 text-blue-600 border border-blue-200">
-                                          Dispatch Scheduled
-                                        </span>
-                                        {scheduledLabel && (
-                                          <span className="text-[9px] font-bold text-slate-400 tracking-tight">
-                                            {scheduledLabel}
-                                          </span>
-                                        )}
-                                      </div>
-                                    ) : (
-                                      <span className={`px-2.5 py-1 rounded-lg text-[9px] font-black uppercase tracking-tighter ${
-                                        dmStatus.includes("SENT")       ? "bg-surgical-navy text-white" :
-                                        dmStatus.includes("REPLIED")    ? "bg-emerald-500 text-white" :
-                                        dmStatus.includes("DRAFTED")    ? "bg-amber-50 text-amber-600 border border-amber-200" :
-                                        dmStatus === "FOLLOWUP_ACTIVE"  ? "bg-teal-50 text-teal-700 border border-teal-200" :
-                                        dmStatus === "WAITING_FOR_REPLY"? "bg-purple-50 text-purple-700 border border-purple-200" :
-                                        dmStatus === "MEETING_BOOKED"   ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
-                                        "bg-slate-100 text-slate-600 border border-slate-200"
-                                      }`}>
-                                        {dmStatus.replace(/_/g, " ")}
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="px-8 py-6">
-                                    <div className="flex items-center justify-end gap-2">
+                        // Pending (unsent, unscheduled) draft for this DM. dm.state often lags behind —
+                        // the backend leaves it at the previous SENT stage while a new draft awaits
+                        // approval — so a pending draft here takes priority over the raw dm state.
+                        const pendingDraft = !hasScheduledDispatch && (campaign.drafts || []).find(
+                          d => d.decision_maker_id === dm.id && d.status === "DRAFTED"
+                        );
+
+                        const status = getFriendlyStatus(
+                          hasScheduledDispatch ? "DISPATCH_SCHEDULED" : pendingDraft ? "DRAFTED" : dmStatus,
+                          pendingDraft || null
+                        );
+
+                        const scheduledLabel = (() => {
+                          if (!scheduledDraft?.scheduled_at) return null;
+                          const raw = String(scheduledDraft.scheduled_at).endsWith("Z")
+                            ? scheduledDraft.scheduled_at
+                            : scheduledDraft.scheduled_at + "Z";
+                          const d = new Date(raw);
+                          if (isNaN(d.getTime())) return null;
+                          return d.toLocaleString("en-US", {
+                            weekday: "short", month: "short", day: "numeric",
+                            hour: "numeric", minute: "2-digit",
+                            timeZoneName: "short",
+                            timeZone: dm.display_timezone || undefined,
+                          });
+                        })();
+
+                        return { dm, co, status, hasScheduledDispatch, scheduledLabel };
+                      });
+
+                    // Unique status labels present, for the filter dropdown
+                    const monitorStatusLabels = [...new Set(monitorRows.map(r => r.status.label))].sort();
+
+                    const filteredRows = monitorStatusFilter
+                      ? monitorRows.filter(r => r.status.label === monitorStatusFilter)
+                      : monitorRows;
+
+                    const totalMonitorPages = Math.ceil(filteredRows.length / MONITOR_PAGE_SIZE) || 1;
+                    const safeMonitorPage = Math.min(monitorPage, totalMonitorPages);
+                    const paginatedRows = filteredRows.slice(
+                      (safeMonitorPage - 1) * MONITOR_PAGE_SIZE,
+                      safeMonitorPage * MONITOR_PAGE_SIZE
+                    );
+
+                    return (
+                      <div className="space-y-4">
+                        {/* ── Header row: count + Filter ── */}
+                        <div className="flex items-center justify-between gap-3 flex-wrap">
+                          <p className="text-sm text-slate-500">
+                            {filteredRows.length}
+                            {monitorStatusFilter ? ` of ${monitorRows.length}` : ""} contact{filteredRows.length !== 1 ? "s" : ""}
+                            {monitorStatusFilter && (
+                              <span className="ml-2 text-indigo-600 font-medium">— {monitorStatusFilter}</span>
+                            )}
+                          </p>
+
+                          <div className="relative" data-monitor-filter>
+                            <button
+                              onClick={() => setShowMonitorFilter(prev => !prev)}
+                              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors border ${
+                                monitorStatusFilter
+                                  ? "bg-indigo-50 text-indigo-700 border-indigo-200"
+                                  : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                              }`}
+                            >
+                              <Filter size={13} />
+                              {monitorStatusFilter || "Filter"}
+                              <ChevronDown size={13} className={`transition-transform ${showMonitorFilter ? "rotate-180" : ""}`} />
+                            </button>
+
+                            <AnimatePresence>
+                              {showMonitorFilter && (
+                                <motion.div
+                                  initial={{ opacity: 0, y: -6, scale: 0.97 }}
+                                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                                  exit={{ opacity: 0, y: -6, scale: 0.97 }}
+                                  transition={{ duration: 0.15 }}
+                                  className="absolute right-0 top-full mt-2 z-50 bg-white border border-slate-200 rounded-xl shadow-lg p-1.5 min-w-[220px]"
+                                >
+                                  <button
+                                    onClick={() => { setMonitorStatusFilter(null); setMonitorPage(1); setShowMonitorFilter(false); }}
+                                    className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                      !monitorStatusFilter ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"
+                                    }`}
+                                  >
+                                    All statuses
+                                    <span className="ml-auto text-xs opacity-60">{monitorRows.length}</span>
+                                  </button>
+
+                                  {monitorStatusLabels.map(label => {
+                                    const count = monitorRows.filter(r => r.status.label === label).length;
+                                    return (
                                       <button
-                                        onClick={() => setShowHistoryDM(dm)}
-                                        className="px-4 py-2 bg-slate-50 hover:bg-surgical-navy hover:text-white text-slate-400 border border-slate-100 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
+                                        key={label}
+                                        onClick={() => { setMonitorStatusFilter(label); setMonitorPage(1); setShowMonitorFilter(false); }}
+                                        className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                          monitorStatusFilter === label ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"
+                                        }`}
                                       >
-                                        View Chain
+                                        {label}
+                                        <span className="ml-auto text-xs opacity-60">{count}</span>
                                       </button>
-                                    </div>
-                                  </td>
+                                    );
+                                  })}
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        </div>
+
+                        <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="border-b border-slate-100">
+                                  <th className="px-6 py-3 text-xs font-medium text-slate-400">Contact</th>
+                                  <th className="px-6 py-3 text-xs font-medium text-slate-400">Organization</th>
+                                  <th className="px-6 py-3 text-xs font-medium text-slate-400">Status</th>
+                                  <th className="px-6 py-3 text-xs font-medium text-slate-400 text-right">Actions</th>
                                 </tr>
-                              );
-                            })
+                              </thead>
+                              <tbody className="divide-y divide-slate-100">
+                                {paginatedRows.length === 0 ? (
+                                  <tr>
+                                    <td colSpan="4" className="px-6 py-20 text-center">
+                                      <div className="flex flex-col items-center gap-3 text-slate-300">
+                                        <Inbox size={36} strokeWidth={1.5} />
+                                        <p className="text-sm text-slate-400">
+                                          {monitorStatusFilter ? `No contacts with status "${monitorStatusFilter}".` : "No outreach activity yet."}
+                                        </p>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ) : (
+                                  paginatedRows.map(({ dm, co, status, hasScheduledDispatch, scheduledLabel }) => (
+                                    <tr key={dm.id} className="hover:bg-slate-50 transition-colors">
+                                      <td className="px-6 py-4">
+                                        <div className="flex items-center gap-3">
+                                          <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center font-semibold text-xs shrink-0">
+                                            {(dm.name || "P").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                                          </div>
+                                          <div className="min-w-0">
+                                            <p className="text-sm font-medium text-slate-900 truncate">{dm.name}</p>
+                                            <p className="text-xs text-slate-400 truncate">{dm.position || "Decision Maker"}</p>
+                                          </div>
+                                        </div>
+                                      </td>
+                                      <td className="px-6 py-4 text-sm text-slate-500">{co?.name}</td>
+                                      <td className="px-6 py-4">
+                                        <div className="flex flex-col gap-1">
+                                          <span className={`inline-flex w-fit px-2.5 py-1 rounded-full text-xs font-medium border ${status.cls}`}>
+                                            {status.label}
+                                          </span>
+                                          {hasScheduledDispatch && scheduledLabel && (
+                                            <span className="text-xs text-slate-400">{scheduledLabel}</span>
+                                          )}
+                                        </div>
+                                      </td>
+                                      <td className="px-6 py-4">
+                                        <div className="flex items-center justify-end">
+                                          <button
+                                            onClick={() => setShowHistoryDM(dm)}
+                                            className="px-3 py-1.5 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg text-sm font-medium transition-colors"
+                                          >
+                                            View History
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  ))
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          {/* Pagination */}
+                          {totalMonitorPages > 1 && (
+                            <div className="flex items-center justify-between px-6 py-3.5 border-t border-slate-100 select-none">
+                              <span className="text-sm text-slate-500">
+                                Page <span className="font-medium text-slate-700">{safeMonitorPage}</span> of {totalMonitorPages}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => setMonitorPage(p => Math.max(p - 1, 1))}
+                                  disabled={safeMonitorPage === 1}
+                                  className="px-3 py-1.5 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+                                >
+                                  Previous
+                                </button>
+                                {getPageWindow(safeMonitorPage, totalMonitorPages).map((p, i) => (
+                                  p === "..." ? (
+                                    <span key={`ellipsis-${i}`} className="w-8 h-8 flex items-center justify-center text-sm text-slate-400">...</span>
+                                  ) : (
+                                    <button
+                                      key={p}
+                                      onClick={() => setMonitorPage(p)}
+                                      className={`w-8 h-8 rounded-lg text-sm font-medium transition-colors ${safeMonitorPage === p ? "bg-slate-900 text-white" : "text-slate-500 hover:bg-slate-100"}`}
+                                    >
+                                      {p}
+                                    </button>
+                                  )
+                                ))}
+                                <button
+                                  onClick={() => setMonitorPage(p => Math.min(p + 1, totalMonitorPages))}
+                                  disabled={safeMonitorPage === totalMonitorPages}
+                                  className="px-3 py-1.5 text-slate-600 hover:bg-slate-100 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:hover:bg-transparent"
+                                >
+                                  Next
+                                </button>
+                              </div>
+                            </div>
                           )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                        </div>
+                      </div>
+                    );
+                  })()
                 ) : (
                   (() => {
                     // All non-discovery pending drafts (includes already-scheduled ones so they stay visible)
@@ -812,55 +975,43 @@ const CampaignWorkspace = () => {
                     // Helper: is this draft locked (already queued for scheduled send)?
                     const isDraftScheduled = (d) => d.dispatch_state === "QUEUED" && !!d.scheduled_at;
 
-                    // Derive unique prospect states present in this draft set
-                    // Scheduled drafts show their own "DISPATCH_SCHEDULED" synthetic state
-                    const uniqueStates = [...new Set(
-                      standardDrafts.map(d => {
-                        if (isDraftScheduled(d)) return "DISPATCH_SCHEDULED";
-                        const dm = campaign.dms?.find(m => m.id === d.decision_maker_id);
-                        return (dm?.state || dm?.status || "DRAFTED").toUpperCase();
-                      })
-                    )].sort();
-
-                    // Apply active filter (use synthetic state for scheduled drafts)
-                    const visibleDrafts = draftFilter
-                      ? standardDrafts.filter(d => {
-                          if (isDraftScheduled(d)) return draftFilter === "DISPATCH_SCHEDULED";
-                          const dm = campaign.dms?.find(m => m.id === d.decision_maker_id);
-                          return (dm?.state || dm?.status || "DRAFTED").toUpperCase() === draftFilter;
-                        })
-                      : standardDrafts;
-
-                    // Status badge colour map (also used for filter dropdown chips)
-                    const statusBadge = (state) => {
-                      const s = (state || "DRAFTED").toUpperCase();
-                      const label = s.replace(/_/g, " ");
-                      let cls = "bg-slate-50 text-slate-500 border-slate-200";
-                      if (s === "DISPATCH_SCHEDULED") cls = "bg-blue-50 text-blue-600 border-blue-200";
-                      else if (s === "DRAFTED")        cls = "bg-amber-50 text-amber-600 border-amber-200";
-                      else if (s === "INITIAL_SENT")   cls = "bg-indigo-50 text-indigo-600 border-indigo-200";
-                      else if (/^REMINDER_[1-6]_SENT$/.test(s))
-                                                       cls = "bg-purple-50 text-purple-600 border-purple-200";
-                      else if (s === "FOLLOWUP_ACTIVE") cls = "bg-teal-50 text-teal-600 border-teal-200";
-                      else if (s === "NEUTRAL")        cls = "bg-slate-100 text-slate-600 border-slate-300";
-                      return (
-                        <span className={`px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border ${cls}`}>
-                          {label}
-                        </span>
-                      );
+                    // Key/label per draft, derived from the draft itself (draft_type + followup_index)
+                    // rather than dm.state — dm.state is left stale by the backend whenever a new
+                    // follow-up draft is created (see getFriendlyStatus for details).
+                    const draftFilterInfo = (d) => {
+                      if (isDraftScheduled(d)) return { key: "DISPATCH_SCHEDULED", label: "Scheduled" };
+                      const { label } = getFriendlyStatus("DRAFTED", d);
+                      let key = "INITIAL_DRAFTED";
+                      if (d.draft_type === "REMINDER") key = `REMINDER_${(d.followup_index || 0) - REMINDER_INDEX_BASE}_DRAFTED`;
+                      else if (d.draft_type === "FOLLOWUP" || d.draft_type === "DISCOVERY") key = "DISCOVERY_DRAFTED";
+                      return { key, label };
                     };
 
+                    // Derive unique filter buckets present in this draft set, with their friendly labels
+                    const filterLabels = new Map();
+                    standardDrafts.forEach(d => {
+                      const { key, label } = draftFilterInfo(d);
+                      if (!filterLabels.has(key)) filterLabels.set(key, label);
+                    });
+                    const uniqueStates = [...filterLabels.keys()].sort();
+                    const labelForFilter = (key) => filterLabels.get(key) || key;
+
+                    // Apply active filter
+                    const visibleDrafts = draftFilter
+                      ? standardDrafts.filter(d => draftFilterInfo(d).key === draftFilter)
+                      : standardDrafts;
+
                     return (
-                      <div className="space-y-5">
+                      <div className="space-y-4">
 
                         {/* ── Header row: count + Filter + Dispatch All ── */}
                         <div className="flex items-center justify-between gap-3 flex-wrap">
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                          <p className="text-sm text-slate-500">
                             {visibleDrafts.length}
                             {draftFilter ? ` of ${standardDrafts.length}` : ""} pending draft{visibleDrafts.length !== 1 ? "s" : ""}
                             {draftFilter && (
-                              <span className="ml-2 text-indigo-500">
-                                — {draftFilter.replace(/_/g, " ")}
+                              <span className="ml-2 text-indigo-600 font-medium">
+                                — {labelForFilter(draftFilter)}
                               </span>
                             )}
                           </p>
@@ -870,15 +1021,15 @@ const CampaignWorkspace = () => {
                             <div className="relative" data-draft-filter>
                               <button
                                 onClick={() => setShowDraftFilter(prev => !prev)}
-                                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border shadow-sm ${
+                                className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors border ${
                                   draftFilter
-                                    ? "bg-indigo-50 text-indigo-600 border-indigo-200"
-                                    : "bg-white text-slate-500 border-slate-200 hover:border-slate-300"
+                                    ? "bg-indigo-50 text-indigo-700 border-indigo-200"
+                                    : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
                                 }`}
                               >
-                                <Filter size={12} />
-                                {draftFilter ? draftFilter.replace(/_/g, " ") : "Filter"}
-                                <ChevronDown size={11} className={`transition-transform ${showDraftFilter ? "rotate-180" : ""}`} />
+                                <Filter size={13} />
+                                {draftFilter ? labelForFilter(draftFilter) : "Filter"}
+                                <ChevronDown size={13} className={`transition-transform ${showDraftFilter ? "rotate-180" : ""}`} />
                               </button>
 
                               {/* Dropdown */}
@@ -889,40 +1040,36 @@ const CampaignWorkspace = () => {
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, y: -6, scale: 0.97 }}
                                     transition={{ duration: 0.15 }}
-                                    className="absolute right-0 top-full mt-2 z-50 bg-white border border-slate-200 rounded-2xl shadow-xl shadow-slate-900/10 p-2 min-w-[200px]"
+                                    className="absolute right-0 top-full mt-2 z-50 bg-white border border-slate-200 rounded-xl shadow-lg p-1.5 min-w-[220px]"
                                   >
                                     {/* All option */}
                                     <button
                                       onClick={() => { setDraftFilter(null); setShowDraftFilter(false); }}
-                                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                                         !draftFilter
-                                          ? "bg-surgical-navy text-white"
-                                          : "text-slate-500 hover:bg-slate-50"
+                                          ? "bg-slate-900 text-white"
+                                          : "text-slate-600 hover:bg-slate-50"
                                       }`}
                                     >
-                                      All Statuses
-                                      <span className="ml-auto text-[9px] font-bold opacity-60">{standardDrafts.length}</span>
+                                      All statuses
+                                      <span className="ml-auto text-xs opacity-60">{standardDrafts.length}</span>
                                     </button>
 
                                     {/* One chip per unique status */}
                                     {uniqueStates.map(state => {
-                                      const count = standardDrafts.filter(d => {
-                                        if (isDraftScheduled(d)) return state === "DISPATCH_SCHEDULED";
-                                        const m = campaign.dms?.find(x => x.id === d.decision_maker_id);
-                                        return (m?.state || m?.status || "DRAFTED").toUpperCase() === state;
-                                      }).length;
+                                      const count = standardDrafts.filter(d => draftFilterInfo(d).key === state).length;
                                       return (
                                         <button
                                           key={state}
                                           onClick={() => { setDraftFilter(state); setShowDraftFilter(false); }}
-                                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                                          className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                                             draftFilter === state
-                                              ? "bg-surgical-navy text-white"
-                                              : "text-slate-500 hover:bg-slate-50"
+                                              ? "bg-slate-900 text-white"
+                                              : "text-slate-600 hover:bg-slate-50"
                                           }`}
                                         >
-                                          {state.replace(/_/g, " ")}
-                                          <span className="ml-auto text-[9px] font-bold opacity-60">{count}</span>
+                                          {labelForFilter(state)}
+                                          <span className="ml-auto text-xs opacity-60">{count}</span>
                                         </button>
                                       );
                                     })}
@@ -935,28 +1082,28 @@ const CampaignWorkspace = () => {
                             <button
                               onClick={handleDispatchAll}
                               disabled={isDispatchingAll}
-                              className="flex items-center gap-2 px-5 py-2.5 bg-surgical-navy hover:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md shadow-surgical-navy/20 disabled:opacity-50 active:scale-95"
+                              className="flex items-center gap-2 px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 active:scale-[0.98]"
                             >
-                              {isDispatchingAll ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
-                              Dispatch All
+                              {isDispatchingAll ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                              Send All
                             </button>
                           </div>
                         </div>
 
                         {/* ── Draft card grid ── */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                           {visibleDrafts.length === 0 ? (
-                            <div className="col-span-full bg-white rounded-[32px] border border-surgical-border p-20 text-center flex flex-col items-center gap-4">
-                              <Mail size={48} className="text-slate-200" strokeWidth={1} />
-                              <p className="text-sm font-black text-slate-400 uppercase tracking-widest italic">
+                            <div className="col-span-full bg-white rounded-2xl border border-slate-200 p-16 text-center flex flex-col items-center gap-3">
+                              <Mail size={40} className="text-slate-300" strokeWidth={1.5} />
+                              <p className="text-sm text-slate-400">
                                 {draftFilter
-                                  ? `No drafts with status "${draftFilter.replace(/_/g, " ")}".`
-                                  : "No pending outreach protocols drafted."}
+                                  ? `No drafts with status "${labelForFilter(draftFilter)}".`
+                                  : "No pending drafts right now."}
                               </p>
                               {draftFilter && (
                                 <button
                                   onClick={() => setDraftFilter(null)}
-                                  className="text-[10px] font-black text-indigo-500 underline uppercase tracking-widest"
+                                  className="text-sm text-indigo-600 hover:underline font-medium"
                                 >
                                   Clear filter
                                 </button>
@@ -966,10 +1113,16 @@ const CampaignWorkspace = () => {
                             visibleDrafts.map((draft) => {
                               const dm = campaign.dms?.find(d => d.id === draft.decision_maker_id);
                               const co = campaign.target_companies?.find(c => c.id === dm?.target_company_id);
-                              const dmState = dm?.state || dm?.status || "DRAFTED";
 
                               // A draft is "locked" once it has been queued for scheduled dispatch
                               const isScheduled = draft.dispatch_state === "QUEUED" && !!draft.scheduled_at;
+
+                              // Every card here is itself a pending DRAFTED draft, so use it directly
+                              // rather than dm.state (which the backend leaves stale — see getFriendlyStatus).
+                              const status = getFriendlyStatus(
+                                isScheduled ? "DISPATCH_SCHEDULED" : "DRAFTED",
+                                draft
+                              );
 
                               // Format the scheduled time for display on the card
                               const scheduledDisplay = (() => {
@@ -993,60 +1146,47 @@ const CampaignWorkspace = () => {
                                   layout
                                   initial={{ opacity: 0, scale: 0.95 }}
                                   animate={{ opacity: 1, scale: 1 }}
-                                  className={`bg-white rounded-[28px] border p-6 shadow-sm transition-all flex flex-col justify-between ${
-                                    isScheduled
-                                      ? "border-blue-100 bg-blue-50/20"
-                                      : "border-surgical-border hover:shadow-xl hover:shadow-surgical-navy/5"
-                                  }`}
+                                  className="bg-white rounded-2xl border border-slate-200 p-5 transition-shadow hover:shadow-sm flex flex-col justify-between"
                                 >
-                                  <div className="space-y-4">
-                                    {/* Card header: avatar + name + STATUS BADGE */}
-                                    <div className="flex items-start justify-between gap-3">
+                                  <div className="space-y-3">
+                                    {/* Card header: avatar + name, status badge on its own row */}
+                                    <div className="space-y-2">
                                       <div className="flex items-center gap-3 min-w-0">
-                                        <div className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center font-black text-xs border ${
-                                          isScheduled
-                                            ? "bg-blue-50 text-blue-600 border-blue-100"
-                                            : "bg-red-50 text-red-600 border-red-100"
-                                        }`}>
+                                        <div className="w-9 h-9 shrink-0 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center font-semibold text-xs">
                                           {(dm?.name || "P").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
                                         </div>
-                                        <div className="min-w-0">
-                                          <p className="text-xs font-black text-slate-900 uppercase tracking-tight truncate">{dm?.name}</p>
-                                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">{co?.name}</p>
+                                        <div className="min-w-0 flex-1">
+                                          <p className="text-sm font-medium text-slate-900 truncate">{dm?.name}</p>
+                                          <p className="text-xs text-slate-400 truncate">{co?.name}</p>
                                         </div>
                                       </div>
 
-                                      {/* Status badge — "DISPATCH SCHEDULED" overrides prospect state */}
-                                      {isScheduled ? (
-                                        <span className="shrink-0 px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest border bg-blue-50 text-blue-600 border-blue-200 whitespace-nowrap">
-                                          Dispatch Scheduled
-                                        </span>
-                                      ) : (
-                                        statusBadge(dmState)
-                                      )}
+                                      <span className={`inline-flex w-fit max-w-full px-2 py-1 rounded-full text-xs font-medium border ${status.cls}`}>
+                                        {status.label}
+                                      </span>
                                     </div>
 
                                     {/* Scheduled time line */}
                                     {isScheduled && scheduledDisplay && (
-                                      <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-xl">
-                                        <Clock size={11} className="text-blue-400 shrink-0" />
-                                        <p className="text-[10px] font-bold text-blue-600 truncate">
+                                      <div className="flex items-center gap-2 px-3 py-2 bg-blue-50 rounded-lg">
+                                        <Clock size={12} className="text-blue-500 shrink-0" />
+                                        <p className="text-xs text-blue-700 truncate">
                                           {scheduledDisplay}
                                         </p>
                                       </div>
                                     )}
 
-                                    <div className="space-y-2">
-                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-1">Subject</p>
-                                      <p className="text-xs font-bold text-slate-800 line-clamp-1 italic">{draft.subject}</p>
-                                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-1 mt-3">Message Snippet</p>
-                                      <p className="text-[11px] font-medium text-slate-500 line-clamp-3 leading-relaxed">
+                                    <div className="space-y-1.5">
+                                      <p className="text-xs font-medium text-slate-400">Subject</p>
+                                      <p className="text-sm text-slate-800 line-clamp-1">{draft.subject}</p>
+                                      <p className="text-xs font-medium text-slate-400 mt-2">Message</p>
+                                      <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed">
                                         {draft.body.replace(/<[^>]*>/g, '').slice(0, 150)}...
                                       </p>
                                     </div>
                                   </div>
 
-                                  <div className="flex items-center gap-3 mt-8">
+                                  <div className="flex items-center gap-2 mt-5">
                                     <button
                                       onClick={() => {
                                         if (isScheduled) return;
@@ -1054,17 +1194,17 @@ const CampaignWorkspace = () => {
                                         setSelectedDraft(draft);
                                       }}
                                       disabled={isScheduled}
-                                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+                                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                     >
-                                      <Edit3 size={14} /> Refine
+                                      <Edit3 size={13} /> Edit
                                     </button>
                                     <button
                                       onClick={() => { if (!isScheduled) handleSendMessage(draft.id, dm?.name, dm?.email); }}
                                       disabled={isScheduled || sendingId === draft.id}
-                                      className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-surgical-navy hover:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md shadow-surgical-navy/20 disabled:opacity-40 disabled:cursor-not-allowed"
+                                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                                     >
-                                      {sendingId === draft.id ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                                      {isScheduled ? "Queued" : "Deploy"}
+                                      {sendingId === draft.id ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                                      {isScheduled ? "Queued" : "Send"}
                                     </button>
                                   </div>
                                 </motion.div>
@@ -1314,235 +1454,7 @@ const CampaignWorkspace = () => {
       </div>
 
       {/* Company Intel Modal */}
-      <AnimatePresence>
-        {selectedCompany && (() => {
-          const co         = selectedCompany;
-          const score      = co.relevance_score || 0;
-          const isRejected = co.status === "REJECTED";
-          const meddpicc   = co.v2_intel?.meddpicc || {};
-          const _PH        = new Set(["none evidenced","none stated","none","n/a","not stated","no pain signals","no signals","not applicable","unknown","needs discovery","unclear — no evidenced need","unclear"]);
-          const clean      = (arr) => (arr || []).filter(v => v && !_PH.has(String(v).trim().toLowerCase()));
-          const cleanPains = clean(co.matched_pains);
-          const cleanSvcs  = clean(co.matched_services);
-          const cleanHooks = clean([...(co.pain_hooks || []), ...(co.growth_hooks || []), ...(co.news_hooks || [])]);
-          const disco      = Array.isArray(meddpicc.discovery_checklist) ? meddpicc.discovery_checklist : [];
-          const initials   = (co.name || "C").split(" ").filter(Boolean).map(w => w[0]).join("").toUpperCase().slice(0, 2);
-          const scoreClr   = score >= 70 ? "text-emerald-600" : score >= 45 ? "text-amber-500" : "text-rose-500";
-
-          const Label = ({ children }) => (
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">{children}</p>
-          );
-          const Card = ({ title, children }) => (
-            <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-2">
-              <Label>{title}</Label>
-              {children}
-            </div>
-          );
-
-          return (
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 md:p-16">
-              <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                onClick={() => setSelectedCompany(null)}
-                className="absolute inset-0 bg-black/40"
-              />
-              <motion.div
-                initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }}
-                transition={{ duration: 0.18 }}
-                className="relative w-full max-w-4xl bg-white rounded-2xl shadow-xl z-10 flex overflow-hidden"
-                style={{ maxHeight: "85vh" }}
-              >
-                {/* Close */}
-                <button
-                  onClick={() => setSelectedCompany(null)}
-                  className="absolute top-4 right-4 z-20 w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
-                >
-                  <X size={18} />
-                </button>
-
-                {/* ── LEFT SIDEBAR ── */}
-                <div className="w-[258px] shrink-0 border-r border-slate-100 flex flex-col overflow-y-auto custom-scrollbar bg-slate-50/50">
-                  <div className="p-6 space-y-5">
-                    {/* Avatar + name */}
-                    <div className="flex flex-col gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-xl bg-slate-200 text-slate-600 flex items-center justify-center font-bold text-base select-none shrink-0">
-                          {initials}
-                        </div>
-                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide border ${isRejected ? "bg-rose-50 text-rose-600 border-rose-100" : "bg-emerald-50 text-emerald-700 border-emerald-100"}`}>
-                          {isRejected ? "Disqualified" : "Qualified"}
-                        </span>
-                      </div>
-                      <h2 className="text-base font-bold text-slate-900 leading-snug">{co.name}</h2>
-                    </div>
-
-                    {/* Score */}
-                    <div className="flex items-center justify-between py-3 border-t border-b border-slate-200">
-                      <span className="text-xs text-slate-500 font-medium">Alignment Score</span>
-                      <span className={`text-lg font-black ${scoreClr}`}>{score}%</span>
-                    </div>
-
-                    {/* Links */}
-                    <div className="flex flex-col gap-2">
-                      {co.website && (
-                        <a href={ensureAbsoluteUrl(co.website)} target="_blank" rel="noreferrer"
-                          className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-600 hover:text-slate-900 transition-colors">
-                          <Globe size={13} className="shrink-0" />
-                          Visit Website
-                        </a>
-                      )}
-                      {co.linkedin && (
-                        <a href={ensureAbsoluteUrl(co.linkedin)} target="_blank" rel="noreferrer"
-                          className="flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-[#0077b5] hover:bg-[#006bb0] text-xs font-semibold text-white transition-colors">
-                          <Linkedin size={13} className="shrink-0" />
-                          LinkedIn Profile
-                        </a>
-                      )}
-                      {co.contact_email && (
-                        <a href={`mailto:${co.contact_email}`}
-                          className="flex items-center gap-2 text-xs text-slate-500 hover:text-slate-900 font-medium transition-colors truncate">
-                          <Mail size={13} className="shrink-0 text-slate-400" />
-                          <span className="truncate">{co.contact_email}</span>
-                        </a>
-                      )}
-                      {co.contact_number && (
-                        <div className="flex items-center gap-2 text-xs text-slate-500 font-medium">
-                          <PhoneCall size={13} className="shrink-0 text-slate-400" />
-                          {co.contact_number}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Firmographics */}
-                    {(co.location || co.company_type || co.employee_count || co.revenue_range) && (
-                      <div className="space-y-3 pt-1 border-t border-slate-200">
-                        {[
-                          { label: "Location",  value: co.location },
-                          { label: "Vertical",  value: co.company_type },
-                          { label: "Headcount", value: co.employee_count },
-                          { label: "Revenue",   value: co.revenue_range },
-                        ].filter(r => r.value).map(({ label, value }) => (
-                          <div key={label}>
-                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">{label}</p>
-                            <p className="text-xs font-semibold text-slate-700 mt-0.5">{value}</p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-
-                    {/* Buyer Roles */}
-                    {(meddpicc.economic_buyer || meddpicc.champion) && (
-                      <div className="space-y-3 pt-1 border-t border-slate-200">
-                        {meddpicc.economic_buyer && (
-                          <div>
-                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Economic Buyer</p>
-                            <p className="text-xs font-semibold text-slate-700 mt-0.5">{meddpicc.economic_buyer}</p>
-                          </div>
-                        )}
-                        {meddpicc.champion && (
-                          <div>
-                            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Champion</p>
-                            <p className="text-xs font-semibold text-slate-700 mt-0.5">{meddpicc.champion}</p>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* ── RIGHT CONTENT ── */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar">
-                  <div className="p-8 space-y-7">
-
-                    {/* ICP reasoning — top */}
-                    {co.relevance_explanation && (
-                      <Card title="ICP Reasoning">
-                        <p className="text-sm text-slate-500 font-medium leading-relaxed italic">"{co.relevance_explanation}"</p>
-                      </Card>
-                    )}
-
-                    {/* Rejection reason */}
-                    {isRejected && co.rejection_reason && (
-                      <div className="flex gap-3 p-4 bg-rose-50 border border-rose-100 rounded-xl">
-                        <AlertCircle size={15} className="text-rose-400 shrink-0 mt-0.5" />
-                        <div>
-                          <Label>Disqualification Reason</Label>
-                          <p className="text-sm text-rose-700 font-medium leading-relaxed">{co.rejection_reason}</p>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Opportunity signal */}
-                    {co.opportunity_reason && (
-                      <Card title="Opportunity Signal">
-                        <p className="text-sm text-slate-600 font-medium leading-relaxed italic">"{co.opportunity_reason}"</p>
-                      </Card>
-                    )}
-
-                    {/* Research summary */}
-                    <Card title="Company Overview">
-                      <p className="text-sm text-slate-600 font-medium leading-relaxed whitespace-pre-wrap">
-                        {co.research_summary || co.deep_research || "No research data available."}
-                      </p>
-                    </Card>
-
-                    {/* Pain signals */}
-                    {cleanHooks.length > 0 && (
-                      <Card title="Signals & Challenges">
-                        <ul className="space-y-2">
-                          {cleanHooks.map((h, i) => (
-                            <li key={i} className="flex items-start gap-2.5 text-sm text-slate-600 font-medium leading-relaxed">
-                              <span className="w-1 h-1 rounded-full bg-slate-400 mt-2 shrink-0" />
-                              {h}
-                            </li>
-                          ))}
-                        </ul>
-                      </Card>
-                    )}
-
-                    {/* Pain points */}
-                    {cleanPains.length > 0 && (
-                      <Card title="Validated Pain Points">
-                        <div className="flex flex-wrap gap-2">
-                          {cleanPains.map((p, i) => (
-                            <span key={i} className="px-3 py-1 bg-rose-50 text-rose-600 border border-rose-100 rounded-lg text-xs font-semibold">{p}</span>
-                          ))}
-                        </div>
-                      </Card>
-                    )}
-
-                    {/* Service alignment */}
-                    {cleanSvcs.length > 0 && (
-                      <Card title="Service Alignment">
-                        <div className="flex flex-wrap gap-2">
-                          {cleanSvcs.map((s, i) => (
-                            <span key={i} className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg text-xs font-semibold">{s}</span>
-                          ))}
-                        </div>
-                      </Card>
-                    )}
-
-                    {/* Value metrics */}
-                    {meddpicc.metrics && !_PH.has(String(meddpicc.metrics).trim().toLowerCase()) && (
-                      <Card title="Value Metrics">
-                        <p className="text-sm text-slate-600 font-medium leading-relaxed">{meddpicc.metrics}</p>
-                      </Card>
-                    )}
-
-                    {/* Evidence of need */}
-                    {meddpicc.need_evidence && !_PH.has(String(meddpicc.need_evidence).trim().toLowerCase()) && (
-                      <Card title="Evidence of Need">
-                        <p className="text-sm text-slate-600 font-medium leading-relaxed">{meddpicc.need_evidence}</p>
-                      </Card>
-                    )}
-
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          );
-        })()}
-      </AnimatePresence>
+      <CompanyDetailModal company={selectedCompany} onClose={() => setSelectedCompany(null)} />
 
       {/* Engagement Protocol Modal */}
       <DraftEditorModal
@@ -1566,104 +1478,97 @@ const CampaignWorkspace = () => {
       <AnimatePresence>
         {showHistoryDM && (
           <div className="fixed inset-0 z-[150] flex justify-end">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowHistoryDM(null)}
-              className="absolute inset-0 bg-slate-900/50 backdrop-blur-md"
+              className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
             />
-            <motion.div 
+            <motion.div
               initial={{ x: "100%" }}
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 200 }}
-              className="relative w-full max-w-xl bg-white h-full shadow-2xl flex flex-col border-l border-slate-100"
+              transition={{ type: "spring", damping: 28, stiffness: 260 }}
+              className="relative w-full max-w-md bg-white h-full shadow-xl flex flex-col border-l border-slate-200"
             >
-              <div className="p-6 md:p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/40 select-none">
-                <div className="flex items-center gap-4">
-                  <div className="w-11 h-11 bg-red-50 text-red-600 border border-red-100 rounded-xl flex items-center justify-center shadow-sm shrink-0">
-                    <MessageSquare size={20} strokeWidth={2.5} />
-                  </div>
-                  <div>
-                    <h3 className="text-lg md:text-xl font-extrabold text-slate-900 uppercase italic tracking-tight leading-tight">Mission Engagement Chain</h3>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none pt-1">
-                      {showHistoryDM.name} • {campaign.target_companies.find(c => c.id === showHistoryDM.target_company_id)?.name}
-                    </p>
-                  </div>
+              <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between shrink-0">
+                <div className="min-w-0">
+                  <h3 className="text-base font-semibold text-slate-900">History</h3>
+                  <p className="text-sm text-slate-500 truncate">
+                    {showHistoryDM.name} · {campaign.target_companies.find(c => c.id === showHistoryDM.target_company_id)?.name}
+                  </p>
                 </div>
-                <button 
-                  onClick={() => setShowHistoryDM(null)} 
-                  className="w-10 h-10 hover:bg-slate-100 rounded-xl text-slate-400 hover:text-slate-900 transition-colors flex items-center justify-center border border-slate-100/60 shadow-sm"
+                <button
+                  onClick={() => setShowHistoryDM(null)}
+                  className="w-8 h-8 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-slate-700 transition-colors flex items-center justify-center shrink-0"
                 >
-                  <X size={18} strokeWidth={2.5} />
+                  <X size={16} />
                 </button>
               </div>
 
-              <div className="flex-grow overflow-y-auto p-6 md:p-8 space-y-8 bg-slate-50/20 relative">
+              <div className="flex-grow overflow-y-auto p-6 space-y-6 relative">
                 {/* Visual Connection Line */}
-                <div className="absolute left-[42px] md:left-[50px] top-12 bottom-12 w-[2px] bg-slate-100 z-0" />
-                
+                <div className="absolute left-[33px] top-8 bottom-8 w-px bg-slate-100 z-0" />
+
                 {getUnifiedHistory(showHistoryDM).map((event, idx) => {
                   const Icon = event.icon;
                   const isExpanded = expandedNodes.includes(event.type + idx);
-                  
+
                   return (
-                    <div key={idx} className="relative flex gap-5 md:gap-6 z-10">
-                      <div className={`w-9 h-9 rounded-xl border-2 flex items-center justify-center shadow-sm shrink-0 ${event.color}`}>
-                        <Icon size={16} strokeWidth={2.5} />
+                    <div key={idx} className="relative flex gap-4 z-10">
+                      <div className={`w-8 h-8 rounded-lg border flex items-center justify-center shrink-0 ${event.color}`}>
+                        <Icon size={14} />
                       </div>
-                      
-                      <div 
+
+                      <div
                         onClick={() => toggleNodeExpansion(event.type + idx)}
-                        className="bg-white p-5 rounded-2xl border border-slate-100/80 shadow-sm flex-grow cursor-pointer hover:bg-slate-50/30 transition-all"
+                        className="bg-white p-4 rounded-xl border border-slate-200 flex-grow cursor-pointer hover:bg-slate-50 transition-colors"
                       >
-                        <div className="flex items-center justify-between mb-2">
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">
-                            {event.label} • {formatTimeAgo(event.timestamp)}
-                          </p>
-                          {event.content.id && (
-                            <div className="p-1 px-1.5 rounded bg-slate-50 border border-slate-100 text-[8px] font-bold text-slate-400 uppercase tracking-tighter">
-                              Sync ID: #{String(event.content.id).slice(-4)}
-                            </div>
-                          )}
-                        </div>
-                        
-                        <p className="text-xs font-extrabold text-slate-800 uppercase italic tracking-tight mb-2">
-                          {event.type === "PROSPECT_IDENTIFIED" 
-                            ? `${event.title} (Score: ${event.content.score}/100)` 
-                            : event.type === "EMAIL_DRAFTED"
-                              ? `Subject: ${event.content.subject}`
-                              : `Subject: ${event.content.subject}`
+                        <p className="text-xs text-slate-400 mb-1.5">
+                          {event.label} · {formatTimeAgo(event.timestamp)}
+                        </p>
+
+                        <p className="text-sm font-medium text-slate-900 mb-1.5">
+                          {event.type === "PROSPECT_IDENTIFIED"
+                            ? `${event.title} (Score: ${event.content.score}/100)`
+                            : `Subject: ${event.content.subject}`
                           }
                         </p>
-                        
-                        <div className={`text-sm leading-relaxed text-slate-600 font-medium ${isExpanded ? '' : 'line-clamp-3'}`}>
+
+                        <div className={`text-sm leading-relaxed text-slate-600 ${isExpanded ? '' : 'line-clamp-3'}`}>
                           {event.type === "PROSPECT_IDENTIFIED" ? (
-                            <p className="italic">"{event.content.reason}"</p>
+                            <p>"{event.content.reason}"</p>
                           ) : (
-                            <p className="whitespace-pre-wrap italic bg-slate-50/50 p-3 rounded-lg border border-slate-100/50">
+                            <p className="whitespace-pre-wrap bg-slate-50 p-3 rounded-lg">
                               {cleanEmailReply(event.content.body)}
                             </p>
                           )}
                         </div>
-                        
+
                         {event.type === "EMAIL_DRAFTED" && (
                           <div className="mt-3 flex items-center justify-between">
-                            <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-widest ${
-                              event.content.isApproved ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700"
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
+                              event.content.isApproved ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"
                             }`}>
-                              {event.content.isApproved ? "Approved" : "Awaiting Approval"}
+                              {event.content.isApproved ? "Approved" : "Awaiting approval"}
                             </span>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
+                                const dm = showHistoryDM;
+                                const targetDraft = (campaign.drafts || []).find(
+                                  d => String(d.decision_maker_id) === String(dm.id) && d.status === "DRAFTED"
+                                );
+                                if (targetDraft) {
+                                  setDraftEditData({ subject: targetDraft.subject, body: targetDraft.body, email: dm.email || "" });
+                                  setSelectedDraft(targetDraft);
+                                }
                                 setShowHistoryDM(null);
-                                scrollToDraft(showHistoryDM.id);
                               }}
-                              className="text-[9px] font-black text-surgical-navy hover:underline uppercase tracking-wider"
+                              className="text-sm font-medium text-indigo-600 hover:underline"
                             >
-                              Go to draft Editor →
+                              Go to draft →
                             </button>
                           </div>
                         )}

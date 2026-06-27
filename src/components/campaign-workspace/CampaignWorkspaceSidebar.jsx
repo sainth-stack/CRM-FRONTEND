@@ -12,6 +12,9 @@ import {
   ArrowLeft,
   ChevronDown,
   Activity,
+  Building2,
+  Layers,
+  BarChart2,
   PanelLeftClose,
   PanelLeftOpen,
   X,
@@ -27,12 +30,23 @@ const navTabs = [
   { id: "history", label: "Discovery", icon: PhoneCall },
 ];
 
+const dashboardSubTabs = [
+  { id: "DASHBOARD", label: "Companies", icon: Building2 },
+  { id: "PIPELINE", label: "Prospects", icon: Layers },
+  { id: "ANALYSIS", label: "Analysis", icon: BarChart2 },
+];
+
 const researchSubTabs = [
   { id: "mission_briefing", label: "Briefing", icon: FileBarChart },
   { id: "lead_pipeline", label: "Targets", icon: Target },
   { id: "stakeholder_intel", label: "Contacts", icon: Users },
   { id: "outreach_protocol", label: "Drafts", icon: Send },
   { id: "rejected_artifacts", label: "Disqualified", icon: Trash },
+];
+
+const monitorSubTabs = [
+  { id: "monitor", label: "Monitor", icon: Activity },
+  { id: "drafts", label: "Drafts Outreach", icon: Mail },
 ];
 
 const navItemClass = (active) =>
@@ -59,10 +73,18 @@ export function CampaignWorkspaceSidebar({
   campaignName,
   activeTab,
   setActiveTab,
+  dashboardSubTab,
+  setDashboardSubTab,
+  dashboardExpanded,
+  setDashboardExpanded,
   researchTab,
   setResearchTab,
   researchExpanded,
   setResearchExpanded,
+  monitorSubTab,
+  setMonitorSubTab,
+  monitorExpanded,
+  setMonitorExpanded,
   collapsed,
   onToggleCollapse,
   lifecycleStatus,
@@ -73,25 +95,49 @@ export function CampaignWorkspaceSidebar({
   const displayName = user?.full_name || user?.email?.split("@")[0] || "Guest";
   const initials = displayName.slice(0, 2).toUpperCase();
 
+  const expandableConfig = {
+    dashboard: {
+      subTabs: dashboardSubTabs,
+      subTab: dashboardSubTab,
+      setSubTab: setDashboardSubTab,
+      expanded: dashboardExpanded,
+      setExpanded: setDashboardExpanded,
+    },
+    research: {
+      subTabs: researchSubTabs,
+      subTab: researchTab,
+      setSubTab: setResearchTab,
+      expanded: researchExpanded,
+      setExpanded: setResearchExpanded,
+    },
+    monitor: {
+      subTabs: monitorSubTabs,
+      subTab: monitorSubTab,
+      setSubTab: setMonitorSubTab,
+      expanded: monitorExpanded,
+      setExpanded: setMonitorExpanded,
+    },
+  };
+
   const handleTabSelect = (tabId) => {
     setActiveTab(tabId);
     onNavClose?.();
   };
 
-  const handleSubTabSelect = (subId) => {
-    setActiveTab("research");
-    setResearchExpanded(true);
-    setResearchTab(subId);
+  const handleSubTabSelect = (tabId, subId, cfg) => {
+    setActiveTab(tabId);
+    cfg.setExpanded(true);
+    cfg.setSubTab(subId);
     onNavClose?.();
   };
 
-  const toggleResearchExpand = (e) => {
+  const toggleExpand = (e, tabId, cfg) => {
     e.stopPropagation();
-    if (activeTab === "research" && researchExpanded) {
-      setResearchExpanded(false);
+    if (activeTab === tabId && cfg.expanded) {
+      cfg.setExpanded(false);
     } else {
-      setActiveTab("research");
-      setResearchExpanded(true);
+      setActiveTab(tabId);
+      cfg.setExpanded(true);
     }
     onNavClose?.();
   };
@@ -201,16 +247,16 @@ export function CampaignWorkspaceSidebar({
       <nav className="flex-1 min-h-0 space-y-1 overflow-y-auto px-2 py-3 no-scrollbar">
         {navTabs.map((t) => {
           const active = activeTab === t.id;
-          const isResearch = t.id === "research";
+          const cfg = expandableConfig[t.id];
 
-          if (isResearch) {
+          if (cfg) {
             return (
               <div key={t.id}>
                 <button
                   type="button"
                   onClick={() => {
-                    setActiveTab("research");
-                    setResearchExpanded(true);
+                    setActiveTab(t.id);
+                    cfg.setExpanded(true);
                     onNavClose?.();
                   }}
                   className={navItemClass(active)}
@@ -224,20 +270,20 @@ export function CampaignWorkspaceSidebar({
                     <span
                       role="button"
                       tabIndex={0}
-                      onClick={toggleResearchExpand}
+                      onClick={(e) => toggleExpand(e, t.id, cfg)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          toggleResearchExpand(e);
+                          toggleExpand(e, t.id, cfg);
                         }
                       }}
                       className="rounded-md p-1 text-zinc-500 transition-colors hover:bg-zinc-800/50 hover:text-zinc-200"
-                      aria-label={researchExpanded ? "Collapse sections" : "Expand sections"}
+                      aria-label={cfg.expanded ? "Collapse sections" : "Expand sections"}
                     >
                       <ChevronDown
                         className={cn(
                           "h-4 w-4 transition-transform duration-300 ease-out",
-                          active && researchExpanded
+                          active && cfg.expanded
                             ? "rotate-0 text-[#00f0ff]"
                             : "-rotate-90 text-zinc-500 group-hover:text-zinc-300"
                         )}
@@ -250,18 +296,18 @@ export function CampaignWorkspaceSidebar({
                   <div
                     className={cn(
                       "grid transition-[grid-template-rows,opacity] duration-300 ease-out",
-                      active && researchExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+                      active && cfg.expanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
                     )}
                   >
                     <div className="overflow-hidden">
                       <div className="ml-4 mt-1 space-y-0.5 border-l border-zinc-800/70 pl-2 pb-1">
-                        {researchSubTabs.map((sub) => {
-                          const subActive = researchTab === sub.id;
+                        {cfg.subTabs.map((sub) => {
+                          const subActive = cfg.subTab === sub.id;
                           return (
                             <button
                               key={sub.id}
                               type="button"
-                              onClick={() => handleSubTabSelect(sub.id)}
+                              onClick={() => handleSubTabSelect(t.id, sub.id, cfg)}
                               className={navItemClass(subActive)}
                               style={{ padding: "8px 12px" }}
                             >
