@@ -46,7 +46,7 @@ export default function UserRoles() {
   // Edit modal — separate state from the Add modal so the two flows don't trample.
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [editForm, setEditForm] = useState({ system_role: "user", organization_id: "", is_active: true });
+  const [editForm, setEditForm] = useState({ system_role: "user", tenant_id: "", organization_id: "", is_active: true });
   const [updating, setUpdating] = useState(false);
 
   const loadUsers = useCallback(async () => {
@@ -148,17 +148,18 @@ export default function UserRoles() {
     setEditingUser(member);
     setEditForm({
       system_role: member.system_role || "user",
+      tenant_id: member.tenant?.tenant_id || "",
       organization_id: member.organization?.organization_id || "",
       is_active: member.is_active !== false,
     });
     setEditDialogOpen(true);
   };
 
-  // Org options for the editing user — scoped to that user's tenant (admins only
+  // Org options for the editing user — scoped to the selected tenant (admins only
   // see their own tenant's orgs anyway, but this guards super admins too).
-  const editingUserTenantId = editingUser?.tenant?.tenant_id || null;
+  const editFormTenantId = editForm.tenant_id || null;
   const orgsForEditingUser = orgs.filter(
-    (o) => !editingUserTenantId || o.tenant?.tenant_id === editingUserTenantId,
+    (o) => !editFormTenantId || o.tenant?.tenant_id === editFormTenantId,
   );
 
   const handleUpdate = async (e) => {
@@ -392,18 +393,40 @@ export default function UserRoles() {
             ))}
           </AdminSelect>
 
-          {/* Organization — scoped to the user's own tenant; backend rejects cross-tenant moves. */}
-          <AdminSelect
-            label="Organization"
-            value={editForm.organization_id}
-            onChange={(e) => setEditForm({ ...editForm, organization_id: e.target.value })}
-            required
-          >
-            <option value="">Select organization</option>
-            {orgsForEditingUser.map((o) => (
-              <option key={o.id} value={o.id}>{o.name}</option>
-            ))}
-          </AdminSelect>
+          {/* Tenant — super admins choose to reassign user's tenant. */}
+          {superAdmin && (
+            <AdminSelect
+              label="Tenant"
+              value={editForm.tenant_id}
+              onChange={(e) => setEditForm({ ...editForm, tenant_id: e.target.value, organization_id: "" })}
+            >
+              <option value="">Select tenant</option>
+              {tenants.map((t) => (
+                <option key={t.id} value={t.id}>{t.name}</option>
+              ))}
+            </AdminSelect>
+          )}
+
+          {/* Organization — scoped to the selected tenant. */}
+          <div>
+            <AdminSelect
+              label="Organization"
+              value={editForm.organization_id}
+              onChange={(e) => setEditForm({ ...editForm, organization_id: e.target.value })}
+              required
+              disabled={superAdmin && !editForm.tenant_id}
+            >
+              <option value="">Select organization</option>
+              {orgsForEditingUser.map((o) => (
+                <option key={o.id} value={o.id}>{o.name}</option>
+              ))}
+            </AdminSelect>
+            {superAdmin && !editForm.tenant_id && (
+              <p className="mt-1.5 text-sm font-medium text-red-600">
+                ⚠ Select a tenant first to choose an organization.
+              </p>
+            )}
+          </div>
 
           {/* Status — disable/re-enable the account. Disabling also revokes sessions server-side. */}
           <label className="flex items-center gap-2 text-sm font-medium text-slate-700">

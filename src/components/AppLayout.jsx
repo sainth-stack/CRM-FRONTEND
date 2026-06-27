@@ -8,10 +8,19 @@ function LayoutInner() {
   const { collapsed } = useSidebarState();
   const location = useLocation();
   const isCampaignWorkspace = location.pathname.startsWith("/campaign");
+  const isCampaignWorkspacePage = isCampaignWorkspace && !location.pathname.includes("/prospect/");
   const sidebarWidth = collapsed ? 56 : 240;
 
+  if (isCampaignWorkspacePage) {
+    return (
+      <div className="flex w-full bg-background h-screen overflow-hidden">
+        <Outlet />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex min-h-screen w-full bg-background">
+    <div className={cn("flex w-full bg-background", isCampaignWorkspacePage ? "h-screen overflow-hidden" : "min-h-screen")}>
       {!isCampaignWorkspace && <AppSidebar />}
       <div
         className="flex flex-1 flex-col min-h-0 transition-all duration-200"

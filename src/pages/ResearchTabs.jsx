@@ -63,19 +63,15 @@ const ResearchTabs = ({
                 <h2 className="text-2xl md:text-3xl font-bold text-slate-900 break-words">
                   {campaign.user_intel?.company_name || "Company Profile"}
                 </h2>
-                <p className="text-sm text-slate-400 font-medium">
+                <p className="text-sm text-muted-foreground">
                   Analytical identity breakdown and strategic market posture
                 </p>
               </div>
-
               <ExportButton onClick={() => handleExport("mission-briefing", "md")} />
             </div>
-            
-            {/* Validated campaign inputs — sourced from the Stage-1 input-validation
-                agent (corrected industry/location), falling back to raw input only
-                when no validated value exists. Employee size is not processed by the
-                agent, so the campaign value is shown directly. */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5">
+
+            {/* Target Parameters Row */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
               {[
                 {
                   label: "Target Industry",
@@ -95,102 +91,106 @@ const ResearchTabs = ({
                     "N/A",
                   Icon: Globe,
                   tint: "text-blue-500",
-                  bg: "bg-blue-500/10",
+                  bg: "bg-blue-50",
                 },
                 {
                   label: "Employee Size",
                   value: campaign.target_employee_count || "Any size",
                   Icon: Users,
                   tint: "text-emerald-500",
-                  bg: "bg-emerald-500/10",
+                  bg: "bg-emerald-50",
                 },
               ].map(({ label, value, Icon, tint, bg }) => (
                 <div
                   key={label}
-                  className="bg-white rounded-[24px] border border-slate-200 p-6 shadow-sm flex items-center gap-4"
+                  className="bg-card rounded-lg border shadow-sm px-6 py-6 flex items-center gap-4"
                 >
-                  <div className={`w-12 h-12 rounded-2xl ${bg} flex items-center justify-center ${tint} shrink-0`}>
+                  <div className={`w-12 h-12 rounded-lg ${bg} flex items-center justify-center ${tint} shrink-0`}>
                     <Icon size={22} />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
-                    <p className="text-sm font-bold text-slate-700 break-words">{value}</p>
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest leading-none mb-1.5">{label}</p>
+                    <p className="text-base font-bold text-slate-900 truncate">{value}</p>
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Strategic Intent (Prompt) — full-width card (grows with content up to
-                2000 chars), mirroring the Company Intelligence Summary layout. */}
-            <div className="bg-white rounded-[24px] border border-slate-200 p-8 shadow-sm flex flex-col">
-              <div className="flex items-center gap-2.5 mb-5">
-                <Target className="text-slate-400" size={18} />
-                <h3 className="text-base font-bold text-slate-900">Strategic Intent (Prompt)</h3>
+            {/* Strategic Intent — full width */}
+            <div className="bg-card rounded-lg border shadow-sm overflow-hidden">
+              <div className="flex items-center gap-2 px-6 pt-5 pb-3 border-b">
+                <Target className="text-muted-foreground shrink-0" size={15} />
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Strategic Intent</h3>
               </div>
-              <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap font-medium flex-1">
-                {campaign.input_validation_review?.prompt?.enhanced || campaign.prompt || "N/A"}
-              </p>
+              <div className="px-6 py-5">
+                <p className="text-sm leading-7 whitespace-pre-wrap">
+                  {campaign.input_validation_review?.prompt?.enhanced || campaign.prompt || "N/A"}
+                </p>
+              </div>
             </div>
 
-            {/* Card 1: Company Summary - Full Width Row */}
-            <div className="bg-white rounded-[24px] border border-slate-200 p-8 shadow-sm flex flex-col">
-              <div className="flex items-center gap-2.5 mb-5">
-                <PieChart className="text-slate-400" size={18} />
-                <h3 className="text-base font-bold text-slate-900">Company Intelligence Summary</h3>
+            {/* Company Intelligence Summary — full width */}
+            <div className="bg-card rounded-lg border shadow-sm overflow-hidden">
+              <div className="flex items-center gap-2 px-6 pt-5 pb-3 border-b">
+                <PieChart className="text-muted-foreground shrink-0" size={15} />
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Company Intelligence Summary</h3>
               </div>
-              <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap font-medium flex-1">
-                {campaign.user_intel?.company_summary || campaign.user_intel?.deep_research || "Conducting corporate intelligence logs..."}
-              </p>
+              <div className="px-6 py-5">
+                <p className="text-sm leading-7 whitespace-pre-wrap">
+                  {campaign.user_intel?.company_summary || campaign.user_intel?.deep_research || "Conducting corporate intelligence logs..."}
+                </p>
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Card 2: Core Offerings & Industries */}
-              <div className="bg-white rounded-[24px] border border-slate-200 p-8 shadow-sm flex flex-col h-full">
-                <div className="flex items-center gap-2.5 mb-5">
-                  <Target className="text-slate-400" size={18} />
-                  <h3 className="text-base font-bold text-slate-900">Services & Market Footprint</h3>
+            {/* Row 2: Services & Posture */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Services & Market Footprint */}
+              <div className="bg-card rounded-lg border shadow-sm p-6 flex flex-col gap-5">
+                <div className="flex items-center gap-2">
+                  <Target className="text-muted-foreground shrink-0" size={15} />
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Services & Market Footprint</h3>
                 </div>
-                
-                <div className="space-y-6">
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Core Services</p>
-                    <div className="flex flex-wrap gap-2">
-                      {(typeof campaign.user_intel?.offerings === 'string' ? JSON.parse(campaign.user_intel.offerings || '[]') : campaign.user_intel?.offerings || []).map((s, i) => (
-                        <span key={i} className="bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg text-[10px] font-semibold text-slate-600">{s}</span>
-                      ))}
-                    </div>
-                  </div>
-                  
-                  <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Target Customer Profiles</p>
-                    <div className="flex flex-wrap gap-2">
-                      {(campaign.user_intel?.target_customers || []).map((ind, i) => (
-                        <span key={i} className="bg-emerald-50 border border-emerald-100 px-3 py-1 rounded-lg text-[10px] font-semibold text-emerald-600">{ind}</span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Card 3: Competitive Edge & Tone */}
-              <div className="bg-white rounded-[24px] border border-slate-200 p-8 shadow-sm flex flex-col h-full">
-                <div className="flex items-center gap-2.5 mb-5">
-                  <ShieldCheck className="text-slate-400" size={18} />
-                  <h3 className="text-base font-bold text-slate-900">Strategic Posture</h3>
-                </div>
-                
                 <div className="space-y-4">
-                  <div className="p-4 bg-red-50 rounded-2xl border border-red-100">
-                    <p className="text-[10px] font-black text-red-500 uppercase tracking-widest mb-1">Brand Mission</p>
-                    <p className="text-sm font-bold text-slate-700">{campaign.user_intel?.motto || "High-Fidelity Outreach Operation"}</p>
-                  </div>
-                  
                   <div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 px-1">Competitive Advantages</p>
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Core Services</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(typeof campaign.user_intel?.offerings === 'string'
+                        ? JSON.parse(campaign.user_intel.offerings || '[]')
+                        : campaign.user_intel?.offerings || []).map((s, i) => (
+                        <span key={i} className="bg-muted border px-2.5 py-1 rounded-md text-[11px] font-medium text-foreground">{s}</span>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Target Customer Profiles</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {(campaign.user_intel?.target_customers || []).map((c, i) => (
+                        <span key={i} className="bg-emerald-50 border border-emerald-100 px-2.5 py-1 rounded-md text-[11px] font-medium text-emerald-700">{c}</span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Strategic Posture */}
+              <div className="bg-card rounded-lg border shadow-sm p-6 flex flex-col gap-5">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="text-muted-foreground shrink-0" size={15} />
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Strategic Posture</h3>
+                </div>
+                <div className="space-y-4">
+                  {campaign.user_intel?.motto && (
+                    <div className="p-3 bg-muted rounded-md border">
+                      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-1">Brand Mission</p>
+                      <p className="text-sm font-medium italic">"{campaign.user_intel.motto}"</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-widest mb-2">Competitive Advantages</p>
                     <ul className="space-y-2">
                       {(campaign.user_intel?.competitive_advantages || []).slice(0, 4).map((adv, i) => (
-                        <li key={i} className="text-xs font-bold text-slate-600 flex items-start gap-2">
-                          <div className="w-1.5 h-1.5 rounded-full bg-brand-primary mt-1.5 shrink-0" />
+                        <li key={i} className="flex items-start gap-2.5 text-sm leading-snug">
+                          <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
                           {adv}
                         </li>
                       ))}
@@ -200,39 +200,37 @@ const ResearchTabs = ({
               </div>
             </div>
 
-            {/* Proof Points & Pains Row */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-               {/* Card 4: Proof Points */}
-               <div className="bg-white rounded-[24px] border border-slate-200 p-8 shadow-sm">
-                <div className="flex items-center gap-2.5 mb-5">
-                  <CheckCircle2 className="text-emerald-500" size={18} />
-                  <h3 className="text-base font-bold text-slate-900">Validation & Proof Points</h3>
+            {/* Row 3: Proof Points & Pain Map */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Proof Points */}
+              <div className="bg-card rounded-lg border shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <CheckCircle2 className="text-emerald-500 shrink-0" size={15} />
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Validation & Proof Points</h3>
                 </div>
-                <div className="grid grid-cols-1 gap-3">
+                <ul className="space-y-2.5">
                   {(campaign.user_intel?.proof_points || []).map((point, i) => (
-                    <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                      <div className="w-6 h-6 rounded-lg bg-white flex items-center justify-center text-emerald-500 shadow-sm border border-slate-100">
-                        <CheckCircle2 size={14} />
-                      </div>
-                      <p className="text-xs font-bold text-slate-700">{point}</p>
-                    </div>
+                    <li key={i} className="flex items-start gap-2.5 text-sm leading-snug">
+                      <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-1.5 shrink-0" />
+                      {point}
+                    </li>
                   ))}
-                </div>
+                </ul>
               </div>
 
-              {/* Card 5: Capability-to-Pain Strategy */}
-              <div className="bg-white rounded-[24px] border border-slate-200 p-8 shadow-sm">
-                <div className="flex items-center gap-2.5 mb-5">
-                  <Users className="text-rose-500" size={18} />
-                  <h3 className="text-base font-bold text-slate-900">Surgical Pain-Map Intelligence</h3>
+              {/* Pain Map */}
+              <div className="bg-card rounded-lg border shadow-sm p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <Users className="text-rose-400 shrink-0" size={15} />
+                  <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Surgical Pain-Map Intelligence</h3>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {(campaign.user_intel?.capability_to_pain_map || []).slice(0, 3).map((item, i) => (
-                    <div key={i} className="p-4 bg-rose-50/50 rounded-2xl border border-rose-100/50">
-                      <p className="text-[9px] font-black text-rose-500 uppercase tracking-widest mb-1">Target Pain</p>
-                      <p className="text-xs font-bold text-slate-800 mb-2">{item.pain}</p>
-                      <p className="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-1">Strategy</p>
-                      <p className="text-[10px] font-medium text-slate-600 italic">{item.solution}</p>
+                    <div key={i} className="p-3 bg-muted rounded-md border">
+                      <p className="text-[10px] font-bold text-rose-400 uppercase tracking-widest mb-1">Target Pain</p>
+                      <p className="text-sm mb-2 leading-snug">{item.pain}</p>
+                      <p className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Strategy</p>
+                      <p className="text-sm text-muted-foreground leading-snug">{item.solution}</p>
                     </div>
                   ))}
                 </div>

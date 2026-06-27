@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Upload, Trash2, Copy, Check, FileText, Loader2, ArrowUp, ArrowDown } from "lucide-react";
+import { Upload, Trash2, Copy, Check, FileText, Loader2, ArrowUp, ArrowDown, AlertTriangle } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 import { adminApi } from "../../lib/api/admin";
+import { isSuperAdmin } from "../../utils/roles";
 import {
   AdminPageLayout,
   AdminPanel,
@@ -33,49 +34,62 @@ function CopyLinkBtn({ url }) {
   );
 }
 
-function UploadZone({ onFile, uploading }) {
+function UploadZone({ onFile, uploading, disabled, disabledMessage }) {
   const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
 
   const pick = (files) => {
+    if (disabled) return;
     const pdf = Array.from(files).find((f) => f.name.toLowerCase().endsWith(".pdf"));
     if (pdf) onFile(pdf);
   };
 
   return (
-    <div
-      onClick={() => !uploading && inputRef.current?.click()}
-      onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-      onDragLeave={() => setDragging(false)}
-      onDrop={(e) => { e.preventDefault(); setDragging(false); pick(e.dataTransfer.files); }}
-      className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-lg p-8 cursor-pointer transition-colors select-none
-        ${dragging ? "border-primary bg-primary/5" : "border-muted-foreground/25 hover:border-primary/50 hover:bg-muted/30"}
-        ${uploading ? "opacity-50 cursor-not-allowed" : ""}`}
-    >
-      {uploading ? (
-        <Loader2 size={24} className="animate-spin text-muted-foreground" />
-      ) : (
-        <Upload size={24} className="text-muted-foreground" />
+    <div className="w-full">
+      <div
+        onClick={() => !uploading && !disabled && inputRef.current?.click()}
+        onDragOver={(e) => { e.preventDefault(); if (!disabled) setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={(e) => { e.preventDefault(); setDragging(false); pick(e.dataTransfer.files); }}
+        className={`flex flex-col items-center justify-center gap-2 border-2 border-dashed rounded-lg p-8 transition-colors select-none
+          ${dragging ? "border-primary bg-primary/5" : "border-muted-foreground/25"}
+          ${!disabled ? "hover:border-primary/50 hover:bg-muted/30 cursor-pointer" : "bg-slate-50 cursor-not-allowed"}
+          ${uploading ? "opacity-50 cursor-not-allowed" : ""}`}
+      >
+        {uploading ? (
+          <Loader2 size={24} className="animate-spin text-slate-500" />
+        ) : (
+          <Upload size={24} className="text-slate-500" />
+        )}
+        <p className="text-sm font-medium text-slate-500">
+          {uploading ? "Uploading…" : disabled ? "Upload disabled" : "Drop a PDF here or click to browse"}
+        </p>
+        <p className="text-xs text-slate-400">PDF only · max 20 MB</p>
+        <input
+          ref={inputRef}
+          type="file"
+          accept="application/pdf,.pdf"
+          className="hidden"
+          disabled={disabled}
+          onChange={(e) => pick(e.target.files)}
+        />
+      </div>
+      {disabled && disabledMessage && (
+        <div className="flex items-center justify-center gap-1.5 mt-3 text-red-500">
+          <AlertTriangle size={16} />
+          <span className="text-sm">{disabledMessage}</span>
+        </div>
       )}
-      <p className="text-sm font-medium text-muted-foreground">
-        {uploading ? "Uploading…" : "Drop a PDF here or click to browse"}
-      </p>
-      <p className="text-xs text-muted-foreground/60">PDF only · max 20 MB</p>
-      <input
-        ref={inputRef}
-        type="file"
-        accept="application/pdf,.pdf"
-        className="hidden"
-        onChange={(e) => pick(e.target.files)}
-      />
     </div>
   );
 }
 
-function AssetSection({ title, description, assetType, uploadFn, token, showToast }) {
+function AssetSection({ title, description, assetType, uploadFn, token, showToast, maxItems, disabledMessage }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
+  
+  const disabled = maxItems && items.length >= maxItems;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -95,7 +109,7 @@ function AssetSection({ title, description, assetType, uploadFn, token, showToas
     setUploading(true);
     try {
       await uploadFn(token, file);
-      showToast({ tone: "success", title: "Uploaded", description: `${file.name} is now available to your organization.` });
+      showToast({ tone: "success", title: "Uploaded", description: `${file.name} is now available.` });
       load();
     } catch (err) {
       showToast({ tone: "error", title: "Upload failed", description: adminApi.extractMessage(err) });
@@ -188,7 +202,7 @@ function AssetSection({ title, description, assetType, uploadFn, token, showToas
   return (
     <AdminPanel title={title} description={description}>
       <div className="px-6 py-4 border-b">
-        <UploadZone onFile={handleFile} uploading={uploading} />
+        <UploadZone onFile={handleFile} uploading={uploading} disabled={disabled} disabledMessage={disabledMessage} />
       </div>
       {loading ? (
         <AdminLoading />
@@ -207,10 +221,12 @@ export default function FileUploads() {
   const { token, user } = useAuth();
   const { showToast } = useToast();
 
+  const isSuper = isSuperAdmin(user);
+
   return (
     <AdminPageLayout
       title="File Uploads"
-      subtitle="Upload brochures and use-case documents for your organization. Copy the link to embed in outreach emails."
+      subtitle={isSuper ? "Upload brochures and use-case documents. Copy the link to embed in outreach emails." : "Upload brochures and use-case documents for your organization. Copy the link to embed in outreach emails."}
       user={user}
     >
       <AssetSection
@@ -220,6 +236,8 @@ export default function FileUploads() {
         uploadFn={adminApi.uploadBrochure}
         token={token}
         showToast={showToast}
+        maxItems={1}
+        disabledMessage="Remove existing record before adding new file."
       />
       <AssetSection
         title="Use Cases"
@@ -228,6 +246,8 @@ export default function FileUploads() {
         uploadFn={adminApi.uploadUsecase}
         token={token}
         showToast={showToast}
+        maxItems={3}
+        disabledMessage="Remove existing record before adding new file."
       />
     </AdminPageLayout>
   );

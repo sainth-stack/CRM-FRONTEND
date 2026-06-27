@@ -112,7 +112,7 @@ const Sidebar = ({ open, onClose }) => {
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto custom-scrollbar px-3 py-5">
+        <nav className="flex-1 overflow-y-auto no-scrollbar px-3 py-5">
           {isAdminRoute && (
             <div className="mb-4 px-1">
               <button

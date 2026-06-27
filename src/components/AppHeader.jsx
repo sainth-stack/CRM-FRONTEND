@@ -10,6 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/context/AuthContext";
+import { cn } from "@/lib/utils";
 
 const routeNames = {
   "/": "Dashboard",
@@ -41,14 +42,19 @@ export function AppHeader() {
     navigate("/login");
   };
 
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
   const crumbLabel = (index) => {
     const path = "/" + breadcrumbParts.slice(0, index + 1).join("/");
-    return routeNames[path] || breadcrumbParts[index].replace(/-/g, " ");
+    if (routeNames[path]) return routeNames[path];
+    const segment = breadcrumbParts[index];
+    if (uuidPattern.test(segment)) return segment;
+    return segment.replace(/-/g, " ");
   };
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-14 items-center justify-between gap-2 border-b bg-card px-4 sm:px-6">
+      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-2 border-b bg-card px-4 sm:px-6">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           {user && (
             <Badge variant="secondary" className="hidden sm:inline-flex text-[11px] shrink-0 capitalize">
@@ -84,12 +90,15 @@ export function AppHeader() {
         </DropdownMenu>
       </header>
 
-      <div className="flex h-9 items-center gap-1 border-b bg-card px-4 sm:px-6 text-xs text-muted-foreground overflow-x-auto">
+      <div className="flex h-11 items-center gap-1 border-b bg-card px-4 sm:px-6 text-xs text-muted-foreground overflow-x-auto">
         <Link to="/" className="hover:text-foreground transition-colors shrink-0">Home</Link>
         {breadcrumbParts.map((_, i) => (
           <span key={i} className="flex items-center gap-1 shrink-0">
             <ChevronRight className="h-3 w-3" />
-            <span className={i === breadcrumbParts.length - 1 ? "text-foreground font-medium capitalize" : "capitalize"}>
+            <span className={cn(
+              i === breadcrumbParts.length - 1 && "text-foreground font-medium",
+              !uuidPattern.test(breadcrumbParts[i]) && "capitalize"
+            )}>
               {crumbLabel(i)}
             </span>
           </span>

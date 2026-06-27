@@ -2,15 +2,15 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
-  Search, Users, Mail,
+  Users, Mail,
   CheckCircle2, Loader2, AlertCircle,
   ArrowLeft, ExternalLink, Globe,
   Linkedin, MessageSquare, ChevronRight,
-  Monitor, PhoneCall, FileBarChart,
+  Monitor, PhoneCall,
   X, Edit3, Send, Trash, Maximize2, Clock, Calendar, Link2,
   TrendingUp, PieChart, Target, ShieldCheck, LayoutDashboard,
   Activity, BarChart3, Filter, ChevronDown,
-  PenLine, Inbox, HelpCircle, Menu
+  PenLine, Inbox, HelpCircle
 } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "../config";
@@ -23,6 +23,7 @@ import DraftEditorModal from "../components/campaign-workspace/DraftEditorModal"
 import DraftPreviewModal from "../components/campaign-workspace/DraftPreviewModal";
 import { CampaignWorkspaceSidebar } from "../components/campaign-workspace/CampaignWorkspaceSidebar";
 import { DispatchConfirmModal } from "../components/campaign-workspace/DispatchConfirmModal";
+import { AppHeader } from "../components/AppHeader";
 
 // Helper to force uniform UTC parsing on both timezone-naive and timezone-aware ISO strings
 const parseUtcDate = (dateStr) => {
@@ -498,7 +499,7 @@ const CampaignWorkspace = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-white">
+      <div className="min-h-screen w-full flex flex-col items-center justify-center gap-4 bg-white">
         <Loader2 className="w-12 h-12 text-brand-primary animate-spin" strokeWidth={3} />
         <p className="text-zinc-400 font-black uppercase text-xs tracking-widest">Reconstructing Workspace...</p>
       </div>
@@ -507,7 +508,7 @@ const CampaignWorkspace = () => {
 
   if (!campaign) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center gap-6 bg-white p-10 text-center">
+      <div className="min-h-screen w-full flex flex-col items-center justify-center gap-6 bg-white p-10 text-center">
         <AlertCircle className="w-16 h-16 text-red-500" />
         <h1 className="text-3xl font-black text-[#1e293b]">Mission Not Found</h1>
         <Link to="/active" className="text-brand-primary font-black uppercase text-xs tracking-widest flex items-center gap-2">
@@ -574,23 +575,7 @@ const CampaignWorkspace = () => {
 
       {/* Right content column */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-
-        {/* Pipeline tracker — the single workspace header (designer requirement).
-            On mobile the drawer menu is pinned to the left and the stepper scrolls
-            horizontally. */}
-        <div className="shrink-0 bg-white border-b border-surgical-border flex items-center">
-          <button
-            type="button"
-            onClick={() => setNavOpen(true)}
-            aria-label="Open campaign navigation"
-            className="md:hidden shrink-0 ml-2 p-2 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors active:scale-95"
-          >
-            <Menu size={20} />
-          </button>
-          <div className="flex-1 min-w-0 overflow-x-auto custom-scrollbar px-3 sm:px-6 lg:px-10 py-4 sm:py-6">
-            <ProgressTracker status={campaign.status} />
-          </div>
-        </div>
+        <AppHeader />
 
         {campaign.status === "INTERVENTION_NEEDED" && (
           <div className="bg-amber-50 border-y border-amber-200 px-10 py-6 animate-pulse-subtle">
@@ -1324,76 +1309,6 @@ const CampaignWorkspace = () => {
               </motion.div>
             )}
 
-            {activeTab === "report" && (
-              <motion.div
-                key="report"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="p-10 max-w-[1600px] mx-auto space-y-12"
-              >
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                  {[
-                    { label: "Target Profiles", value: campaign.target_companies_count, icon: Search, color: "text-surgical-navy", bg: "bg-surgical-navy/5 border border-surgical-navy/10" },
-                    { label: "Pipeline Status", value: campaign.status === "COMPLETED" ? "FINISHED" : "ACTIVE", icon: Activity, color: "text-surgical-navy", bg: "bg-surgical-navy/5 border border-surgical-navy/10" },
-                    { label: "Mission Impact", value: `${Math.round((campaign.dms || []).filter(d => d.status === 'MEETING_BOOKED').length / (campaign.target_companies_count || 1) * 100)}%`, icon: Target, color: "text-surgical-navy", bg: "bg-surgical-navy/5 border border-surgical-navy/10" }
-                  ].map((stat, i) => (
-                    <div key={i} className="bg-white p-8 rounded-[32px] border border-surgical-border shadow-sm flex items-center gap-6">
-                      <div className={`w-16 h-16 ${stat.bg} ${stat.color} rounded-2xl flex items-center justify-center shrink-0`}>
-                        <stat.icon size={28} strokeWidth={2.5} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">{stat.label}</p>
-                        <h4 className="text-3xl font-black text-slate-900 uppercase tracking-tight leading-none">{stat.value}</h4>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="bg-white rounded-[32px] border border-surgical-border overflow-hidden shadow-sm">
-                   <div className="px-10 py-6 border-b border-surgical-border flex items-center justify-between bg-slate-50/30">
-                      <h3 className="text-lg font-black text-slate-900 uppercase italic tracking-tight">Intelligence Repository</h3>
-                      <span className="px-3 py-1 bg-surgical-navy/5 text-surgical-navy border border-surgical-navy/10 rounded-lg text-[10px] font-black uppercase tracking-widest">
-                        {campaign.target_companies.length} Records Profiled
-                      </span>
-                   </div>
-                   <div className="divide-y divide-slate-50">
-                      {campaign.target_companies.map(company => (
-                        <div key={company.id} className="px-10 py-6 flex items-center justify-between hover:bg-slate-50/50 transition-colors">
-                           <div className="flex items-center gap-5">
-                              <div className="w-12 h-12 bg-surgical-navy/5 text-surgical-navy rounded-xl flex items-center justify-center font-black text-sm border border-surgical-navy/10">
-                                 {company.name[0].toUpperCase()}
-                              </div>
-                              <div>
-                                 <h4 className="font-extrabold text-slate-900 uppercase tracking-tight leading-none mb-1 flex items-center gap-2">
-                                    {company.name}
-                                    {(() => {
-                                      const qualified = ['ACCEPTED', 'RESEARCH_COMPLETE', 'STAKEHOLDERS_IDENTIFIED'].includes(company.status);
-                                      const rejected = company.status === 'REJECTED';
-                                      const cls = qualified
-                                        ? 'bg-surgical-navy text-white'
-                                        : rejected
-                                          ? 'bg-rose-50 text-rose-600 border border-rose-100'
-                                          : 'bg-blue-50 text-surgical-cobalt border border-blue-200';
-                                      const label = qualified ? 'Qualified' : rejected ? 'Rejected' : 'Review';
-                                      return <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest ${cls}`}>{label}</span>;
-                                    })()}
-                                 </h4>
-                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{company.location || "Global Ops"}</p>
-                              </div>
-                           </div>
-                           <button
-                             onClick={() => setSelectedCompany(company)}
-                             className="text-[10px] font-black text-surgical-navy uppercase tracking-widest underline underline-offset-4 decoration-2 decoration-surgical-navy/20 hover:text-surgical-navy/70 transition-all"
-                           >
-                              Access Intelligence
-                           </button>
-                        </div>
-                      ))}
-                   </div>
-                </div>
-              </motion.div>
-            )}
           </AnimatePresence>
         </main>
       </div>

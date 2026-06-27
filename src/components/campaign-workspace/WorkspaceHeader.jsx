@@ -3,7 +3,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
   Activity,
-  FileBarChart,
   LayoutDashboard,
   Monitor,
   PhoneCall,
@@ -67,15 +66,6 @@ const WorkspaceHeader = ({ campaignName, activeTab, onTabChange, hasDrafts, disp
               >
                 <PhoneCall size={16} strokeWidth={3} />
                 Discovery Call
-              </button>
-              <button
-                onClick={() => onTabChange("report")}
-                className={`flex items-center gap-2.5 px-6 py-2.5 rounded-xl text-[13px] font-black uppercase tracking-wider transition-all ${
-                  activeTab === "report" ? "bg-white text-brand-primary shadow-sm" : "text-slate-400 hover:text-slate-600"
-                }`}
-              >
-                <FileBarChart size={16} strokeWidth={3} />
-                Report
               </button>
             </motion.div>
           )}

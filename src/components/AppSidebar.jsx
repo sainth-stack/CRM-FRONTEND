@@ -57,7 +57,11 @@ export function AppSidebar() {
   // so they need the full nav like end users.)
   let navItems = userNavItems;
   if (isAdminRoute) {
-    navItems = adminNavItems.filter((item) => !item.superOnly || superAdmin);
+    navItems = adminNavItems.filter((item) => {
+      if (item.superOnly && !superAdmin) return false;
+      if (item.adminOnly && superAdmin) return false;
+      return true;
+    });
   } else if (isAdminUser) {
     const settingsItem = userNavItems.find((i) => i.path === "/settings");
     navItems = [
@@ -85,17 +89,27 @@ export function AppSidebar() {
     >
       <div
         className={cn(
-          "relative flex items-center border-b border-zinc-900/70 shrink-0",
+          "relative flex items-center border-b border-zinc-900/70 shrink-0 group",
           collapsed ? "justify-center px-2 h-16" : "justify-between px-4 h-16"
         )}
       >
-        <AppLogo collapsed={collapsed} showTagline={!collapsed} size="sm" />
+        <AppLogo
+          collapsed={collapsed}
+          showTagline={!collapsed}
+          size="sm"
+          className={cn(
+            "transition-all duration-200",
+            collapsed && "group-hover:opacity-0 group-hover:scale-75 group-hover:pointer-events-none"
+          )}
+        />
         <button
           type="button"
           onClick={toggle}
           className={cn(
             "rounded-lg p-1.5 text-zinc-500 transition-all duration-200 hover:bg-zinc-800/60 hover:text-white",
-            collapsed ? "absolute right-1.5 top-1/2 -translate-y-1/2" : "shrink-0"
+            collapsed
+              ? "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 scale-75 pointer-events-none group-hover:opacity-100 group-hover:scale-100 group-hover:pointer-events-auto"
+              : "shrink-0"
           )}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
           title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -134,7 +148,7 @@ export function AppSidebar() {
         </div>
       )}
 
-      <nav className="flex-1 min-h-0 space-y-1 px-2 py-3 overflow-y-auto custom-scrollbar">
+      <nav className="flex-1 min-h-0 space-y-1 px-2 py-3 overflow-y-auto no-scrollbar">
         {navItems.map((item) => {
           const active = item.path === "/"
             ? location.pathname === "/"
