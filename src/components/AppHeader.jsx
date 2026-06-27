@@ -54,7 +54,7 @@ export function AppHeader() {
 
   return (
     <>
-      <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-2 border-b bg-card px-4 sm:px-6">
+      <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between gap-2 border-b bg-card px-4 sm:px-6">
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           {user && (
             <Badge variant="secondary" className="hidden sm:inline-flex text-[11px] shrink-0 capitalize">
@@ -90,7 +90,7 @@ export function AppHeader() {
         </DropdownMenu>
       </header>
 
-      <div className="flex h-11 items-center gap-1 border-b bg-card px-4 sm:px-6 text-xs text-muted-foreground overflow-x-auto">
+      <div className="flex h-11 shrink-0 items-center gap-1 border-b bg-card px-4 sm:px-6 text-xs text-muted-foreground overflow-x-auto">
         <Link to="/" className="hover:text-foreground transition-colors shrink-0">Home</Link>
         {breadcrumbParts.map((_, i) => (
           <span key={i} className="flex items-center gap-1 shrink-0">

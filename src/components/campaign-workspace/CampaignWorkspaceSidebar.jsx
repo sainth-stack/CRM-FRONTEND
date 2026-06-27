@@ -17,6 +17,8 @@ import {
   BarChart2,
   PanelLeftClose,
   PanelLeftOpen,
+  Calendar,
+  Loader2,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -27,7 +29,7 @@ const navTabs = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "research", label: "Campaign", icon: Globe },
   { id: "monitor", label: "Outreach", icon: Mail },
-  { id: "history", label: "Discovery", icon: PhoneCall },
+  { id: "history", label: "Calls & Meetings", icon: PhoneCall },
 ];
 
 const dashboardSubTabs = [
@@ -48,6 +50,79 @@ const monitorSubTabs = [
   { id: "monitor", label: "Monitor", icon: Activity },
   { id: "drafts", label: "Drafts Outreach", icon: Mail },
 ];
+
+const historySubTabs = [
+  { id: "drafts", label: "Drafts", icon: PhoneCall },
+  { id: "scheduled", label: "Scheduled Meetings", icon: Calendar },
+];
+
+// Pipeline gating for the "Campaign" (research) sub-routes. Each campaign moves
+// through backend stages sequentially (see CampaignStatus in
+// backend/app/db/models/campaign.py); a sub-route should only appear once the
+// stage that produces its data has started, and should show a spinner only
+// while that stage is the one actively running.
+//
+// milestone 0 = briefing in progress
+// milestone 1 = briefing complete -> enrichment/ICP running (unlocks Targets + Disqualified)
+// milestone 2 = enrichment/ICP complete -> stakeholder ranking running (unlocks Contacts)
+// milestone 3 = stakeholder ranking complete -> drafting running (unlocks Drafts)
+// milestone 4 = drafting complete (or terminal state)
+const STAGE_MILESTONE = {
+  PENDING: 0,
+  INPUT_VALIDATED: 0,
+  RESEARCHING_USER_COMPANY: 0,
+  STAGE_1_CSV_TRIMMED: 0,
+  INTERVENTION_NEEDED: 0,
+  STAGE_2_USER_INTEL_COMPLETE: 1,
+  STAGE_3_ICP_FILTERED: 1,
+  STAGE_4_RESEARCH_COMPLETE: 2,
+  STAGE_5_STAKEHOLDERS_RANKED: 3,
+  STAGE_6_DRAFTING_COMPLETE: 4,
+  COMPLETED: 4,
+  PARTIAL_SUCCESS: 4,
+  FAILED: 4,
+  INACTIVE: 4,
+};
+
+// Statuses where the pipeline isn't actively advancing (blocked, finished, or
+// errored) — a sub-route can still be unlocked at these statuses, but it
+// should never show a spinner since nothing is currently "in progress".
+const STALLED_STATUSES = new Set([
+  "INTERVENTION_NEEDED",
+  "FAILED",
+  "INACTIVE",
+  "COMPLETED",
+  "PARTIAL_SUCCESS",
+]);
+
+const RESEARCH_TAB_GATING = {
+  mission_briefing: { unlockAt: 0, spinUntil: 1 },
+  lead_pipeline: { unlockAt: 1, spinUntil: 2 },
+  stakeholder_intel: { unlockAt: 2, spinUntil: 3 },
+  outreach_protocol: { unlockAt: 3, spinUntil: 4 },
+  rejected_artifacts: { unlockAt: 1, spinUntil: null }, // unlocks with Targets; never spins on its own
+};
+
+function SpinningIcon({ className, ...rest }) {
+  return <Loader2 className={cn(className, "animate-spin")} {...rest} />;
+}
+
+function getVisibleResearchSubTabs(campaignStatus) {
+  const milestone = STAGE_MILESTONE[campaignStatus] ?? 4; // unknown/legacy status -> fail open, show everything
+  const isProcessing = !STALLED_STATUSES.has(campaignStatus);
+
+  return researchSubTabs
+    .filter((sub) => milestone >= RESEARCH_TAB_GATING[sub.id].unlockAt)
+    .map((sub) => {
+      const gate = RESEARCH_TAB_GATING[sub.id];
+      const isLoading =
+        isProcessing &&
+        gate.spinUntil != null &&
+        milestone >= gate.unlockAt &&
+        milestone < gate.spinUntil;
+      return isLoading ? { ...sub, icon: SpinningIcon } : sub;
+    });
+}
 
 const navItemClass = (active) =>
   cn(
@@ -85,9 +160,14 @@ export function CampaignWorkspaceSidebar({
   setMonitorSubTab,
   monitorExpanded,
   setMonitorExpanded,
+  historySubTab,
+  setHistorySubTab,
+  historyExpanded,
+  setHistoryExpanded,
   collapsed,
   onToggleCollapse,
   lifecycleStatus,
+  campaignStatus,
   navOpen,
   onNavClose,
 }) {
@@ -104,7 +184,7 @@ export function CampaignWorkspaceSidebar({
       setExpanded: setDashboardExpanded,
     },
     research: {
-      subTabs: researchSubTabs,
+      subTabs: getVisibleResearchSubTabs(campaignStatus),
       subTab: researchTab,
       setSubTab: setResearchTab,
       expanded: researchExpanded,
@@ -116,6 +196,13 @@ export function CampaignWorkspaceSidebar({
       setSubTab: setMonitorSubTab,
       expanded: monitorExpanded,
       setExpanded: setMonitorExpanded,
+    },
+    history: {
+      subTabs: historySubTabs,
+      subTab: historySubTab,
+      setSubTab: setHistorySubTab,
+      expanded: historyExpanded,
+      setExpanded: setHistoryExpanded,
     },
   };
 

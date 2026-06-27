@@ -16,6 +16,9 @@ import axios from "axios";
 import API_BASE_URL from "../config";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import LeadLedger from "./LeadLedger";
 import ResearchTabs from "./ResearchTabs";
 import { CompanyDetailModal } from "../components/campaign-workspace/CompanyDetailModal";
@@ -263,6 +266,7 @@ const CampaignWorkspace = () => {
   const [monitorTab, setMonitorTab] = useState("monitor"); // monitor, drafts
   const [monitorExpanded, setMonitorExpanded] = useState(false);
   const [discoveryTab, setDiscoveryTab] = useState("drafts"); // drafts, scheduled
+  const [historyExpanded, setHistoryExpanded] = useState(true);
   const [showRefineModal, setShowRefineModal] = useState(false);
   const [refineAnswers, setRefineAnswers] = useState({});
   const [researchTab, setResearchTab] = useState("mission_briefing");
@@ -633,9 +637,14 @@ const CampaignWorkspace = () => {
         setMonitorSubTab={setMonitorTab}
         monitorExpanded={monitorExpanded}
         setMonitorExpanded={setMonitorExpanded}
+        historySubTab={discoveryTab}
+        setHistorySubTab={setDiscoveryTab}
+        historyExpanded={historyExpanded}
+        setHistoryExpanded={setHistoryExpanded}
         collapsed={campaignNavCollapsed}
         onToggleCollapse={() => setCampaignNavCollapsed((c) => !c)}
         lifecycleStatus={getDisplayStatus()}
+        campaignStatus={campaign.status}
         navOpen={navOpen}
         onNavClose={() => setNavOpen(false)}
       />
@@ -674,7 +683,7 @@ const CampaignWorkspace = () => {
           </div>
         )}
 
-        <main className="flex-grow overflow-y-auto bg-surgical-bg">
+        <main className="flex-1 min-h-0 overflow-y-auto bg-surgical-bg">
           <AnimatePresence mode="wait">
             {activeTab === "dashboard" && (
               <motion.div
@@ -1219,235 +1228,191 @@ const CampaignWorkspace = () => {
               </motion.div>
             )}
 
-            {activeTab === "history" && (
+            {activeTab === "history" && (() => {
+              const discoveryDrafts = (campaign.drafts || []).filter(d => d.status === "DRAFTED" && d.draft_type === "DISCOVERY");
+              const scheduledDMs = (campaign.dms || []).filter(dm => dm.status === "MEETING_BOOKED" || dm.scheduled_time_utc);
+
+              return (
               <motion.div
                 key="history"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
-                className="p-10 max-w-[1600px] mx-auto space-y-8"
+                className="p-10 max-w-[1600px] mx-auto space-y-6"
               >
-                <div className="flex items-center justify-between mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-surgical-navy/5 text-surgical-navy rounded-xl flex items-center justify-center border border-surgical-navy/10 shadow-sm">
-                      <PhoneCall size={20} strokeWidth={3} />
-                    </div>
-                    <div>
-                      <span className="px-2.5 py-0.5 bg-surgical-navy/5 text-surgical-navy border border-surgical-navy/10 rounded-lg text-[10px] font-black uppercase tracking-widest self-start mb-1 inline-block">Coordination Protocol</span>
-                      <h3 className="text-2xl font-extrabold text-slate-900 tracking-tight uppercase italic leading-none">Discovery Calls</h3>
-                    </div>
-                  </div>
-
-                  {/* Sub-navigation for Discovery Calls */}
-                  <div className="flex bg-slate-50 border border-slate-100 p-1 rounded-xl">
-                    <button
-                      onClick={() => setDiscoveryTab("drafts")}
-                      className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                        discoveryTab === "drafts" ? "bg-white text-surgical-navy shadow-sm border border-slate-200/60" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100/50"
-                      }`}
-                    >
-                      <PhoneCall size={14} /> Pending Drafts
-                    </button>
-                    <button
-                      onClick={() => setDiscoveryTab("scheduled")}
-                      className={`flex items-center gap-2 px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
-                        discoveryTab === "scheduled" ? "bg-white text-surgical-navy shadow-sm border border-slate-200/60" : "text-slate-400 hover:text-slate-600 hover:bg-slate-100/50"
-                      }`}
-                    >
-                      <Calendar size={14} /> Scheduled Meetings
-                    </button>
-                  </div>
-                </div>
-
                 {discoveryTab === "drafts" ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {(() => {
-                    const discoveryDrafts = (campaign.drafts || []).filter(d => d.status === "DRAFTED" && d.draft_type === "DISCOVERY");
-                    if (discoveryDrafts.length === 0) {
-                      return (
-                        <div className="col-span-full bg-white rounded-[32px] border border-surgical-border p-20 text-center flex flex-col items-center gap-4">
-                          <PhoneCall size={48} className="text-slate-200" strokeWidth={1} />
-                          <p className="text-sm font-black text-slate-400 uppercase tracking-widest italic">No discovery calls pending coordination.</p>
-                        </div>
-                      );
-                    }
-                    return discoveryDrafts.map((draft) => {
-                      const dm = campaign.dms?.find(d => d.id === draft.decision_maker_id);
-                      const co = campaign.target_companies?.find(c => c.id === dm?.target_company_id);
-                      return (
-                        <motion.div
-                          key={draft.id}
-                          layout
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          className="bg-white rounded-[28px] border border-surgical-border p-6 shadow-sm hover:shadow-xl hover:shadow-surgical-navy/5 transition-all flex flex-col justify-between"
-                        >
-                          <div className="space-y-4">
-                            <div className="flex items-start justify-between">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-black text-xs border border-amber-100">
-                                  {(dm?.name || "P").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
-                                </div>
-                                <div>
-                                  <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{dm?.name}</p>
-                                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{co?.name}</p>
-                                </div>
-                              </div>
-                              <div className="px-2 py-1 bg-amber-50 border border-amber-100 text-amber-600 rounded-lg text-[8px] font-black uppercase tracking-widest">
-                                Discovery
-                              </div>
-                            </div>
-                            
-                            <div className="space-y-2">
-                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-1">Subject</p>
-                              <p className="text-xs font-bold text-slate-800 line-clamp-1 italic">{draft.subject}</p>
-                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-1 mt-3">Message Snippet</p>
-                              <p className="text-[11px] font-medium text-slate-500 line-clamp-3 leading-relaxed">
-                                {draft.body.replace(/<[^>]*>/g, '').slice(0, 150)}...
-                              </p>
-                            </div>
-                          </div>
+                  <div className="space-y-4">
+                    {/* ── Header row: title + count, matches the Scheduled meetings header ── */}
+                    <div className="flex items-center justify-between gap-3 flex-wrap">
+                      <div>
+                        <h2 className="text-lg font-semibold text-foreground">Drafts</h2>
+                        <p className="text-sm text-muted-foreground mt-0.5">Discovery call emails ready for you to review and send.</p>
+                      </div>
+                      <Badge variant="secondary" className="tabular-nums">
+                        {discoveryDrafts.length} pending draft{discoveryDrafts.length !== 1 ? "s" : ""}
+                      </Badge>
+                    </div>
 
-                          <div className="flex items-center gap-3 mt-8">
-                            <button
-                              onClick={() => {
-                                setDraftEditData({ subject: draft.subject, body: draft.body, email: dm?.email || "" });
-                                setSelectedDraft(draft);
-                              }}
-                              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border border-slate-100"
-                            >
-                              <Edit3 size={14} /> Refine
-                            </button>
-                            <button
-                              onClick={() => handleSendMessage(draft.id, dm?.name, dm?.email)}
-                              disabled={sendingId === draft.id}
-                              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-surgical-navy hover:bg-slate-800 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md shadow-surgical-navy/20 disabled:opacity-50"
-                            >
-                              {sendingId === draft.id ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
-                              Deploy
-                            </button>
-                          </div>
-                        </motion.div>
-                      );
-                    });
-                  })()}
+                    {/* ── Draft card grid — same markup as the Outreach > Drafts cards ── */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {discoveryDrafts.length === 0 ? (
+                        <div className="col-span-full bg-white rounded-2xl border border-slate-200 p-16 text-center flex flex-col items-center gap-3">
+                          <PhoneCall size={40} className="text-slate-300" strokeWidth={1.5} />
+                          <p className="text-sm text-slate-400">No pending drafts right now.</p>
+                        </div>
+                      ) : discoveryDrafts.map((draft) => {
+                        const dm = campaign.dms?.find(d => d.id === draft.decision_maker_id);
+                        const co = campaign.target_companies?.find(c => c.id === dm?.target_company_id);
+                        const status = getFriendlyStatus("DRAFTED", draft);
+                        return (
+                          <motion.div
+                            key={draft.id}
+                            layout
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="bg-white rounded-2xl border border-slate-200 p-5 transition-shadow hover:shadow-sm flex flex-col justify-between"
+                          >
+                            <div className="space-y-3">
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <div className="w-9 h-9 shrink-0 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center font-semibold text-xs">
+                                    {(dm?.name || "P").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-sm font-medium text-slate-900 truncate">{dm?.name}</p>
+                                    <p className="text-xs text-slate-400 truncate">{co?.name}</p>
+                                  </div>
+                                </div>
+
+                                <span className={`inline-flex w-fit max-w-full px-2 py-1 rounded-full text-xs font-medium border ${status.cls}`}>
+                                  {status.label}
+                                </span>
+                              </div>
+
+                              <div className="space-y-1.5">
+                                <p className="text-xs font-medium text-slate-400">Subject</p>
+                                <p className="text-sm text-slate-800 line-clamp-1">{draft.subject}</p>
+                                <p className="text-xs font-medium text-slate-400 mt-2">Message</p>
+                                <p className="text-xs text-slate-500 line-clamp-3 leading-relaxed">
+                                  {draft.body.replace(/<[^>]*>/g, '').slice(0, 150)}...
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 mt-5">
+                              <button
+                                onClick={() => {
+                                  setDraftEditData({ subject: draft.subject, body: draft.body, email: dm?.email || "" });
+                                  setSelectedDraft(draft);
+                                }}
+                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 border border-slate-200 hover:bg-slate-50 text-slate-600 rounded-lg text-sm font-medium transition-colors"
+                              >
+                                <Edit3 size={13} /> Edit
+                              </button>
+                              <button
+                                onClick={() => handleSendMessage(draft.id, dm?.name, dm?.email)}
+                                disabled={sendingId === draft.id}
+                                className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                              >
+                                {sendingId === draft.id ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
+                                Send
+                              </button>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
                   </div>
                 ) : (
-                  <div className="bg-white rounded-[32px] border border-surgical-border overflow-hidden shadow-sm">
-                    <div className="px-10 py-6 border-b border-surgical-border flex items-center justify-between bg-slate-50/30">
-                      <h3 className="text-lg font-black text-slate-900 uppercase italic tracking-tight">Scheduled Intelligence Briefings</h3>
-                      <span className="px-3 py-1 bg-emerald-50 text-emerald-600 border border-emerald-100 rounded-lg text-[10px] font-black uppercase tracking-widest">
-                        {(campaign.dms || []).filter(dm => dm.status === "MEETING_BOOKED" || dm.scheduled_time_utc).length} Booked
-                      </span>
+                  <>
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-lg font-semibold text-foreground">Scheduled meetings</h2>
+                        <p className="text-sm text-muted-foreground mt-0.5">Discovery calls your prospects have booked.</p>
+                      </div>
+                      <Badge variant="secondary" className="tabular-nums">{scheduledDMs.length} booked</Badge>
                     </div>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left border-collapse">
-                        <thead>
-                          <tr className="bg-slate-50 border-b border-surgical-border">
-                            <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Prospect</th>
-                            <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Organization</th>
-                            <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
-                              <span className="inline-flex items-center gap-1.5"><Calendar size={11} strokeWidth={3} /> Meeting Date</span>
-                            </th>
-                            <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">
-                              <span className="inline-flex items-center gap-1.5"><Clock size={11} strokeWidth={3} /> Meeting Time</span>
-                            </th>
-                            <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Coordinate</th>
-                            <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Time Remaining</th>
-                            <th className="py-4 px-8 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap text-right">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-surgical-border bg-white">
-                          {(() => {
-                            const scheduledDMs = (campaign.dms || []).filter(dm => dm.status === "MEETING_BOOKED" || dm.scheduled_time_utc);
-                            if (scheduledDMs.length === 0) {
-                              return (
-                                <tr>
-                                  <td colSpan="7" className="py-20 text-center">
-                                    <Calendar size={48} className="text-slate-200 mx-auto mb-4" strokeWidth={1} />
-                                    <p className="text-sm font-black text-slate-400 uppercase tracking-widest italic">No meetings scheduled.</p>
-                                  </td>
-                                </tr>
-                              );
-                            }
-                            return scheduledDMs.map(dm => {
+
+                    <Card>
+                      {scheduledDMs.length === 0 ? (
+                        <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                          <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center mb-4">
+                            <Calendar className="h-7 w-7 text-muted-foreground" />
+                          </div>
+                          <h3 className="text-base font-semibold mb-1">No meetings yet</h3>
+                          <p className="text-sm text-muted-foreground max-w-sm">Booked discovery calls will show up here.</p>
+                        </CardContent>
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[28%]">Contact</TableHead>
+                              <TableHead className="w-[22%]">Company</TableHead>
+                              <TableHead className="w-[22%]">Meeting time</TableHead>
+                              <TableHead className="w-[14%]">Time left</TableHead>
+                              <TableHead className="w-[14%] text-right">Meeting link</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {scheduledDMs.map(dm => {
                               const co = campaign.target_companies?.find(c => c.id === dm.target_company_id);
                               const meetingDate = formatMeetingDate(dm.scheduled_time_utc, dm.display_timezone);
                               const meetingTime = formatMeetingTime(dm.scheduled_time_utc, dm.display_timezone);
                               const isPast = dm.scheduled_time_utc && new Date(dm.scheduled_time_utc + "Z") < new Date();
                               return (
-                                <tr key={dm.id} className="hover:bg-slate-50/50 transition-colors">
-                                  <td className="py-5 px-8">
+                                <TableRow key={dm.id}>
+                                  <TableCell>
                                     <div className="flex items-center gap-3">
-                                      <div className="w-8 h-8 rounded-lg bg-surgical-navy/5 text-surgical-navy flex items-center justify-center font-black text-[10px] border border-surgical-navy/10 shrink-0">
+                                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-semibold text-xs shrink-0">
                                         {(dm.name || "P").split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
                                       </div>
-                                      <div>
-                                        <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{dm.name}</p>
-                                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{dm.position || "Stakeholder"}</p>
+                                      <div className="min-w-0">
+                                        <p className="text-sm font-medium text-foreground truncate">{dm.name}</p>
+                                        <p className="text-xs text-muted-foreground truncate">{dm.email}</p>
                                       </div>
                                     </div>
-                                  </td>
-                                  <td className="py-5 px-8 text-xs font-bold text-slate-700">{co?.name || "Unknown"}</td>
-                                  <td className="py-5 px-8">
+                                  </TableCell>
+                                  <TableCell className="text-sm text-foreground">{co?.name || "Unknown"}</TableCell>
+                                  <TableCell>
                                     {dm.scheduled_time_utc ? (
-                                      <div className="flex flex-col gap-0.5">
-                                        <span className={`text-xs font-black uppercase tracking-tight ${isPast ? "text-slate-400" : "text-slate-900"}`}>
-                                          {meetingDate}
+                                      <div className="flex flex-col">
+                                        <span className={`text-sm ${isPast ? "text-muted-foreground" : "text-foreground"}`}>{meetingDate}</span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {meetingTime}{isPast && " · Elapsed"}
                                         </span>
-                                        {isPast && (
-                                          <span className="text-[9px] font-bold text-rose-400 uppercase tracking-widest">Elapsed</span>
-                                        )}
                                       </div>
                                     ) : (
-                                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">TBD</span>
+                                      <span className="text-sm text-muted-foreground">TBD</span>
                                     )}
-                                  </td>
-                                  <td className="py-5 px-8">
-                                    {dm.scheduled_time_utc ? (
-                                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest whitespace-nowrap border ${
-                                        isPast
-                                          ? "bg-slate-50 text-slate-400 border-slate-100"
-                                          : "bg-emerald-50 text-emerald-700 border-emerald-100"
-                                      }`}>
-                                        <Clock size={11} strokeWidth={3} />
-                                        {meetingTime}
-                                      </span>
-                                    ) : (
-                                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">TBD</span>
-                                    )}
-                                  </td>
-                                  <td className="py-5 px-8 text-xs text-slate-500 font-medium">{dm.email}</td>
-                                  <td className="py-5 px-8">
-                                    <span className={`px-3 py-1 border rounded-lg text-[10px] font-black uppercase tracking-widest whitespace-nowrap inline-flex items-center gap-1.5 ${
-                                      isPast
-                                        ? "bg-slate-50 text-slate-400 border-slate-100"
-                                        : "bg-amber-50 text-amber-600 border-amber-100"
-                                    }`}>
-                                      <Clock size={12} strokeWidth={3} /> {formatTimeLeft(dm.scheduled_time_utc)}
-                                    </span>
-                                  </td>
-                                  <td className="py-5 px-8 text-right">
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge variant="outline" className="gap-1.5">
+                                      <Clock className="h-3 w-3" /> {formatTimeLeft(dm.scheduled_time_utc)}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-right">
                                     {dm.meeting_link ? (
-                                      <a href={dm.meeting_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-surgical-navy text-white rounded-lg text-[10px] font-black uppercase tracking-widest transition-all hover:bg-slate-800 shadow-sm shadow-surgical-navy/10">
-                                        <Link2 size={12} /> Join Link
-                                      </a>
+                                      <Button asChild size="sm" variant="outline">
+                                        <a href={dm.meeting_link} target="_blank" rel="noopener noreferrer">
+                                          <Link2 className="h-4 w-4" /> Join
+                                        </a>
+                                      </Button>
                                     ) : (
-                                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">TBA</span>
+                                      <span className="text-sm text-muted-foreground">Not set yet</span>
                                     )}
-                                  </td>
-                                </tr>
+                                  </TableCell>
+                                </TableRow>
                               );
-                            });
-                          })()}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-
+                            })}
+                          </TableBody>
+                        </Table>
+                      )}
+                    </Card>
+                  </>
                 )}
               </motion.div>
-            )}
+              );
+            })()}
 
           </AnimatePresence>
         </main>
