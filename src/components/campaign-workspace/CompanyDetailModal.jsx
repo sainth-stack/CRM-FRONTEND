@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { X, Globe, Linkedin, Mail, PhoneCall, AlertCircle } from "lucide-react";
+import { X, Globe, Linkedin, Mail, PhoneCall, AlertCircle, ShieldX } from "lucide-react";
 
 const ensureAbsoluteUrl = (url) => {
   if (!url || url === "#" || url === "N/A" || url === "unknown") return "#";
@@ -25,6 +25,125 @@ const Card = ({ title, children }) => (
     {children}
   </div>
 );
+
+const CHECK_LABEL = { location: "Location", size: "Employee Size", industry: "Industry" };
+const VERDICT_STYLE = {
+  REJECTED:    { bg: "bg-rose-50",   text: "text-rose-700",   border: "border-rose-200" },
+  APPROVED:    { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-200" },
+  INCONCLUSIVE:{ bg: "bg-amber-50",  text: "text-amber-700",  border: "border-amber-200" },
+};
+
+function parseScreenerReasoning(text) {
+  if (!text?.startsWith("[Pre-screened]")) return null;
+
+  const inner = text.slice("[Pre-screened] ".length);
+  const failOnMatch = inner.match(/^FAIL on: ([^.]+)\.\s*/);
+  const failedChecks = failOnMatch ? failOnMatch[1].split(",").map(s => s.trim()) : [];
+  const rest = failOnMatch ? inner.slice(failOnMatch[0].length) : inner;
+
+  const segments = rest.split(" | ");
+  const checks = segments.map(seg => {
+    const colonIdx = seg.indexOf(": ");
+    if (colonIdx === -1) return { name: seg, verdict: null, main: "", bullets: [] };
+    const name = seg.slice(0, colonIdx);
+    const evidence = seg.slice(colonIdx + 2);
+    const lines = evidence.split("\n");
+    const firstLine = lines[0] || "";
+
+    // Parse "DECISION: REJECTED — <reason>" from the first line
+    const verdictMatch = firstLine.match(/^DECISION:\s*(\w+)\s*[—–-]+\s*(.*)/);
+    const verdict = verdictMatch ? verdictMatch[1].toUpperCase() : null;
+    const main = verdictMatch ? verdictMatch[2] : firstLine;
+
+    const bullets = lines.slice(1)
+      .filter(l => l.trim().startsWith("-"))
+      .map(l => {
+        const cleaned = l.replace(/^-\s*/, "").trim();
+        const labelMatch = cleaned.match(/^([^:]{1,30}?):\s(.+)/s);
+        return labelMatch
+          ? { label: labelMatch[1], content: labelMatch[2] }
+          : { label: null, content: cleaned };
+      });
+
+    return { name: CHECK_LABEL[name] || name, verdict, main, bullets };
+  });
+
+  return { failedChecks, checks };
+}
+
+function ScreenerReasoning({ text }) {
+  const parsed = parseScreenerReasoning(text);
+
+  if (!parsed) {
+    // Plain ICP reasoning (non-pre-screened) — just render as text
+    return (
+      <Card title="ICP Reasoning">
+        <p className="text-sm text-slate-600 leading-relaxed">{text}</p>
+      </Card>
+    );
+  }
+
+  const { failedChecks, checks } = parsed;
+
+  return (
+    <div className="rounded-xl border border-rose-100 bg-rose-50/40 p-4 space-y-4">
+      {/* Header */}
+      <div className="flex items-center gap-2">
+        <ShieldX size={14} className="text-rose-500 shrink-0" />
+        <span className="text-[10px] font-bold text-rose-500 uppercase tracking-widest">Pre-screen Rejection</span>
+        <div className="flex gap-1.5 ml-1">
+          {failedChecks.map(c => (
+            <span key={c} className="px-2 py-0.5 bg-rose-100 text-rose-600 rounded text-[10px] font-bold uppercase tracking-wide">
+              {CHECK_LABEL[c] || c}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      {/* Per-check sections */}
+      {checks.map((check, i) => {
+        const vstyle = VERDICT_STYLE[check.verdict] || VERDICT_STYLE.REJECTED;
+        return (
+          <div key={i} className="space-y-2">
+            {checks.length > 1 && (
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{check.name}</p>
+            )}
+
+            {/* Verdict badge + reason */}
+            {check.verdict && (
+              <div className={`flex items-start gap-2 px-3 py-2 rounded-lg border ${vstyle.bg} ${vstyle.border}`}>
+                <span className={`text-[10px] font-black uppercase tracking-wide shrink-0 mt-0.5 ${vstyle.text}`}>
+                  {check.verdict}
+                </span>
+                <span className={`text-xs leading-relaxed ${vstyle.text}`}>{check.main}</span>
+              </div>
+            )}
+            {!check.verdict && check.main && (
+              <p className="text-sm text-slate-700 leading-relaxed">{check.main}</p>
+            )}
+
+            {/* Signal bullets */}
+            {check.bullets.length > 0 && (
+              <ul className="space-y-1.5 pl-1">
+                {check.bullets.map((b, j) => (
+                  <li key={j} className="flex gap-2 text-xs text-slate-600 leading-relaxed">
+                    <span className="w-1 h-1 rounded-full bg-slate-400 mt-1.5 shrink-0" />
+                    <span>
+                      {b.label && (
+                        <span className="font-semibold text-slate-700">{b.label}: </span>
+                      )}
+                      {b.content}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export function CompanyDetailModal({ company, onClose }) {
   return (
@@ -157,9 +276,7 @@ export function CompanyDetailModal({ company, onClose }) {
 
                   {/* ICP reasoning — top */}
                   {co.relevance_explanation && (
-                    <Card title="ICP Reasoning">
-                      <p className="text-sm text-slate-500 font-medium leading-relaxed italic">"{co.relevance_explanation}"</p>
-                    </Card>
+                    <ScreenerReasoning text={co.relevance_explanation} />
                   )}
 
                   {/* Rejection reason */}
