@@ -29,6 +29,7 @@ import { CampaignWorkspaceSidebar } from "../components/campaign-workspace/Campa
 import { DispatchConfirmModal } from "../components/campaign-workspace/DispatchConfirmModal";
 import { AppHeader } from "../components/AppHeader";
 import { useToast } from "../context/ToastContext";
+import { useAuth } from "../context/AuthContext";
 
 // Helper to force uniform UTC parsing on both timezone-naive and timezone-aware ISO strings
 const parseUtcDate = (dateStr) => {
@@ -260,6 +261,7 @@ const ProgressTracker = ({ status }) => {
 const CampaignWorkspace = () => {
   const { id } = useParams();
   const { showToast } = useToast();
+  const { markMailboxDisconnected } = useAuth();
   const [campaign, setCampaign] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("research");
@@ -494,6 +496,12 @@ const CampaignWorkspace = () => {
       await fetchCampaignDetails();
     } catch (error) {
       console.error("Dispatch error:", error);
+      if (error.response?.status === 403 && error.response?.headers?.["x-error-code"] === "mailbox_required") {
+        markMailboxDisconnected();
+        showToast({ tone: "error", title: "Gmail disconnected", description: "Your Gmail connection expired. Reconnecting your mailbox..." });
+        setShowDispatchModal(false);
+        return;
+      }
       const errorDetail = error.response?.data?.detail || "Deployment failed.";
       showToast({ tone: "error", title: "Deployment failed", description: errorDetail });
     } finally {

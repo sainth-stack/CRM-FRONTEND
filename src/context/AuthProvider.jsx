@@ -246,8 +246,12 @@ export const AuthProvider = ({ children }) => {
         if (response.ok) {
             const data = await response.json();
             persistSession(data.access_token, data.refresh_token);
-            // We consciously DO NOT set user here to prevent firing the 'isLoggedIn' 
-            // routes before 'hasMailbox' is validated. We delegate to checkAuth().
+            // Seed hasMailbox from the login response (backend already checked + refreshed
+            // the Gmail token at this point) so the route guard is correct immediately,
+            // before checkAuth()/auth/me overwrites it with a plain DB existence check.
+            if (data.has_mailbox !== undefined) {
+                setHasMailbox(data.has_mailbox);
+            }
             await checkAuth();
         } else {
             const errorData = await response.json().catch(() => ({}));
@@ -336,25 +340,30 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    const markMailboxDisconnected = useCallback(() => {
+        setHasMailbox(false);
+    }, []);
+
     return (
-        <AuthContext.Provider value={{ 
-            user, 
-            token, 
-            isLoggedIn: !!user, 
-            hasMailbox, 
+        <AuthContext.Provider value={{
+            user,
+            token,
+            isLoggedIn: !!user,
+            hasMailbox,
             hasCalendar,
             mailboxHealth,
-            login, 
-            logout, 
+            login,
+            logout,
             getMailboxAuthorizationUrl,
-            connectMailbox, 
+            connectMailbox,
             getCalAuthorizationUrl,
             connectCalCalendar,
             demoSignup,
             verifyDemoOtp,
-            loading, 
+            loading,
             checkAuth,
             refreshAccessToken,
+            markMailboxDisconnected,
         }}>
             {!loading && children}
         </AuthContext.Provider>
