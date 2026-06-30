@@ -33,6 +33,7 @@ const ResearchTabs = ({
   researchTab,
   setResearchTab,
   setSelectedCompany,
+  setSelectedProspect,
   setSelectedDraft,
   setDraftEditData,
   setActiveTab,
@@ -356,7 +357,8 @@ const ResearchTabs = ({
                   return (
                     <div
                       key={dm.id}
-                      className="bg-white rounded-[24px] border border-slate-200 p-6 flex flex-col justify-between min-h-[300px] h-full"
+                      onClick={() => setSelectedProspect && setSelectedProspect(dm)}
+                      className="bg-white rounded-[24px] border border-slate-200 p-6 flex flex-col justify-between min-h-[300px] h-full cursor-pointer hover:shadow-xl hover:shadow-slate-100 transition-all"
                     >
                       <div className="flex flex-col gap-4">
                         <div className="flex items-center gap-4">
@@ -407,12 +409,11 @@ const ResearchTabs = ({
                         </div>
                       </div>
 
-                      <div className="flex items-center justify-center pt-3 border-t border-slate-50 mt-4">
+                      <div className="flex items-center justify-center pt-3 border-t border-slate-50 mt-4" onClick={e => e.stopPropagation()}>
                         <a
                           href={ensureAbsoluteUrl(dm.linkedin)}
                           target="_blank"
                           rel="noreferrer"
-                          onClick={(e) => e.stopPropagation()}
                           className="flex items-center justify-center gap-2 py-2 w-full bg-[#0077b5] hover:bg-[#005c8a] text-white font-bold text-xs rounded-xl transition-all shadow-sm shadow-blue-500/10"
                         >
                           <Linkedin size={14} /> LinkedIn

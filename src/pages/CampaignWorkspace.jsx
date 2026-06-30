@@ -22,6 +22,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import LeadLedger from "./LeadLedger";
 import ResearchTabs from "./ResearchTabs";
 import { CompanyDetailModal } from "../components/campaign-workspace/CompanyDetailModal";
+import { ProspectDetailModal } from "../components/campaign-workspace/ProspectDetailModal";
 import MissionSidebar from "../components/campaign-workspace/MissionSidebar";
 import DraftEditorModal from "../components/campaign-workspace/DraftEditorModal";
 import DraftPreviewModal from "../components/campaign-workspace/DraftPreviewModal";
@@ -275,6 +276,7 @@ const CampaignWorkspace = () => {
   const [refineAnswers, setRefineAnswers] = useState({});
   const [researchTab, setResearchTab] = useState("mission_briefing");
   const [selectedCompany, setSelectedCompany] = useState(null);
+  const [selectedProspect, setSelectedProspect] = useState(null);
   const [companyModalTab, setCompanyModalTab] = useState("research");
   const [selectedDraft, setSelectedDraft] = useState(null);
   const [previewDraft, setPreviewDraft] = useState(null);
@@ -720,11 +722,12 @@ const CampaignWorkspace = () => {
                 exit={{ opacity: 0, x: -20 }}
                 className="h-full"
               >
-                <ResearchTabs 
-                  campaign={campaign} 
+                <ResearchTabs
+                  campaign={campaign}
                   researchTab={researchTab}
                   setResearchTab={setResearchTab}
                   setSelectedCompany={setSelectedCompany}
+                  setSelectedProspect={setSelectedProspect}
                   setSelectedDraft={setSelectedDraft}
                   setDraftEditData={setDraftEditData}
                   setActiveTab={setActiveTab}
@@ -1430,6 +1433,13 @@ const CampaignWorkspace = () => {
 
       {/* Company Intel Modal */}
       <CompanyDetailModal company={selectedCompany} onClose={() => setSelectedCompany(null)} />
+
+      {/* Prospect Detail Modal */}
+      <ProspectDetailModal
+        prospect={selectedProspect}
+        company={campaign?.target_companies?.find(c => c.id === selectedProspect?.target_company_id)}
+        onClose={() => setSelectedProspect(null)}
+      />
 
       {/* Engagement Protocol Modal */}
       <DraftEditorModal
