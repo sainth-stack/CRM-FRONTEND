@@ -60,13 +60,13 @@ function ChipField({ label, placeholder, list, value, onChange, onKeyDown, onBlu
         {list.map((chip, idx) => (
           <span
             key={`${chip}-${idx}`}
-            className="inline-flex items-center gap-1 bg-primary/10 border border-primary/20 text-primary text-xs font-medium rounded-md px-2 py-1"
+            className="inline-flex items-center gap-1 bg-black/10 border border-black/20 text-black text-xs font-medium rounded-md px-2 py-1"
           >
             {chip}
             <button
               type="button"
               onClick={() => onRemove(idx)}
-              className="text-primary/70 hover:text-primary"
+              className="text-black/70 hover:text-black"
               aria-label={`Remove ${chip}`}
             >
               <X className="h-3 w-3" />
@@ -399,7 +399,7 @@ const CampaignSetup = () => {
                       {sizes.map((band) => (
                         <span
                           key={band}
-                          className="inline-flex items-center gap-1 bg-primary/10 border border-primary/20 text-primary text-xs font-medium rounded-md px-2 py-0.5"
+                          className="inline-flex items-center gap-1 bg-black/10 border border-black/20 text-black text-xs font-medium rounded-md px-2 py-0.5"
                         >
                           {band}
                           <span
@@ -416,7 +416,7 @@ const CampaignSetup = () => {
                                 toggleSize(band);
                               }
                             }}
-                            className="text-primary/70 hover:text-primary cursor-pointer"
+                            className="text-black/70 hover:text-black cursor-pointer"
                             aria-label={`Remove ${band}`}
                           >
                             <X className="h-3 w-3" />
@@ -448,7 +448,7 @@ const CampaignSetup = () => {
                             <span
                               className={cn(
                                 "w-4 h-4 rounded border flex items-center justify-center shrink-0",
-                                active ? "bg-primary border-primary text-primary-foreground" : "border-input"
+                                active ? "bg-black border-black text-white" : "border-input"
                               )}
                             >
                               {active && <Check className="h-3 w-3" strokeWidth={3} />}
@@ -515,9 +515,9 @@ const CampaignSetup = () => {
               </Label>
 
               {file ? (
-                <div className="mt-2 flex items-center gap-3 rounded-md border border-primary/30 bg-primary/5 px-4 py-3">
-                  <div className="w-9 h-9 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
-                    <FileSpreadsheet className="h-4 w-4 text-primary" />
+                <div className="mt-2 flex items-center gap-3 rounded-md border border-black/30 bg-black/5 px-4 py-3">
+                  <div className="w-9 h-9 rounded-md bg-black/10 flex items-center justify-center shrink-0">
+                    <FileSpreadsheet className="h-4 w-4 text-black" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium truncate">{file.name}</p>
@@ -532,7 +532,7 @@ const CampaignSetup = () => {
               ) : (
                 <div
                   className={cn(
-                    "relative mt-2 rounded-md border-2 border-dashed px-6 py-8 text-center cursor-pointer transition-colors hover:border-primary/50 hover:bg-muted/50",
+                    "relative mt-2 rounded-md border-2 border-dashed px-6 py-8 text-center cursor-pointer transition-colors hover:border-black/50 hover:bg-muted/50",
                     fieldErrors.file ? "border-destructive bg-destructive/5" : "border-muted-foreground/25"
                   )}
                 >
@@ -547,7 +547,7 @@ const CampaignSetup = () => {
                   />
                   <UploadCloud className="h-7 w-7 mx-auto text-muted-foreground mb-2" />
                   <p className="text-sm font-medium">
-                    Drag &amp; drop or <span className="text-primary">browse</span> to upload
+                    Drag &amp; drop or <span className="text-black font-medium">browse</span> to upload
                   </p>
                   <p className="text-xs text-muted-foreground mt-1">.csv, .xlsx or .xls</p>
                 </div>
@@ -570,7 +570,7 @@ const CampaignSetup = () => {
                   Back
                 </Link>
               </Button>
-              <Button type="submit" disabled={isLoading}>
+              <Button type="submit" disabled={isLoading} className="bg-black text-white hover:bg-zinc-900">
                 {isLoading ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin mr-1" />

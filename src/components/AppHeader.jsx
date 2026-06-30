@@ -27,7 +27,7 @@ const routeNames = {
   "/admin/user-sessions": "User Sessions",
 };
 
-export function AppHeader() {
+export function AppHeader({ crumbOverrides = {} }) {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -48,7 +48,7 @@ export function AppHeader() {
     const path = "/" + breadcrumbParts.slice(0, index + 1).join("/");
     if (routeNames[path]) return routeNames[path];
     const segment = breadcrumbParts[index];
-    if (uuidPattern.test(segment)) return segment;
+    if (uuidPattern.test(segment)) return crumbOverrides[segment] || "...";
     return segment.replace(/-/g, " ");
   };
 

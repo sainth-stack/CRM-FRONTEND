@@ -64,6 +64,11 @@ module.exports = {
           deep: "hsl(var(--sidebar-deep))",
           cyan: "hsl(var(--sidebar-cyan))",
         },
+        surgical: {
+          navy: "#0F1B3D",
+          cobalt: "#2F6FED",
+          border: "#E2E8F0",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

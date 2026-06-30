@@ -5,6 +5,7 @@ import {
 import axios from "axios";
 import API_BASE_URL from "../config";
 import { Button } from "@/components/ui/button";
+import { useToast } from "../context/ToastContext";
 
 const exportButtonClass = "shrink-0 self-start sm:self-auto";
 
@@ -37,6 +38,8 @@ const ResearchTabs = ({
   setActiveTab,
   onPreviewDraft
 }) => {
+  const { showToast } = useToast();
+
   const handleExport = (type, filenameExt) => {
     const token = localStorage.getItem("token");
     axios.get(`${API_BASE_URL}/campaigns/${campaign.id}/export/${type}`, {
@@ -50,7 +53,7 @@ const ResearchTabs = ({
       document.body.appendChild(link);
       link.click();
       link.remove();
-    }).catch(err => alert("Failed to export: " + (err.response?.data?.detail || err.message)));
+    }).catch(err => showToast({ tone: "error", title: "Export failed", description: err.response?.data?.detail || err.message }));
   };
 
   return (

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CheckCircle2, Loader2, Mail, X, Clock, AlertCircle, Send, Sparkles } from "lucide-react";
+import { CheckCircle2, Loader2, Mail, X, Clock, AlertCircle } from "lucide-react";
 
 // Helper to force uniform UTC parsing on both timezone-naive and timezone-aware ISO strings
 const parseUtcDate = (dateStr) => {
@@ -59,12 +59,8 @@ const DraftEditorModal = ({
   onClose,
   onSave,
   isSaving,
-  onAIRefine, // optional: (instruction) => Promise<void> — wired later to a backend refine endpoint
 }) => {
   const [expandedItems, setExpandedItems] = useState([]);
-  const [showRefinePrompt, setShowRefinePrompt] = useState(false);
-  const [refineInstruction, setRefineInstruction] = useState("");
-  const [isRefining, setIsRefining] = useState(false);
 
   const toggleItemExpansion = (idx) => {
     setExpandedItems((prev) =>
@@ -139,20 +135,6 @@ const DraftEditorModal = ({
     timeLabel: formatTimeAgo(item.timestamp),
   }));
 
-  const handleRefineSend = async () => {
-    if (!refineInstruction.trim() || isRefining) return;
-    setIsRefining(true);
-    try {
-      if (onAIRefine) {
-        await onAIRefine(refineInstruction.trim());
-      }
-      setRefineInstruction("");
-      setShowRefinePrompt(false);
-    } finally {
-      setIsRefining(false);
-    }
-  };
-
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-6 lg:p-12 overflow-y-auto select-none">
@@ -190,13 +172,6 @@ const DraftEditorModal = ({
             </div>
 
             <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => setShowRefinePrompt(true)}
-                className="flex items-center gap-1.5 px-3 py-2 hover:bg-slate-100 rounded-lg text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors"
-              >
-                <Sparkles size={14} />
-                Regenerate
-              </button>
               <button
                 onClick={onClose}
                 className="w-8 h-8 hover:bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors"
@@ -427,63 +402,6 @@ const DraftEditorModal = ({
           </div>
         </motion.div>
       </div>
-
-      {/* AI Refine instruction pop-up */}
-      {showRefinePrompt && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 select-none">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => !isRefining && setShowRefinePrompt(false)}
-            className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
-          />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: 10 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 10 }}
-            transition={{ duration: 0.15 }}
-            className="relative w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 p-5 z-10"
-          >
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2">
-                <Sparkles size={15} className="text-indigo-500" />
-                <h4 className="text-sm font-semibold text-slate-900">Refine with AI</h4>
-              </div>
-              <button
-                onClick={() => !isRefining && setShowRefinePrompt(false)}
-                className="w-7 h-7 hover:bg-slate-100 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 transition-colors"
-              >
-                <X size={14} />
-              </button>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                autoFocus
-                value={refineInstruction}
-                onChange={(e) => setRefineInstruction(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleRefineSend();
-                  }
-                }}
-                placeholder="Eg. please mention what changes you wanted to make. Add additional data if available."
-                className="flex-grow bg-slate-50 px-3.5 py-2.5 rounded-lg border border-slate-200 text-sm text-slate-800 outline-none focus:border-indigo-300 focus:ring-1 focus:ring-indigo-200 transition-colors"
-              />
-              <button
-                onClick={handleRefineSend}
-                disabled={!refineInstruction.trim() || isRefining}
-                className="w-10 h-10 shrink-0 flex items-center justify-center bg-slate-900 hover:bg-slate-800 disabled:opacity-40 text-white rounded-lg transition-colors"
-              >
-                {isRefining ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
-              </button>
-            </div>
-          </motion.div>
-        </div>
-      )}
     </AnimatePresence>
   );
 };

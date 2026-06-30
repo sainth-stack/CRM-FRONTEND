@@ -28,6 +28,7 @@ import DraftPreviewModal from "../components/campaign-workspace/DraftPreviewModa
 import { CampaignWorkspaceSidebar } from "../components/campaign-workspace/CampaignWorkspaceSidebar";
 import { DispatchConfirmModal } from "../components/campaign-workspace/DispatchConfirmModal";
 import { AppHeader } from "../components/AppHeader";
+import { useToast } from "../context/ToastContext";
 
 // Helper to force uniform UTC parsing on both timezone-naive and timezone-aware ISO strings
 const parseUtcDate = (dateStr) => {
@@ -258,6 +259,7 @@ const ProgressTracker = ({ status }) => {
 
 const CampaignWorkspace = () => {
   const { id } = useParams();
+  const { showToast } = useToast();
   const [campaign, setCampaign] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("research");
@@ -464,7 +466,7 @@ const CampaignWorkspace = () => {
     } catch (error) {
       console.error("Tactical Deployment Failure:", error);
       const errorDetail = error.response?.data?.detail || "Strategic deployment failed. Please check your communication protocols.";
-      alert(`ERROR: ${errorDetail}`);
+      showToast({ tone: "error", title: "Deployment failed", description: errorDetail });
     } finally {
       setSendingId(null);
     }
@@ -478,14 +480,14 @@ const CampaignWorkspace = () => {
     try {
       if (mode === "send-now") {
         await axios.post(`${API_BASE_URL}/drafts/${draftId}/send-now`);
-        alert(`✅ Email to ${recipientName} queued for immediate delivery!`);
+        showToast({ tone: "success", title: "Queued", description: `Email to ${recipientName} queued for immediate delivery.` });
       } else {
         const res = await axios.post(`${API_BASE_URL}/drafts/${draftId}/send`);
         const data = res.data;
         if (data.message === "already_scheduled") {
-          alert(`Already scheduled: Email to ${recipientName} is queued for ${data.display}.`);
+          showToast({ tone: "info", title: "Already scheduled", description: `Email to ${recipientName} is queued for ${data.display}.` });
         } else {
-          alert(`✅ Email to ${recipientName} scheduled for ${data.display}.`);
+          showToast({ tone: "success", title: "Scheduled", description: `Email to ${recipientName} scheduled for ${data.display}.` });
         }
       }
       setShowDispatchModal(false);
@@ -493,7 +495,7 @@ const CampaignWorkspace = () => {
     } catch (error) {
       console.error("Dispatch error:", error);
       const errorDetail = error.response?.data?.detail || "Deployment failed.";
-      alert(`ERROR: ${errorDetail}`);
+      showToast({ tone: "error", title: "Deployment failed", description: errorDetail });
     } finally {
       setIsConfirmingDispatch(false);
     }
@@ -505,14 +507,14 @@ const CampaignWorkspace = () => {
     try {
       const res = await axios.post(`${API_BASE_URL}/campaigns/${campaign.id}/drafts/dispatch-all`);
       const { scheduled_count, skipped_count, error_count } = res.data;
-      let msg = `Dispatch All complete.\n✅ Scheduled: ${scheduled_count}`;
-      if (skipped_count > 0) msg += `\n⏭ Skipped: ${skipped_count} (already queued or sent)`;
-      if (error_count > 0) msg += `\n⚠️ Errors: ${error_count}`;
-      alert(msg);
+      let msg = `Scheduled: ${scheduled_count}`;
+      if (skipped_count > 0) msg += ` · Skipped: ${skipped_count} (already queued or sent)`;
+      if (error_count > 0) msg += ` · Errors: ${error_count}`;
+      showToast({ tone: error_count > 0 ? "error" : "success", title: "Dispatch all complete", description: msg });
       await fetchCampaignDetails();
     } catch (error) {
       const detail = error.response?.data?.detail || "Batch dispatch failed.";
-      alert(`ERROR: ${detail}`);
+      showToast({ tone: "error", title: "Batch dispatch failed", description: detail });
     } finally {
       setIsDispatchingAll(false);
     }
@@ -525,10 +527,10 @@ const CampaignWorkspace = () => {
       await fetchCampaignDetails();
       setShowRefineModal(false);
       setRefineAnswers({});
-      alert("Mission Briefing Successfully Updated. System re-validating...");
+      showToast({ tone: "success", title: "Mission briefing updated", description: "System re-validating..." });
     } catch (error) {
       console.error("Error updating prompt:", error);
-      alert("Failed to synchronize mission refinement.");
+      showToast({ tone: "error", title: "Update failed", description: "Failed to synchronize mission refinement." });
     } finally {
       setIsSaving(false);
     }
@@ -551,10 +553,10 @@ const CampaignWorkspace = () => {
       await axios.patch(`${API_BASE_URL}/drafts/${selectedDraft.id}`, draftEditData);
       await fetchCampaignDetails();
       setSelectedDraft(null);
-      alert("Executive Protocol Refinement Synchronized.");
+      showToast({ tone: "success", title: "Draft saved" });
     } catch (error) {
       console.error("Error saving draft:", error);
-      alert("Failed to synchronize refinement.");
+      showToast({ tone: "error", title: "Save failed", description: "Failed to synchronize refinement." });
     } finally {
       setIsSaving(false);
     }
@@ -651,7 +653,7 @@ const CampaignWorkspace = () => {
 
       {/* Right content column */}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <AppHeader />
+        <AppHeader crumbOverrides={{ [campaign.id]: campaign.name }} />
 
         {campaign.status === "INTERVENTION_NEEDED" && (
           <div className="bg-amber-50 border-y border-amber-200 px-10 py-6 animate-pulse-subtle">

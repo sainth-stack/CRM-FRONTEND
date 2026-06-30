@@ -60,8 +60,8 @@ const CreateCampaign = () => {
     <div className="max-w-lg mx-auto">
       <Card>
         <CardHeader>
-          <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-2">
-            <Target className="h-6 w-6 text-primary" />
+          <div className="w-12 h-12 rounded-lg bg-black/10 flex items-center justify-center mb-2">
+            <Target className="h-6 w-6 text-black" />
           </div>
           <CardTitle className="text-2xl">Create Campaign</CardTitle>
           <CardDescription>
@@ -90,7 +90,7 @@ const CreateCampaign = () => {
               )}
             </div>
 
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full bg-black text-white hover:bg-zinc-900">
               Continue
               <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
