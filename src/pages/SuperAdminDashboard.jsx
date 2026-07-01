@@ -19,6 +19,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import API_BASE_URL from '../config';
 import { useToast } from '../context/ToastContext';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 
 const SuperAdminDashboard = () => {
   const { token, user } = useAuth();
@@ -28,6 +29,7 @@ const SuperAdminDashboard = () => {
   const [isAddingAdmin, setIsAddingAdmin] = useState(false);
   const [editingAdmin, setEditingAdmin] = useState(null);
   const [error, setError] = useState(null);
+  const [confirmAdminId, setConfirmAdminId] = useState(null);
   
   // Provisioning Form State
   const [newAdmin, setNewAdmin] = useState({ email: '', user_limit: 5 });
@@ -119,21 +121,22 @@ const SuperAdminDashboard = () => {
     }
   };
 
+  const requestDeleteAdmin = (adminId) => setConfirmAdminId(adminId);
+
   const handleDeleteAdmin = async (adminId) => {
-    if (!window.confirm("ARE YOU SURE? This will permanently decommission this administrative sector.")) return;
-    
     try {
       const response = await fetch(`${API_BASE_URL}/auth/sovereign/admins/${adminId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
+        showToast({ tone: "success", title: "Admin decommissioned" });
         fetchAdmins();
       } else {
         throw new Error("Decommissioning failed.");
       }
     } catch (err) {
-      setError(err.message);
+      showToast({ tone: "error", title: "Decommission failed", description: err.message });
     }
   };
 
@@ -326,8 +329,8 @@ const SuperAdminDashboard = () => {
                          >
                            <Settings size={14} />
                          </button>
-                         <button 
-                           onClick={() => handleDeleteAdmin(adm.id)}
+                         <button
+                           onClick={() => requestDeleteAdmin(adm.id)}
                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50/60 bg-slate-50/30 border border-slate-100/60 rounded-xl transition-all shadow-sm select-none"
                            title="Decommission Node"
                          >
@@ -498,6 +501,19 @@ const SuperAdminDashboard = () => {
           </div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={confirmAdminId !== null}
+        title="Decommission this admin?"
+        description="This will permanently decommission this administrative sector."
+        confirmLabel="Decommission"
+        onCancel={() => setConfirmAdminId(null)}
+        onConfirm={() => {
+          const id = confirmAdminId;
+          setConfirmAdminId(null);
+          handleDeleteAdmin(id);
+        }}
+      />
     </div>
   );
 };

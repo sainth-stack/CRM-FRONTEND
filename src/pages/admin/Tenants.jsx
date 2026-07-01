@@ -14,6 +14,7 @@ import {
   AdminPagination,
   AdminSearchBar,
 } from "../../components/admin/AdminShell";
+import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 
 const emptyForm = { name: "", type: "", timeout: "30" };
 
@@ -31,6 +32,7 @@ export default function Tenants() {
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -105,7 +107,6 @@ export default function Tenants() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Delete this tenant? Remove all organizations first.")) return;
     try {
       await adminApi.deleteTenant(token, id);
       showToast({ tone: "success", title: "Tenant deleted" });
@@ -154,7 +155,7 @@ export default function Tenants() {
                       <AdminBtn variant="ghost" onClick={() => openEdit(r)}>
                         <Pencil size={14} />
                       </AdminBtn>
-                      <AdminBtn variant="danger" onClick={() => handleDelete(r.id)}>
+                      <AdminBtn variant="danger" onClick={() => setConfirmDeleteId(r.id)}>
                         <Trash2 size={14} />
                       </AdminBtn>
                     </div>
@@ -189,6 +190,19 @@ export default function Tenants() {
           <AdminInput label="Session Timeout (minutes)" type="number" value={form.timeout} onChange={(e) => setForm({ ...form, timeout: e.target.value })} />
         </form>
       </AdminModal>
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Delete this tenant?"
+        description="Remove all organizations first."
+        confirmLabel="Delete"
+        onCancel={() => setConfirmDeleteId(null)}
+        onConfirm={() => {
+          const id = confirmDeleteId;
+          setConfirmDeleteId(null);
+          handleDelete(id);
+        }}
+      />
     </AdminPageLayout>
   );
 }

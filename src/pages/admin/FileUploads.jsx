@@ -11,6 +11,7 @@ import {
   AdminTable,
   AdminLoading,
 } from "../../components/admin/AdminShell";
+import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 
 function formatBytes(bytes) {
   if (!bytes) return "—";
@@ -88,7 +89,8 @@ function AssetSection({ title, description, assetType, uploadFn, token, showToas
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
-  
+  const [confirmAsset, setConfirmAsset] = useState(null);
+
   const disabled = maxItems && items.length >= maxItems;
 
   const load = useCallback(async () => {
@@ -119,7 +121,6 @@ function AssetSection({ title, description, assetType, uploadFn, token, showToas
   };
 
   const handleDelete = async (asset) => {
-    if (!window.confirm(`Delete "${asset.filename}"? This cannot be undone.`)) return;
     try {
       await adminApi.deleteAsset(token, asset.id);
       showToast({ tone: "success", title: "Deleted" });
@@ -191,7 +192,7 @@ function AssetSection({ title, description, assetType, uploadFn, token, showToas
       render: (r) => (
         <div className="flex justify-end gap-1">
           <CopyLinkBtn url={adminApi.assetDownloadUrl(r.id)} />
-          <AdminBtn variant="danger" onClick={() => handleDelete(r)} title="Delete">
+          <AdminBtn variant="danger" onClick={() => setConfirmAsset(r)} title="Delete">
             <Trash2 size={14} />
           </AdminBtn>
         </div>
@@ -213,6 +214,18 @@ function AssetSection({ title, description, assetType, uploadFn, token, showToas
           emptyMessage={`No ${title.toLowerCase()} uploaded yet.`}
         />
       )}
+      <ConfirmDialog
+        open={confirmAsset !== null}
+        title={`Delete "${confirmAsset?.filename}"?`}
+        description="This cannot be undone."
+        confirmLabel="Delete"
+        onCancel={() => setConfirmAsset(null)}
+        onConfirm={() => {
+          const asset = confirmAsset;
+          setConfirmAsset(null);
+          handleDelete(asset);
+        }}
+      />
     </AdminPanel>
   );
 }

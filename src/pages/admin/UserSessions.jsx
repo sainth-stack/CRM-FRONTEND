@@ -12,6 +12,7 @@ import {
   AdminPagination,
   AdminBadge,
 } from "../../components/admin/AdminShell";
+import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 
 export default function UserSessions() {
   const { token, user } = useAuth();
@@ -22,6 +23,7 @@ export default function UserSessions() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalRecords, setTotalRecords] = useState(0);
+  const [confirmRevokeId, setConfirmRevokeId] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -48,7 +50,6 @@ export default function UserSessions() {
   }, [load]);
 
   const handleRevoke = async (id) => {
-    if (!window.confirm("Revoke this session and terminate user tokens?")) return;
     try {
       await adminApi.revokeSession(token, id);
       showToast({ tone: "success", title: "Session revoked" });
@@ -105,7 +106,7 @@ export default function UserSessions() {
                   align: "right",
                   render: (r) =>
                     r.status === "active" ? (
-                      <AdminBtn variant="danger" onClick={() => handleRevoke(r.id)}>
+                      <AdminBtn variant="danger" onClick={() => setConfirmRevokeId(r.id)}>
                         <LogOut size={14} /> Revoke
                       </AdminBtn>
                     ) : (
@@ -119,6 +120,19 @@ export default function UserSessions() {
           </>
         )}
       </AdminPanel>
+
+      <ConfirmDialog
+        open={confirmRevokeId !== null}
+        title="Revoke this session?"
+        description="This will terminate the user's tokens immediately."
+        confirmLabel="Revoke"
+        onCancel={() => setConfirmRevokeId(null)}
+        onConfirm={() => {
+          const id = confirmRevokeId;
+          setConfirmRevokeId(null);
+          handleRevoke(id);
+        }}
+      />
     </AdminPageLayout>
   );
 }

@@ -55,8 +55,13 @@ function parseScreenerReasoning(text) {
     const verdict = verdictMatch ? verdictMatch[1].toUpperCase() : null;
     const main = verdictMatch ? verdictMatch[2] : firstLine;
 
+    // Backend emits either dash-prefixed bullets ("- Label: text") or plain
+    // paragraph lines ("Signals: ...", "Description: ...", "SIC Code: ...",
+    // "NAICS Code: ...", "Conclusion: ..."). Capture both — filtering to only
+    // dash lines silently dropped every paragraph-style line (the common case).
     const bullets = lines.slice(1)
-      .filter(l => l.trim().startsWith("-"))
+      .map(l => l.trim())
+      .filter(Boolean)
       .map(l => {
         const cleaned = l.replace(/^-\s*/, "").trim();
         const labelMatch = cleaned.match(/^([^:]{1,30}?):\s(.+)/s);
@@ -141,6 +146,63 @@ function ScreenerReasoning({ text }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function parseScreenerSummary(text) {
+  if (!text) return null;
+
+  const failOnMatch = text.match(/^FAIL on: ([^.]+)\.\s*/);
+  const failedChecks = failOnMatch ? failOnMatch[1].split(",").map(s => s.trim()) : [];
+  const rest = failOnMatch ? text.slice(failOnMatch[0].length) : text;
+  const verdict = failOnMatch ? "FAIL" : "PASS";
+
+  const checks = rest.split(" | ").map(seg => {
+    const colonIdx = seg.indexOf(": ");
+    if (colonIdx === -1) return { name: seg, evidence: "" };
+    const name = seg.slice(0, colonIdx);
+    return { name: CHECK_LABEL[name] || name, evidence: seg.slice(colonIdx + 2) };
+  });
+
+  return { verdict, failedChecks, checks };
+}
+
+function ScreenerPrecheck({ text }) {
+  const parsed = parseScreenerSummary(text);
+  if (!parsed) return null;
+
+  const { verdict, failedChecks, checks } = parsed;
+  const isFail = verdict === "FAIL";
+  const theme = isFail
+    ? { wrap: "border-rose-100 bg-rose-50/40", icon: "text-rose-500", label: "text-rose-500", badge: "bg-rose-100 text-rose-600" }
+    : { wrap: "border-emerald-100 bg-emerald-50/40", icon: "text-emerald-500", label: "text-emerald-500", badge: "bg-emerald-100 text-emerald-600" };
+
+  return (
+    <div className={`rounded-xl border ${theme.wrap} p-4 space-y-3`}>
+      <div className="flex items-center gap-2">
+        <ShieldX size={14} className={`${theme.icon} shrink-0`} />
+        <span className={`text-[10px] font-bold ${theme.label} uppercase tracking-widest`}>
+          {isFail ? "Pre-screen Rejection" : "Pre-screen Passed"}
+        </span>
+        {isFail && (
+          <div className="flex gap-1.5 ml-1">
+            {failedChecks.map(c => (
+              <span key={c} className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide ${theme.badge}`}>
+                {CHECK_LABEL[c] || c}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+      <ul className="space-y-1.5">
+        {checks.map((c, i) => (
+          <li key={i} className="text-xs text-slate-600 leading-relaxed">
+            <span className="font-semibold text-slate-700">{c.name}: </span>
+            {c.evidence}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -273,6 +335,11 @@ export function CompanyDetailModal({ company, onClose }) {
               {/* ── RIGHT CONTENT ── */}
               <div className="flex-1 overflow-y-auto custom-scrollbar">
                 <div className="p-8 space-y-7">
+
+                  {/* Screener pre-check — survives ICP overwrite of relevance_explanation */}
+                  {!isRejected && co.screener_reasoning && (
+                    <ScreenerPrecheck text={co.screener_reasoning} />
+                  )}
 
                   {/* ICP reasoning — top */}
                   {co.relevance_explanation && (

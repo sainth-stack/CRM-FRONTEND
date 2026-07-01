@@ -16,6 +16,7 @@ import {
   AdminPagination,
   AdminSearchBar,
 } from "../../components/admin/AdminShell";
+import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 
 const emptyForm = { name: "", tenant_id: "", parent_id: "", logo_url: "", logo_name: "" };
 
@@ -36,6 +37,7 @@ export default function Organizations() {
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -141,7 +143,6 @@ export default function Organizations() {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Delete this organization?")) return;
     try {
       await adminApi.deleteOrganization(token, id);
       showToast({ tone: "success", title: "Organization deleted" });
@@ -193,7 +194,7 @@ export default function Organizations() {
                             <AdminBtn variant="ghost" onClick={() => openEdit(r)}>
                               <Pencil size={14} />
                             </AdminBtn>
-                            <AdminBtn variant="danger" onClick={() => handleDelete(r.id)}>
+                            <AdminBtn variant="danger" onClick={() => setConfirmDeleteId(r.id)}>
                               <Trash2 size={14} />
                             </AdminBtn>
                           </div>
@@ -265,6 +266,18 @@ export default function Organizations() {
               columns remain; wire a real upload/render flow before bringing them back. */}
         </form>
       </AdminModal>
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Delete this organization?"
+        confirmLabel="Delete"
+        onCancel={() => setConfirmDeleteId(null)}
+        onConfirm={() => {
+          const id = confirmDeleteId;
+          setConfirmDeleteId(null);
+          handleDelete(id);
+        }}
+      />
     </AdminPageLayout>
   );
 }

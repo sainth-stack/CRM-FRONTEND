@@ -19,6 +19,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import API_BASE_URL from '../config';
 import { useToast } from '../context/ToastContext';
+import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 
 const AdminDashboard = () => {
   const { token, user } = useAuth();
@@ -27,6 +28,7 @@ const AdminDashboard = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isProvisioning, setIsProvisioning] = useState(false);
   const [error, setError] = useState(null);
+  const [confirmState, setConfirmState] = useState(null); // { type: "delete" | "replace", userId }
   
   // Provisioning Form
   const [newUser, setNewUser] = useState({ email: '' });
@@ -113,38 +115,41 @@ const AdminDashboard = () => {
     }
   };
 
+  const requestDeleteUser = (userId) => setConfirmState({ type: "delete", userId });
+  const requestReplaceUser = (userId) => setConfirmState({ type: "replace", userId });
+
   const handleDeleteUser = async (userId) => {
-    if (!window.confirm("CONFIRM DECOMMISSION: This will permanently remove this user sector and all associated campaigns.")) return;
-    
     try {
       const response = await fetch(`${API_BASE_URL}/auth/management/users/${userId}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (response.ok) {
+        showToast({ tone: "success", title: "User decommissioned" });
         fetchManagedUsers();
       } else {
         throw new Error("Decommissioning failed.");
       }
     } catch (err) {
-      setError(err.message);
+      showToast({ tone: "error", title: "Decommission failed", description: err.message });
     }
   };
 
   const handleReplaceUser = async (oldUserId) => {
-    if (window.confirm("IDENTITY REPLACEMENT: This will decommission the existing user and open the provisioning portal for a new identity.")) {
-      try {
+    try {
       const response = await fetch(`${API_BASE_URL}/auth/management/users/${oldUserId}`, {
-          method: 'DELETE',
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (response.ok) {
-          setIsProvisioning(true);
-          fetchManagedUsers();
-        }
-      } catch {
-        setError("Replacement handshake failed.");
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (response.ok) {
+        setIsProvisioning(true);
+        showToast({ tone: "success", title: "User decommissioned", description: "Provisioning portal opened for the new identity." });
+        fetchManagedUsers();
+      } else {
+        throw new Error("Replacement handshake failed.");
       }
+    } catch (err) {
+      showToast({ tone: "error", title: "Replacement failed", description: err.message });
     }
   };
 
@@ -253,15 +258,15 @@ const AdminDashboard = () => {
                     <Mail size={14} />
                   </button>
                 )}
-                <button 
-                  onClick={() => handleReplaceUser(u.id)}
+                <button
+                  onClick={() => requestReplaceUser(u.id)}
                   className="p-2 bg-slate-50 border border-slate-100/60 text-slate-400 hover:text-red-600 hover:bg-red-50/30 rounded-xl transition-all shadow-sm select-none"
                   title="Replace Identity"
                 >
                   <RefreshCw size={14} />
                 </button>
-                <button 
-                  onClick={() => handleDeleteUser(u.id)}
+                <button
+                  onClick={() => requestDeleteUser(u.id)}
                   className="p-2 bg-rose-50 border border-rose-100/60 text-rose-500 hover:bg-rose-100/50 hover:text-rose-600 rounded-xl transition-all shadow-sm select-none"
                   title="Decommission"
                 >
@@ -430,6 +435,24 @@ const AdminDashboard = () => {
           </div>
         )}
       </AnimatePresence>
+
+      <ConfirmDialog
+        open={confirmState !== null}
+        title={confirmState?.type === "replace" ? "Replace this identity?" : "Decommission this user?"}
+        description={
+          confirmState?.type === "replace"
+            ? "This will decommission the existing user and open the provisioning portal for a new identity."
+            : "This will permanently remove this user sector and all associated campaigns."
+        }
+        confirmLabel={confirmState?.type === "replace" ? "Replace" : "Decommission"}
+        onCancel={() => setConfirmState(null)}
+        onConfirm={() => {
+          const state = confirmState;
+          setConfirmState(null);
+          if (state?.type === "replace") handleReplaceUser(state.userId);
+          else if (state?.type === "delete") handleDeleteUser(state.userId);
+        }}
+      />
     </div>
   );
 };

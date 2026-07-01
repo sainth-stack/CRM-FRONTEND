@@ -21,6 +21,7 @@ import {
   AdminPagination,
   AdminSearchBar,
 } from "../../components/admin/AdminShell";
+import { ConfirmDialog } from "../../components/ui/ConfirmDialog";
 
 const emptyForm = { system_role: "user", email: "", tenant_id: "", organization_id: "" };
 
@@ -48,6 +49,7 @@ export default function UserRoles() {
   const [editingUser, setEditingUser] = useState(null);
   const [editForm, setEditForm] = useState({ system_role: "user", tenant_id: "", organization_id: "", is_active: true });
   const [updating, setUpdating] = useState(false);
+  const [confirmDeleteMember, setConfirmDeleteMember] = useState(null);
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -196,12 +198,15 @@ export default function UserRoles() {
   };
 
   // ---- Delete member ---------------------------------------------------------
-  const handleDelete = async (member) => {
+  const requestDelete = (member) => {
     if (member.id === user?.id) {
       showToast({ tone: "error", title: "Cannot delete yourself" });
       return;
     }
-    if (!window.confirm(`Delete ${member.email}? This cannot be undone.`)) return;
+    setConfirmDeleteMember(member);
+  };
+
+  const handleDelete = async (member) => {
     try {
       await adminApi.deleteUser(token, member.id);
       showToast({ tone: "success", title: "Member deleted" });
@@ -261,7 +266,7 @@ export default function UserRoles() {
                         </AdminBtn>
                         <AdminBtn
                           variant="danger"
-                          onClick={() => handleDelete(r)}
+                          onClick={() => requestDelete(r)}
                           disabled={isSelf}
                           title={isSelf ? "You can't delete yourself" : "Delete member"}
                         >
@@ -439,6 +444,19 @@ export default function UserRoles() {
           </label>
         </form>
       </AdminModal>
+
+      <ConfirmDialog
+        open={confirmDeleteMember !== null}
+        title={`Delete ${confirmDeleteMember?.email}?`}
+        description="This cannot be undone."
+        confirmLabel="Delete"
+        onCancel={() => setConfirmDeleteMember(null)}
+        onConfirm={() => {
+          const member = confirmDeleteMember;
+          setConfirmDeleteMember(null);
+          handleDelete(member);
+        }}
+      />
     </AdminPageLayout>
   );
 }

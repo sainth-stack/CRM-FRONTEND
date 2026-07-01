@@ -3,6 +3,8 @@ import { Trash2, RefreshCw, Archive, Loader2 } from "lucide-react";
 import axios from "axios";
 import API_BASE_URL from "@/config";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { useToast } from "@/context/ToastContext";
 import {
   CampaignPageHeader,
   CampaignToolbar,
@@ -13,6 +15,7 @@ import {
 } from "@/components/campaigns/CampaignShared";
 
 const InactiveCampaigns = () => {
+  const { showToast } = useToast();
   const [campaigns, setCampaigns] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -20,6 +23,7 @@ const InactiveCampaigns = () => {
   const [sortOrder, setSortOrder] = useState("newest");
   const [processingId, setProcessingId] = useState(null);
   const [processingAction, setProcessingAction] = useState(null);
+  const [confirmState, setConfirmState] = useState(null); // { type: "single" | "batch", id? }
 
   useEffect(() => {
     fetchCampaigns();
@@ -37,16 +41,23 @@ const InactiveCampaigns = () => {
     }
   };
 
+  const requestDelete = (id) => setConfirmState({ type: "single", id });
+  const requestBatchDelete = () => {
+    if (selectedIds.length === 0) return;
+    setConfirmState({ type: "batch" });
+  };
+
   const handleDelete = async (id) => {
-    if (!window.confirm("Delete this campaign permanently?")) return;
     setProcessingId(id);
     setProcessingAction("delete");
     try {
       await axios.delete(`${API_BASE_URL}/campaigns/${id}`);
       setCampaigns((prev) => prev.filter((c) => c.id !== id));
       setSelectedIds((prev) => prev.filter((selectedId) => selectedId !== id));
+      showToast({ tone: "success", title: "Campaign deleted" });
     } catch (error) {
       console.error("Error deleting campaign:", error);
+      showToast({ tone: "error", title: "Delete failed", description: error?.response?.data?.detail || "Please try again." });
     } finally {
       setProcessingId(null);
       setProcessingAction(null);
@@ -60,8 +71,10 @@ const InactiveCampaigns = () => {
       await axios.patch(`${API_BASE_URL}/campaigns/${id}/status?status=PENDING`);
       setCampaigns((prev) => prev.filter((c) => c.id !== id));
       setSelectedIds((prev) => prev.filter((selectedId) => selectedId !== id));
+      showToast({ tone: "success", title: "Campaign restored" });
     } catch (error) {
       console.error("Error restoring campaign:", error);
+      showToast({ tone: "error", title: "Restore failed", description: error?.response?.data?.detail || "Please try again." });
     } finally {
       setProcessingId(null);
       setProcessingAction(null);
@@ -70,14 +83,15 @@ const InactiveCampaigns = () => {
 
   const handleBatchDelete = async () => {
     if (selectedIds.length === 0) return;
-    if (!window.confirm(`Permanently delete ${selectedIds.length} inactive campaigns?`)) return;
     setProcessingAction("batch-delete");
     try {
       await axios.post(`${API_BASE_URL}/campaigns/batch-delete`, { campaign_ids: selectedIds });
       setCampaigns((prev) => prev.filter((c) => !selectedIds.includes(c.id)));
       setSelectedIds([]);
+      showToast({ tone: "success", title: "Campaigns deleted" });
     } catch (error) {
       console.error("Error in batch delete:", error);
+      showToast({ tone: "error", title: "Batch delete failed", description: error?.response?.data?.detail || "Please try again." });
     } finally {
       setProcessingAction(null);
     }
@@ -92,8 +106,10 @@ const InactiveCampaigns = () => {
       );
       setCampaigns((prev) => prev.filter((c) => !selectedIds.includes(c.id)));
       setSelectedIds([]);
+      showToast({ tone: "success", title: "Campaigns restored" });
     } catch (error) {
       console.error("Error in batch restore:", error);
+      showToast({ tone: "error", title: "Batch restore failed", description: error?.response?.data?.detail || "Please try again." });
     } finally {
       setProcessingAction(null);
     }
@@ -143,7 +159,7 @@ const InactiveCampaigns = () => {
         }
         primaryActionLabel={processingAction === "batch-delete" ? "Purging…" : "Purge"}
         primaryActionIcon={Trash2}
-        onPrimaryAction={handleBatchDelete}
+        onPrimaryAction={requestBatchDelete}
         primaryDisabled={selectedIds.length === 0 || processingAction !== null}
         primaryLoading={processingAction === "batch-delete"}
       />
@@ -179,7 +195,7 @@ const InactiveCampaigns = () => {
               isSelected={selectedIds.includes(campaign.id)}
               onToggleSelect={() => toggleSelect(campaign.id)}
               onRestore={handleRestore}
-              onDelete={handleDelete}
+              onDelete={requestDelete}
               processingId={processingId}
               processingAction={processingAction}
               mode="inactive"
@@ -187,6 +203,20 @@ const InactiveCampaigns = () => {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirmState !== null}
+        title={confirmState?.type === "batch" ? `Delete ${selectedIds.length} campaigns?` : "Delete this campaign?"}
+        description="This action is permanent and cannot be undone."
+        confirmLabel="Delete"
+        onCancel={() => setConfirmState(null)}
+        onConfirm={() => {
+          const state = confirmState;
+          setConfirmState(null);
+          if (state?.type === "batch") handleBatchDelete();
+          else if (state?.type === "single") handleDelete(state.id);
+        }}
+      />
     </div>
   );
 };
